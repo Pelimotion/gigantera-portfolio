@@ -39,7 +39,7 @@ export const SECTORS_CATALOG: SectorInfo[] = [
   }
 ];
 
-const BUNNY_CDN_GIGANTERA = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BUNNY_PULL_ZONE_URL) ? import.meta.env.VITE_BUNNY_PULL_ZONE_URL : 'https://gigantera-penumbra.b-cdn.net';
+const BUNNY_CDN_GIGANTERA = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BUNNY_PULL_ZONE_URL) ? `${import.meta.env.VITE_BUNNY_PULL_ZONE_URL}/gigantera-portfolio` : 'https://gigantera-penumbra.b-cdn.net/gigantera-portfolio';
 const base = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) || '/';
 const cleanBase = base.endsWith('/') ? base : base + '/';
 const getWorkAssetUrl = (subpath: string) => `${cleanBase}works/${subpath}`;

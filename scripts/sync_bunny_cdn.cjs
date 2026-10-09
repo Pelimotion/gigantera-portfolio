@@ -5,10 +5,11 @@ const path = require('path');
 const BUNNY_STORAGE_ZONE = 'gigantera';
 const BUNNY_STORAGE_PASSWORD = '9b382c1a-23ac-4fa6-b93ce53458c7-e946-40b8';
 const BUNNY_ENDPOINT = 'br.storage.bunnycdn.com';
+const TARGET_FOLDER = 'gigantera-portfolio';
 const OLD_CDN_BASE = 'https://pelimotion-portfolio.b-cdn.net/gigantera';
 const NEW_PULL_ZONE = 'https://gigantera-penumbra.b-cdn.net';
 
-const LOCAL_WORKS_DIR = path.join(__dirname, 'public/works');
+const LOCAL_WORKS_DIR = path.join(__dirname, '../public/works');
 
 const AUDIO_TRACKS = [
   '01-automar', '02-danse', '03-apenas', '04-giant-mullets',
@@ -91,20 +92,19 @@ async function verifyHead(url) {
 }
 
 async function run() {
-  console.log('🚀 [BUNNY CDN MIGRATION] Iniciando sincronização integral para zona "gigantera"');
-  console.log(`🌐 Pull Zone Destino: ${NEW_PULL_ZONE}\n`);
+  console.log(`🚀 [BUNNY CDN SYNC] Sincronizando para a pasta dedicada: "${TARGET_FOLDER}" na zona "${BUNNY_STORAGE_ZONE}"`);
+  console.log(`🌐 Base URL: ${NEW_PULL_ZONE}/${TARGET_FOLDER}/\n`);
 
   // 1. Audio Previews
   console.log('🎵 --- FASE 1: Áudio Previews (17 faixas) ---');
   for (const track of AUDIO_TRACKS) {
     const filename = `preview-${track}.mp3`;
-    const remoteSubpath = `audio/previews/${filename}`;
-    const url = `${OLD_CDN_BASE}/${remoteSubpath}`;
+    const remotePath = `${TARGET_FOLDER}/audio/previews/${filename}`;
+    const sourceUrl = `${NEW_PULL_ZONE}/audio/previews/${filename}`;
     try {
-      const buf = await downloadBuffer(url);
-      await uploadBuffer(remoteSubpath, buf, 'audio/mpeg');
-      await uploadBuffer(`gigantera/${remoteSubpath}`, buf, 'audio/mpeg');
-      const headStatus = await verifyHead(`${NEW_PULL_ZONE}/${remoteSubpath}`);
+      const buf = await downloadBuffer(sourceUrl);
+      await uploadBuffer(remotePath, buf, 'audio/mpeg');
+      const headStatus = await verifyHead(`${NEW_PULL_ZONE}/${remotePath}`);
       console.log(`  ✓ ${filename.padEnd(30)} [${(buf.length/1024).toFixed(1)} KB] -> CDN HTTP ${headStatus}`);
     } catch (e) {
       console.error(`  ✗ Erro em ${filename}:`, e.message);
@@ -112,16 +112,15 @@ async function run() {
   }
 
   // 2. Audio Full Tracks
-  console.log('\n🎼 --- FASE 2: Áudio Completo / Full (17 faixas) ---');
+  console.log('\n🎼 --- FASE 2: Áudio Completo (17 faixas) ---');
   for (const track of AUDIO_TRACKS) {
     const filename = `full-${track}.mp3`;
-    const remoteSubpath = `audio/full/${filename}`;
-    const url = `${OLD_CDN_BASE}/${remoteSubpath}`;
+    const remotePath = `${TARGET_FOLDER}/audio/full/${filename}`;
+    const sourceUrl = `${NEW_PULL_ZONE}/audio/full/${filename}`;
     try {
-      const buf = await downloadBuffer(url);
-      await uploadBuffer(remoteSubpath, buf, 'audio/mpeg');
-      await uploadBuffer(`gigantera/${remoteSubpath}`, buf, 'audio/mpeg');
-      const headStatus = await verifyHead(`${NEW_PULL_ZONE}/${remoteSubpath}`);
+      const buf = await downloadBuffer(sourceUrl);
+      await uploadBuffer(remotePath, buf, 'audio/mpeg');
+      const headStatus = await verifyHead(`${NEW_PULL_ZONE}/${remotePath}`);
       console.log(`  ✓ ${filename.padEnd(30)} [${(buf.length/1024/1024).toFixed(2)} MB] -> CDN HTTP ${headStatus}`);
     } catch (e) {
       console.error(`  ✗ Erro em ${filename}:`, e.message);
@@ -131,18 +130,17 @@ async function run() {
   // 3. Stills / Obras Fotográficas Giclée
   console.log('\n🖼️ --- FASE 3: Stills & Obras Giclée (9 obras) ---');
   for (const filename of STILLS) {
-    const remoteSubpath = `stills/${filename}`;
+    const remotePath = `${TARGET_FOLDER}/stills/${filename}`;
     let buf = null;
     const localPath = path.join(LOCAL_WORKS_DIR, filename);
     if (fs.existsSync(localPath)) {
       buf = fs.readFileSync(localPath);
     } else {
-      buf = await downloadBuffer(`${OLD_CDN_BASE}/${remoteSubpath}`);
+      buf = await downloadBuffer(`${NEW_PULL_ZONE}/stills/${filename}`);
     }
     try {
-      await uploadBuffer(remoteSubpath, buf, 'image/jpeg');
-      await uploadBuffer(`gigantera/${remoteSubpath}`, buf, 'image/jpeg');
-      const headStatus = await verifyHead(`${NEW_PULL_ZONE}/${remoteSubpath}`);
+      await uploadBuffer(remotePath, buf, 'image/jpeg');
+      const headStatus = await verifyHead(`${NEW_PULL_ZONE}/${remotePath}`);
       console.log(`  ✓ ${filename.padEnd(36)} [${(buf.length/1024).toFixed(1)} KB] -> CDN HTTP ${headStatus}`);
     } catch (e) {
       console.error(`  ✗ Erro em ${filename}:`, e.message);
@@ -152,25 +150,24 @@ async function run() {
   // 4. Videos / Vitrines Cinéticas
   console.log('\n🎬 --- FASE 4: Vídeos & Vitrines Cinéticas (6 vídeos) ---');
   for (const filename of VIDEOS) {
-    const remoteSubpath = `videos/${filename}`;
+    const remotePath = `${TARGET_FOLDER}/videos/${filename}`;
     let buf = null;
     const localPath = path.join(LOCAL_WORKS_DIR, 'video', filename);
     if (fs.existsSync(localPath)) {
       buf = fs.readFileSync(localPath);
     } else {
-      buf = await downloadBuffer(`${OLD_CDN_BASE}/${remoteSubpath}`);
+      buf = await downloadBuffer(`${NEW_PULL_ZONE}/videos/${filename}`);
     }
     try {
-      await uploadBuffer(remoteSubpath, buf, 'video/mp4');
-      await uploadBuffer(`gigantera/${remoteSubpath}`, buf, 'video/mp4');
-      const headStatus = await verifyHead(`${NEW_PULL_ZONE}/${remoteSubpath}`);
+      await uploadBuffer(remotePath, buf, 'video/mp4');
+      const headStatus = await verifyHead(`${NEW_PULL_ZONE}/${remotePath}`);
       console.log(`  ✓ ${filename.padEnd(36)} [${(buf.length/1024/1024).toFixed(2)} MB] -> CDN HTTP ${headStatus}`);
     } catch (e) {
       console.error(`  ✗ Erro em ${filename}:`, e.message);
     }
   }
 
-  console.log('\n✨ [MIGRAÇÃO CONCLUÍDA COM SUCESSO]');
+  console.log('\n✨ [SINCRONIZAÇÃO EM "gigantera-portfolio" CONCLUÍDA]');
 }
 
 run().catch(console.error);
