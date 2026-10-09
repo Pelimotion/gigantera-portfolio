@@ -27,7 +27,7 @@ const HARS = {
     const storedIP = localStorage.getItem('penumbra_lan_ip');
     if (mode === 'local') return '';
     if (mode === 'cloud' && storedIP) return `http://${storedIP}:3000`;
-    if (mode === 'cloud') return 'https://pelimotion-portfolio.b-cdn.net/penumbra'; // Fallback Bunny CDN
+    if (mode === 'cloud') return 'https://gigantera-penumbra.b-cdn.net'; // Vibe-Coding Zero-Server CDN
     return ''; // LAN mode (accessed via IP) uses relative paths
   },
   getWsUrl: () => {
@@ -56,30 +56,53 @@ const MediaProvider = {
     MediaProvider.localFilesMap.clear();
     const clips = [];
     
-    // Recursive folder scan
+    // Check if there is already a local manifest
+    async function getLocalManifest(handle) {
+      try {
+        const fileHandle = await handle.getFileHandle('media_manifest.json');
+        const file = await fileHandle.getFile();
+        return JSON.parse(await file.text());
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Recursive folder scan to populate localFilesMap
     async function scanDir(handle, currentPath = '') {
       for await (const entry of handle.values()) {
         const entryPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
         if (entry.kind === 'file') {
           const ext = entry.name.split('.').pop().toLowerCase();
-          if (['mp4', 'mov', 'webm'].includes(ext)) {
+          if (['mp4', 'mov', 'webm', 'json'].includes(ext)) {
             const file = await entry.getFile();
             MediaProvider.localFilesMap.set(entryPath, file);
             
-            // Build dynamic manifest entry
-            clips.push({
-              id: `local_${Date.now()}_${Math.random().toString(36).substr(2,9)}`,
-              filename: entry.name,
-              folder: currentPath || 'ROOT',
-              relative_path: entryPath,
-              absolute_path: entryPath,
-              width: 1920, height: 1080, duration: 10.0, fps: 60.0, // Assumed defaults
-              codec: ext,
-              category: currentPath.toUpperCase() || 'UNCATEGORIZED',
-              suggested_layer: 0,
-              thumbnail: '', // Local thumbnails can be generated via Canvas extraction later
-              is_local: true
-            });
+            if (ext === 'json') {
+              if (entry.name !== 'media_manifest.json') {
+                clips.push({
+                  id: `local_model_${entry.name}`,
+                  filename: entry.name,
+                  type: 'model',
+                  relative_path: entryPath,
+                  category: 'MODEL 3D',
+                  is_local: true
+                });
+              }
+            } else {
+              clips.push({
+                id: `local_${Date.now()}_${Math.random().toString(36).substr(2,9)}`,
+                filename: entry.name,
+                folder: currentPath || 'ROOT',
+                relative_path: entryPath,
+                absolute_path: entryPath,
+                width: 1920, height: 1080, duration: 10.0, fps: 60.0,
+                codec: ext,
+                category: currentPath.split('/')[0].toUpperCase() || 'UNCATEGORIZED',
+                suggested_layer: 0,
+                thumbnail: '', 
+                is_local: true
+              });
+            }
           }
         } else if (entry.kind === 'directory') {
           await scanDir(entry, entryPath);
@@ -88,34 +111,278 @@ const MediaProvider = {
     }
     
     await scanDir(dirHandle);
+
+    // AUTO INSTALLER LOGIC (OTA)
+    if (clips.length === 0) {
+      if (confirm('📦 PASTA VAZIA DETECTADA!\\nDeseja instalar a Biblioteca Completa do Gigantera (Mídias, Modelos 3D e Executável Offline) direto da nuvem CDN nesta pasta?')) {
+        console.log('[Media Nexus] Iniciando Instalação OTA...');
+        const CDN_BASE = 'https://gigantera-penumbra.b-cdn.net';
+        
+        const manifestRes = await fetch(`${CDN_BASE}/media_manifest.json`);
+        const manifestData = await manifestRes.json();
+        
+        const progressDiv = document.createElement('div');
+        progressDiv.style = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#111;padding:30px;border:1px solid #00f0ff;color:#fff;z-index:99999;font-family:monospace;text-align:center;border-radius:8px;box-shadow: 0 0 40px rgba(0,240,255,0.2);';
+        progressDiv.innerHTML = `<h3>📥 INSTALANDO GIGANTERA OFFLINE</h3><p id="ota-status" style="margin:20px 0;">Preparando download de ${manifestData.length} itens...</p><progress id="ota-bar" value="0" max="100" style="width:100%;height:20px;"></progress>`;
+        document.body.appendChild(progressDiv);
+
+        const downloadQueue = [
+          { remote: 'media_manifest.json', local: 'media_manifest.json' },
+          { remote: 'Penumbra_Portable.html', local: 'Penumbra_Offline_Executable.html' }
+        ];
+
+        for (const item of manifestData) {
+          if (item.relative_path) downloadQueue.push({ remote: item.relative_path, local: item.relative_path });
+          if (item.thumbnail) downloadQueue.push({ remote: item.thumbnail, local: item.thumbnail });
+          if (item.preview_anim) downloadQueue.push({ remote: item.preview_anim, local: item.preview_anim });
+        }
+
+        async function ensureDirectory(baseHandle, pathStr) {
+          const parts = pathStr.split('/');
+          let currentHandle = baseHandle;
+          for (const part of parts) {
+            if (!part) continue;
+            currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
+          }
+          return currentHandle;
+        }
+
+        let doneCount = 0;
+        for (const fileItem of downloadQueue) {
+          document.getElementById('ota-status').textContent = `Baixando: ${fileItem.local}`;
+          try {
+            const res = await fetch(`${CDN_BASE}/${fileItem.remote}`);
+            if (res.ok) {
+              const blob = await res.blob();
+              const parts = fileItem.local.split('/');
+              const fileName = parts.pop();
+              const dirPath = parts.join('/');
+              
+              const targetDirHandle = dirPath ? await ensureDirectory(dirHandle, dirPath) : dirHandle;
+              const fileHandle = await targetDirHandle.getFileHandle(fileName, { create: true });
+              const writable = await fileHandle.createWritable();
+              await writable.write(blob);
+              await writable.close();
+            }
+          } catch (e) {
+            console.warn(`Falha no download OTA: ${fileItem.local}`, e);
+          }
+          doneCount++;
+          document.getElementById('ota-bar').value = (doneCount / downloadQueue.length) * 100;
+        }
+
+        progressDiv.innerHTML = `<h3>✅ INSTALAÇÃO CONCLUÍDA!</h3><p>O Penumbra Engine portátil e todas as mídias agora são nativas no seu HD.</p>`;
+        setTimeout(() => progressDiv.remove(), 4000);
+        
+        // Re-scan dynamically created files
+        MediaProvider.localFilesMap.clear();
+        clips.length = 0;
+        await scanDir(dirHandle);
+      }
+    }
+
+    const localManifest = await getLocalManifest(dirHandle);
+    
+    // Auto-Launch Portable HTML if present and we aren't already running in it
+    const isOfflineMode = window.location.protocol === 'blob:' || window.location.protocol === 'file:';
+    if (!isOfflineMode) {
+      try {
+        const execHandle = await dirHandle.getFileHandle('Penumbra_Offline_Executable.html');
+        const execFile = await execHandle.getFile();
+        const execUrl = URL.createObjectURL(execFile);
+        
+        const popup = window.open(execUrl, '_blank');
+        if (popup) {
+          document.body.innerHTML = `
+            <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:#050505; color:#00f0ff; font-family:monospace; text-align:center;">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+              <h2 style="margin-top:20px; font-size:24px;">GIGANTERA OFFLINE INICIADO</h2>
+              <p style="color:#aaa; max-width:400px; line-height:1.6;">O motor portátil foi aberto em uma nova aba rodando diretamente do seu SSD com latência zero.<br><br>Por favor, acesse a nova aba.</p>
+            </div>
+          `;
+          return []; // Halt current app
+        }
+      } catch (e) {
+        // Not found, continue normally
+      }
+    }
+
+    if (localManifest && localManifest.length > 0) {
+      console.log('[Media Nexus] Usando media_manifest.json local otimizado.');
+      return localManifest;
+    }
+
+    return clips;
+  },
+
+  scanExtraDir: async (dirHandle) => {
+    const clips = [];
+    async function scan(handle, currentPath = '') {
+      for await (const entry of handle.values()) {
+        const entryPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+        if (entry.kind === 'file') {
+          const ext = entry.name.split('.').pop().toLowerCase();
+          if (['mp4', 'mov', 'webm'].includes(ext)) {
+            const file = await entry.getFile();
+            // Prefix to avoid collisions
+            const uniquePath = `EXTRA_${Date.now()}/${entryPath}`;
+            MediaProvider.localFilesMap.set(uniquePath, file);
+            clips.push({
+              id: `local_extra_${Date.now()}_${Math.random().toString(36).substr(2,9)}`,
+              filename: entry.name,
+              folder: currentPath || 'LOCAL IMPORT',
+              relative_path: uniquePath,
+              absolute_path: uniquePath,
+              width: 1920, height: 1080, duration: 10.0, fps: 60.0,
+              codec: ext,
+              category: 'IMPORTAÇÃO LOCAL',
+              suggested_layer: 0,
+              thumbnail: '',
+              is_local: true
+            });
+          }
+        } else if (entry.kind === 'directory') {
+          await scan(entry, entryPath);
+        }
+      }
+    }
+    await scan(dirHandle);
     return clips;
   },
 
   initCDN: async () => {
     MediaProvider.mode = 'cdn';
-    const res = await fetch(HARS.resolveUrl('/api/manifest'));
-    if (!res.ok) throw new Error('CDN Manifest not found');
-    return await res.json();
+    // 0. If running on localhost, prefer controller server manifest to include downloads and local edits
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      try {
+        const resLocal = await fetch('/api/manifest');
+        if (resLocal.ok) {
+          const localClips = await resLocal.json();
+          if (Array.isArray(localClips) && localClips.length > 0) {
+            console.log(`[MediaProvider] Loaded manifest from local controller (${localClips.length} clips)`);
+            return localClips;
+          }
+        }
+      } catch (e) {}
+    }
+    // 1. Try Bunny Edge CDN
+    try {
+      const res = await fetch('https://gigantera-penumbra.b-cdn.net/media_manifest.json');
+      if (res.ok) {
+        console.log('[MediaProvider] Loaded manifest from Bunny CDN');
+        return await res.json();
+      }
+    } catch(e) {
+      console.warn('[CDN] Failed to load from Edge CDN, trying local/origin manifest...', e);
+    }
+    // 2. Try relative /media_manifest.json (served locally or offline)
+    try {
+      const res2 = await fetch('/media_manifest.json');
+      if (res2.ok) {
+        console.log('[MediaProvider] Loaded manifest from local /media_manifest.json');
+        return await res2.json();
+      }
+    } catch(e2) {}
+    // 3. Try /api/manifest endpoint
+    try {
+      const res3 = await fetch('/api/manifest');
+      if (res3.ok) {
+        console.log('[MediaProvider] Loaded manifest from /api/manifest');
+        return await res3.json();
+      }
+    } catch(e3) {}
+    return [];
   },
 
-  getMediaUrl: (relativePath) => {
+  getMediaUrl: (clipOrPath) => {
+    if (!clipOrPath) return '';
+    const clip = typeof clipOrPath === 'object' ? clipOrPath : allClips.find(c => c.relative_path === clipOrPath || c.filename === clipOrPath || c.id === clipOrPath);
+    const relPath = typeof clipOrPath === 'string' ? clipOrPath : (clip ? (clip.relative_path || clip.filename) : '');
+    
+    // 0. Check local cache registry (Zero-waste disk playback)
+    if (clip && typeof UserProfileManager !== 'undefined') {
+      const cacheInfo = UserProfileManager.getCacheDetails(clip);
+      if (cacheInfo.isCached && cacheInfo.local_path) {
+        const clean = cacheInfo.local_path.startsWith('/') ? cacheInfo.local_path : `/${cacheInfo.local_path}`;
+        return clean;
+      }
+    }
+
+    // 1. Direct stream url if resolved
+    if (clip && clip.stream_url) {
+      if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !clip.stream_url.includes('/api/stream/proxy')) {
+        return `/api/stream/proxy?url=${encodeURIComponent(clip.stream_url)}`;
+      }
+      return clip.stream_url;
+    }
+
+    // 2. Direct external HTTP URL
+    if (relPath.startsWith('http://') || relPath.startsWith('https://')) {
+      if (clip && clip.is_stream && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !relPath.includes('/api/stream/proxy')) {
+        return `/api/stream/proxy?url=${encodeURIComponent(relPath)}`;
+      }
+      return relPath;
+    }
+
+    // 3. Local downloaded files (media_pool/downloads)
+    if (relPath.startsWith('downloads/') || (clip && clip.is_downloaded)) {
+      const cleanDown = relPath.startsWith('/') ? relPath : `/${relPath}`;
+      return cleanDown;
+    }
+
+    // 4. Standalone File System Access API
     if (MediaProvider.mode === 'local') {
-      const file = MediaProvider.localFilesMap.get(relativePath);
+      const file = MediaProvider.localFilesMap.get(relPath);
       return file ? URL.createObjectURL(file) : '';
     }
-    if (MediaProvider.mode === 'cdn' || MediaProvider.mode === 'lan') {
-      return HARS.resolveUrl(`/api/raw-video?path=${encodeURIComponent(relativePath)}`); // We'll need to adapt the endpoint or use direct paths
+
+    // 5. Bunny Edge CDN
+    if (MediaProvider.mode === 'cdn') {
+      const cleanPath = relPath.startsWith('/') ? relPath.substring(1) : relPath;
+      return `https://gigantera-penumbra.b-cdn.net/${cleanPath}`;
     }
-    return relativePath;
+
+    // 6. LAN / Origin fallback
+    if (MediaProvider.mode === 'lan') {
+      return HARS.resolveUrl(`/api/raw-video?path=${encodeURIComponent(relPath)}`);
+    }
+
+    return relPath;
   },
 
   getThumbUrl: (clip) => {
-    if (!clip || !clip.thumbnail) return '';
-    if (MediaProvider.mode === 'local') {
-      // Future: extract frame from local File blob and cache it. For now, empty skeleton.
+    if (!clip) return '';
+    if (clip.thumbnail && (clip.thumbnail.startsWith('http://') || clip.thumbnail.startsWith('https://'))) {
+      return clip.thumbnail;
+    }
+    // YouTube automated fallback thumbnail
+    const ytId = clip.youtube_id || extractYouTubeId(clip.filename) || extractYouTubeId(clip.relative_path);
+    if (ytId) {
+      return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+    }
+    if (!clip.thumbnail) return '';
+    if (clip.is_downloaded && !clip.thumbnail.startsWith('http')) {
+      const cleanThumb = clip.thumbnail.startsWith('/') ? clip.thumbnail.substring(1) : clip.thumbnail;
+      return `/thumbnails/${cleanThumb}`;
+    }
+    if (MediaProvider.mode === 'local' && !clip.is_downloaded) {
       return ''; 
     }
-    return HARS.resolveUrl(`/thumbnails/${clip.thumbnail}`);
+    const cleanThumb = clip.thumbnail.startsWith('/') ? clip.thumbnail.substring(1) : clip.thumbnail;
+    if (MediaProvider.mode === 'cdn' && !clip.is_downloaded) {
+      return `https://gigantera-penumbra.b-cdn.net/${cleanThumb}`;
+    }
+    return HARS.resolveUrl(`/thumbnails/${cleanThumb}`);
+  },
+
+  getPreviewAnimUrl: (clip) => {
+    if (!clip || !clip.preview_anim) return '';
+    if (clip.preview_anim.startsWith('http://') || clip.preview_anim.startsWith('https://')) return clip.preview_anim;
+    const cleanAnim = clip.preview_anim.startsWith('/') ? clip.preview_anim.substring(1) : clip.preview_anim;
+    if (MediaProvider.mode === 'cdn') {
+      return `https://gigantera-penumbra.b-cdn.net/${cleanAnim}`;
+    }
+    return '';
   }
 };
 
@@ -203,7 +470,8 @@ let appState = {
   vertical_projection: false,
   projector_compensation: true,
   audio_gain: 1.0,
-  fps_limit: 60,
+  fps_limit: 30,
+  network_output_enabled: false,
   fx: {
     active: false,
     target: 'master', // 'master' (Master PGM Output), 'deck_a' (Deck A L0), 'deck_b' (Deck B L3)
@@ -276,8 +544,20 @@ let appState = {
 };
 window.appState = appState;
 
+function extractYouTubeId(url) {
+  if (!url || typeof url !== 'string') return null;
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/);
+  return match ? match[1] : null;
+}
+function isYouTubeUrl(url) {
+  return Boolean(extractYouTubeId(url));
+}
+
 let allClips = [];
 let activeCategoryFilter = 'ALL';
+let activeSourceFilter = 'ALL';
+let isGroupedByCategory = true;
+let activeDownloadJobs = new Map();
 let allMattes = [];
 let activeMatteCategoryFilter = 'ALL';
 let activeSelectedMatte = null;
@@ -521,8 +801,81 @@ function initWebSocket() {
         updateAudioSourceUI(msg.data);
       } else if (msg.type === 'manifest_updated') {
         allClips = msg.data;
+        loadCustomClipsFromStorage();
         renderFolderPills();
         renderMediaCards();
+      } else if (msg.type === 'download_progress') {
+        const job = msg.job;
+        if (job) {
+          activeDownloadJobs.set(job.id, job);
+          const pWrap = document.getElementById('nsd-progress-wrap');
+          const pStatus = document.getElementById('nsd-progress-status');
+          const pMetrics = document.getElementById('nsd-progress-metrics');
+          const pBar = document.getElementById('nsd-progress-bar');
+          if (pWrap) pWrap.style.display = 'block';
+          if (pStatus) pStatus.textContent = `BAIXANDO: ${job.title || 'MÍDIA'}...`;
+          if (pMetrics) pMetrics.textContent = `${job.progress}% · ${job.speed || ''} · ETA ${job.eta || ''}`;
+          if (pBar) pBar.style.width = `${job.progress}%`;
+        }
+      } else if (msg.type === 'download_complete') {
+        const job = msg.job;
+        const newClip = msg.clip;
+        if (job) activeDownloadJobs.delete(job.id);
+        const pStatus = document.getElementById('nsd-progress-status');
+        const pBar = document.getElementById('nsd-progress-bar');
+        if (pStatus) pStatus.textContent = `DOWNLOAD CONCLUÍDO: ${newClip ? newClip.filename : 'OK'}`;
+        if (pBar) pBar.style.width = '100%';
+        setTimeout(() => {
+          const pWrap = document.getElementById('nsd-progress-wrap');
+          if (pWrap) pWrap.style.display = 'none';
+        }, 3000);
+        if (newClip && !allClips.some(c => c.id === newClip.id)) {
+          allClips.unshift(newClip);
+          renderFolderPills();
+          renderMediaCards();
+        }
+      } else if (msg.type === 'download_error') {
+        const pStatus = document.getElementById('nsd-progress-status');
+        if (pStatus) pStatus.textContent = `ERRO NO DOWNLOAD: ${msg.job?.error || 'Falha'}`;
+      } else if (msg.type === 'clip_updated') {
+        const updated = msg.clip;
+        if (updated) {
+          const idx = allClips.findIndex(c => c.id === updated.id);
+          if (idx !== -1) allClips[idx] = { ...allClips[idx], ...updated };
+          renderMediaCards();
+        }
+      } else if (msg.type === 'user_profile_updated') {
+        if (msg.profile && typeof UserProfileManager !== 'undefined') {
+          UserProfileManager.profile = {
+            ...UserProfileManager.profile,
+            ...msg.profile,
+            settings: { ...UserProfileManager.profile.settings, ...(msg.profile.settings || {}) },
+            category_overrides: { ...(msg.profile.category_overrides || {}) },
+            cached_media_registry: { ...(msg.profile.cached_media_registry || {}) }
+          };
+          UserProfileManager.updateCacheUI();
+          UserProfileManager.applyCategoryOverrides();
+          renderMediaCards();
+        }
+      } else if (msg.type === 'clip_cached') {
+        if (msg.clipId) {
+          const clip = allClips.find(c => c.id === msg.clipId || c.filename === msg.filename);
+          if (clip) {
+            clip.is_downloaded = true;
+            clip.relative_path = msg.local_path;
+          }
+          if (typeof UserProfileManager !== 'undefined') {
+            if (!UserProfileManager.profile.cached_media_registry) UserProfileManager.profile.cached_media_registry = {};
+            UserProfileManager.profile.cached_media_registry[msg.clipId] = {
+              filename: msg.filename,
+              local_path: msg.local_path,
+              size_mb: msg.size_mb,
+              is_downloaded: true
+            };
+            UserProfileManager.updateCacheUI();
+          }
+          renderMediaCards();
+        }
       }
     } catch (e) {
       console.warn('WS message parsing error:', e);
@@ -550,11 +903,12 @@ function syncVideoSources() {
       if (!playerL0.paused) playerL0.pause();
     } else {
       const clip = allClips.find(c => c.id === appState.layers.layer0.clipId);
-      const targetSrc = clip ? MediaProvider.getMediaUrl(clip.relative_path) : '';
+      const targetSrc = clip ? MediaProvider.getMediaUrl(clip) : '';
       playerL0.muted = true;
       playerL0.playsInline = true;
       playerL0.loop = true;
-      if (!playerL0.src.includes(targetSrc)) {
+      if (targetSrc && (!playerL0.src.includes(targetSrc) || playerL0.dataset.activeSrc !== targetSrc)) {
+        playerL0.dataset.activeSrc = targetSrc;
         playerL0.src = targetSrc;
         playerL0.load();
         playerL0.play().catch(() => {});
@@ -570,11 +924,12 @@ function syncVideoSources() {
       if (!playerL3.paused) playerL3.pause();
     } else {
       const clip = allClips.find(c => c.id === appState.layers.layer3.clipId);
-      const targetSrc = clip ? MediaProvider.getMediaUrl(clip.relative_path) : '';
+      const targetSrc = clip ? MediaProvider.getMediaUrl(clip) : '';
       playerL3.muted = true;
       playerL3.playsInline = true;
       playerL3.loop = true;
-      if (!playerL3.src.includes(targetSrc)) {
+      if (targetSrc && (!playerL3.src.includes(targetSrc) || playerL3.dataset.activeSrc !== targetSrc)) {
+        playerL3.dataset.activeSrc = targetSrc;
         playerL3.src = targetSrc;
         playerL3.load();
         playerL3.play().catch(() => {});
@@ -590,11 +945,12 @@ function syncVideoSources() {
       if (!playerL4.paused) playerL4.pause();
     } else {
       const clip = allClips.find(c => c.id === appState.layers.layer4.clipId);
-      const targetSrc = clip ? MediaProvider.getMediaUrl(clip.relative_path) : '';
+      const targetSrc = clip ? MediaProvider.getMediaUrl(clip) : '';
       playerL4.muted = true;
       playerL4.playsInline = true;
       playerL4.loop = true;
-      if (!playerL4.src.includes(targetSrc)) {
+      if (targetSrc && (!playerL4.src.includes(targetSrc) || playerL4.dataset.activeSrc !== targetSrc)) {
+        playerL4.dataset.activeSrc = targetSrc;
         playerL4.src = targetSrc;
         playerL4.load();
         playerL4.play().catch(() => {});
@@ -2489,7 +2845,7 @@ initMarineSpores();
 
 // Load real 3D vertex points extracted from user's Espinhaço FBX
 function loadSpinePoints() {
-  fetch('/penumbra/assets/espinhaco_spine_points.json')
+  fetch('assets/espinhaco_spine_points.json')
     .then(r => r.json())
     .then(data => {
       if (data && data.points && data.points.length > 0) {
@@ -4331,10 +4687,152 @@ function renderQueueCards() {
   
   // Set real canvas resolution based on display size to avoid blur
   const rect = canvas.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return;
   canvas.width = rect.width;
   canvas.height = rect.height;
   
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // If in Pro Timeline Arrangement View (Expanded Height >= 120px)
+  if (rect.height >= 120) {
+    const w = canvas.width;
+    const h = canvas.height;
+    const rulerH = 22;
+    const tracksH = h - rulerH;
+    const numTracks = 5;
+    const trackH = tracksH / numTracks;
+
+    // 1. Draw Top Time Ruler
+    ctx.fillStyle = '#06090e';
+    ctx.fillRect(0, 0, w, rulerH);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, rulerH);
+    ctx.lineTo(w, rulerH);
+    ctx.stroke();
+
+    // Bar ticks (every 4 bars / 16 bars)
+    const barWidth = w / 16;
+    for (let b = 0; b <= 16; b++) {
+      const bx = b * barWidth;
+      ctx.strokeStyle = b % 4 === 0 ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 255, 255, 0.1)';
+      ctx.beginPath();
+      ctx.moveTo(bx, rulerH - (b % 4 === 0 ? 10 : 5));
+      ctx.lineTo(bx, rulerH);
+      ctx.stroke();
+
+      if (b % 4 === 0 && b < 16) {
+        ctx.fillStyle = 'rgba(0, 240, 255, 0.7)';
+        ctx.font = '8px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(`BAR ${b+1}`, bx + 4, rulerH - 4);
+      }
+    }
+
+    // 2. Track Lanes Background & Dividing Lines
+    const trackColors = [
+      'rgba(0, 255, 136, 0.04)',
+      'rgba(255, 255, 255, 0.02)',
+      'rgba(255, 255, 255, 0.02)',
+      'rgba(0, 240, 255, 0.04)',
+      'rgba(255, 42, 133, 0.04)'
+    ];
+
+    for (let t = 0; t < numTracks; t++) {
+      const ty = rulerH + (t * trackH);
+      ctx.fillStyle = trackColors[t] || '#05070a';
+      ctx.fillRect(0, ty, w, trackH);
+
+      // Grid line
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.beginPath();
+      ctx.moveTo(0, ty + trackH);
+      ctx.lineTo(w, ty + trackH);
+      ctx.stroke();
+
+      // Vertical measure lines across tracks
+      for (let b = 1; b < 16; b++) {
+        const bx = b * barWidth;
+        ctx.strokeStyle = b % 4 === 0 ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.015)';
+        ctx.beginPath();
+        ctx.moveTo(bx, ty);
+        ctx.lineTo(bx, ty + trackH);
+        ctx.stroke();
+      }
+    }
+
+    // 3. Render Active Program Clip on Track 0 (L0 Master)
+    const l0Clip = appState.layers?.layer0;
+    const l0Y = rulerH + 2;
+    const block0W = barWidth * 8;
+    ctx.fillStyle = 'rgba(0, 255, 136, 0.18)';
+    ctx.strokeStyle = 'rgba(0, 255, 136, 0.75)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(10, l0Y, block0W - 10, trackH - 4, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('▶ L0 PROGRAM: ' + ((l0Clip?.name || 'MASTER').substring(0, 24)), 18, l0Y + 12);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.font = '8px monospace';
+    ctx.fillText('MATTE: ' + (l0Clip?.matte || 'FULL'), 18, l0Y + trackH - 8);
+
+    // 4. Render Active Cue Clip on Track 3 (L3 Cue Bus B)
+    const l3Clip = appState.layers?.layer3;
+    const l3Y = rulerH + (3 * trackH) + 2;
+    const block3X = 10 + (barWidth * 4);
+    const block3W = barWidth * 8;
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.18)';
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.75)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(block3X, l3Y, block3W, trackH - 4, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#00f0ff';
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('◱ CUE BUS B: ' + ((l3Clip?.name || 'PREVIEW').substring(0, 22)), block3X + 8, l3Y + 12);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.font = '8px monospace';
+    ctx.fillText('NEXT IN QUEUE', block3X + 8, l3Y + trackH - 8);
+
+    // 5. Render Queue Future Sequence Blocks
+    if (queueList && queueList.length > 0) {
+      queueList.slice(0, 4).forEach((qItem, qIdx) => {
+        const qX = 10 + ((qIdx + 2) * barWidth * 3);
+        if (qX < w - 80) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(qX, l0Y, barWidth * 2.8, trackH - 4, 3);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+          ctx.font = '8px monospace';
+          ctx.fillText(`+${qIdx+1} ` + (qItem.name || '').substring(0, 10), qX + 6, l0Y + 12);
+        }
+      });
+    }
+
+    // 6. Tension Waveform Indicator along bottom track
+    const fxY = rulerH + (4 * trackH);
+    ctx.fillStyle = 'rgba(255, 42, 133, 0.1)';
+    ctx.fillRect(0, fxY, w, trackH);
+    ctx.fillStyle = 'rgba(255, 42, 133, 0.8)';
+    ctx.font = 'bold 8.5px monospace';
+    ctx.fillText('FX ENGINE: ' + (appState.fx?.enabled ? 'ACTIVE (' + (appState.fx?.activeEffect || 'AUTO') + ')' : 'BYPASS'), 10, fxY + 13);
+
+    return;
+  }
   
   if (!queueList || queueList.length === 0) {
     ctx.fillStyle = 'rgba(255,255,255,0.2)';
@@ -4902,6 +5400,27 @@ async function loadMediaPool(providedClips = null) {
       }
     }
 
+    // Initialize Centralized User Profile & Cache Registry
+    if (typeof UserProfileManager !== 'undefined') {
+      await UserProfileManager.init();
+    }
+    loadCustomClipsFromStorage();
+
+    // Dynamic 3D Model Override from CDN or Local Storage
+    const customModel = allClips.find(c => c.type === 'model' && c.filename.includes('espinhaco_spine_points.json'));
+    if (customModel && (MediaProvider.mode === 'cdn' || MediaProvider.mode === 'local')) {
+      const modelUrl = MediaProvider.getMediaUrl(customModel.relative_path);
+      fetch(modelUrl).then(r => r.json()).then(data => {
+        if (data && data.points) {
+          plexusSpinePoints = data.points;
+          console.log(`[✓] Plexus 3D Espinhaço override from ${MediaProvider.mode}: ${plexusSpinePoints.length} vertices.`);
+        }
+      }).catch(e => console.warn('Failed to load custom model override', e));
+    }
+
+    // Keep only videos for the UI Grid
+    allClips = allClips.filter(c => c.type !== 'model');
+
     // Ensure Plexus 3D Espinhaço Generative clip is prepended and available in Media Pool
     if (!allClips.some(c => c.id === 'clip_gen_plexus_spine')) {
       allClips.unshift({
@@ -4996,25 +5515,1171 @@ window.toggleAutopilotFolder = function(folder, isActive) {
   sendAction('set_autopilot_folders', { active_folders: active });
 };
 
+// ============================================================================
+// CENTRALIZED USER PROFILE & ZERO-WASTE LOCAL CACHE MANAGER
+// ============================================================================
+const UserProfileManager = {
+  profile: {
+    schema_version: "1.2.0",
+    app: "Penumbra System VJ Engine",
+    last_saved: new Date().toISOString(),
+    settings: {
+      media_source: "cdn",
+      remember_source: true,
+      cdn_pin: "2026",
+      target_fps: 30,
+      osc_enabled: false,
+      lan_ip: "localhost",
+      active_macro_state: "GROOVE",
+      active_macro_preset: "Pure Clean Cinema",
+      grading: { gamma: 0.85, black_pedestal: -0.05, mid_density: 1.0, sobel_mix: 0.22, contrast: 1.0 },
+      audio: { input: "line_in", headphone_monitor: false, headphone_volume: 0.8 },
+      ui: { group_by_category: true, active_source_filter: "ALL", active_category_filter: "ALL", hover_preview_enabled: true, hover_preview_delay_ms: 280 }
+    },
+    custom_clips: [],
+    category_overrides: {},
+    cached_media_registry: {}
+  },
+
+  init: async () => {
+    let loadedFromServer = false;
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      try {
+        const res = await fetch('/api/user/profile');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data === 'object') {
+            UserProfileManager.profile = {
+              ...UserProfileManager.profile,
+              ...data,
+              settings: { ...UserProfileManager.profile.settings, ...(data.settings || {}) },
+              category_overrides: { ...(data.category_overrides || {}) },
+              cached_media_registry: { ...(data.cached_media_registry || {}) }
+            };
+            if (Array.isArray(data.custom_clips)) {
+              UserProfileManager.profile.custom_clips = data.custom_clips;
+            }
+            loadedFromServer = true;
+            console.log('[UserProfileManager] Perfil centralizado carregado do servidor (penumbra_user_profile.json)');
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!loadedFromServer) {
+      try {
+        const raw = localStorage.getItem('penumbra_user_profile');
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (data && typeof data === 'object') {
+            UserProfileManager.profile = {
+              ...UserProfileManager.profile,
+              ...data,
+              settings: { ...UserProfileManager.profile.settings, ...(data.settings || {}) },
+              category_overrides: { ...(data.category_overrides || {}) },
+              cached_media_registry: { ...(data.cached_media_registry || {}) }
+            };
+            if (Array.isArray(data.custom_clips)) {
+              UserProfileManager.profile.custom_clips = data.custom_clips;
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    UserProfileManager.applyCategoryOverrides();
+    UserProfileManager.rehydrateCustomClips();
+    UserProfileManager.updateCacheUI();
+  },
+
+  save: (syncServer = true) => {
+    try {
+      UserProfileManager.profile.last_saved = new Date().toISOString();
+      localStorage.setItem('penumbra_user_profile', JSON.stringify(UserProfileManager.profile));
+      if (syncServer && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        fetch('/api/user/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(UserProfileManager.profile)
+        }).catch(() => {});
+      }
+      UserProfileManager.updateCacheUI();
+    } catch (e) {}
+  },
+
+  getSetting: (key, fallback = null) => {
+    return (UserProfileManager.profile.settings && UserProfileManager.profile.settings[key] !== undefined)
+      ? UserProfileManager.profile.settings[key]
+      : fallback;
+  },
+
+  setSetting: (key, val) => {
+    if (!UserProfileManager.profile.settings) UserProfileManager.profile.settings = {};
+    UserProfileManager.profile.settings[key] = val;
+    UserProfileManager.save(true);
+  },
+
+  applyCategoryOverrides: () => {
+    if (!UserProfileManager.profile.category_overrides) return;
+    const overrides = UserProfileManager.profile.category_overrides;
+    allClips.forEach(c => {
+      if (overrides[c.id]) {
+        c.category = overrides[c.id];
+        if (c.category === 'CHROMA') c.has_chroma = true;
+      }
+    });
+  },
+
+  rehydrateCustomClips: () => {
+    if (!Array.isArray(UserProfileManager.profile.custom_clips)) return;
+    UserProfileManager.profile.custom_clips.forEach(c => {
+      if (!allClips.some(existing => existing.id === c.id || existing.filename === c.filename)) {
+        allClips.unshift(c);
+      }
+    });
+  },
+
+  isClipCached: (clip) => {
+    if (!clip) return false;
+    if (clip.is_local && MediaProvider.mode === 'local') return true;
+    if (clip.is_downloaded) return true;
+    const reg = UserProfileManager.profile.cached_media_registry || {};
+    if (reg[clip.id] && reg[clip.id].is_downloaded) return true;
+    if (reg[clip.filename] && reg[clip.filename].is_downloaded) return true;
+    const baseName = clip.relative_path ? clip.relative_path.split('/').pop() : '';
+    if (baseName && reg[baseName] && reg[baseName].is_downloaded) return true;
+    return false;
+  },
+
+  getCacheDetails: (clip) => {
+    if (!clip) return { isCached: false, size_mb: 0 };
+    const reg = UserProfileManager.profile.cached_media_registry || {};
+    const item = reg[clip.id] || reg[clip.filename] || (clip.relative_path ? reg[clip.relative_path.split('/').pop()] : null);
+    if (item && item.is_downloaded) {
+      return { isCached: true, size_mb: item.size_mb || clip.size_mb || 0, local_path: item.local_path };
+    }
+    if (clip.is_downloaded) {
+      return { isCached: true, size_mb: clip.size_mb || 0, local_path: clip.relative_path };
+    }
+    if (clip.is_local && MediaProvider.mode === 'local') {
+      return { isCached: true, size_mb: clip.size_mb || 0, local_path: clip.absolute_path || clip.relative_path };
+    }
+    return { isCached: false, size_mb: clip.size_mb || 0 };
+  },
+
+  updateCacheUI: () => {
+    const reg = UserProfileManager.profile.cached_media_registry || {};
+    const cachedItems = Object.values(reg).filter(v => v.is_downloaded);
+    const totalCachedMb = cachedItems.reduce((acc, it) => acc + (it.size_mb || 0), 0);
+    const offlineClipsCount = allClips.filter(c => UserProfileManager.isClipCached(c)).length;
+    const remoteClipsCount = Math.max(0, allClips.length - offlineClipsCount);
+
+    const lblCacheStats = document.getElementById('lbl-cache-stats');
+    if (lblCacheStats) {
+      lblCacheStats.textContent = `💾 ${offlineClipsCount} OFFLINE · ☁️ ${remoteClipsCount} NUVEM`;
+    }
+
+    const badgeCacheSize = document.getElementById('cfg-cache-size-badge');
+    if (badgeCacheSize) {
+      badgeCacheSize.textContent = `${Math.round(totalCachedMb * 10) / 10} MB EM DISCO`;
+    }
+
+    const lblLastSaved = document.getElementById('cfg-profile-last-saved');
+    if (lblLastSaved && UserProfileManager.profile.last_saved) {
+      const d = new Date(UserProfileManager.profile.last_saved);
+      lblLastSaved.textContent = d.toLocaleString();
+    }
+
+    const lblCustomCount = document.getElementById('cfg-profile-custom-count');
+    if (lblCustomCount) {
+      lblCustomCount.textContent = (UserProfileManager.profile.custom_clips || []).length;
+    }
+
+    const lblCatCount = document.getElementById('cfg-profile-cat-count');
+    if (lblCatCount) {
+      lblCatCount.textContent = Object.keys(UserProfileManager.profile.category_overrides || {}).length;
+    }
+  }
+};
+window.UserProfileManager = UserProfileManager;
+
+function saveCustomClipsToStorage() {
+  try {
+    const custom = allClips.filter(c => c.is_stream || c.is_downloaded || c.id.startsWith('stream_') || c.id.startsWith('clip_dl_'));
+    UserProfileManager.profile.custom_clips = custom;
+    UserProfileManager.save(true);
+    localStorage.setItem('penumbra_custom_clips', JSON.stringify(custom));
+  } catch (e) {}
+}
+
+function loadCustomClipsFromStorage() {
+  UserProfileManager.rehydrateCustomClips();
+}
+
+function getClipSource(clip) {
+  if (clip.is_generative || clip.id === 'clip_gen_plexus_spine') return 'generative';
+  if (clip.is_stream || clip.id.startsWith('stream_') || (clip.relative_path && (clip.relative_path.startsWith('http://') || clip.relative_path.startsWith('https://')))) {
+    return isYouTubeUrl(clip.relative_path || clip.filename) ? 'youtube' : 'stream';
+  }
+  if (clip.is_downloaded || (clip.relative_path && clip.relative_path.startsWith('downloads/'))) {
+    return 'downloaded';
+  }
+  if (clip.is_local || clip.id.startsWith('local_')) return 'local';
+  return 'cdn';
+}
+
+function updateCategoryAndSourceBadges() {
+  const countsSrc = { ALL: allClips.length, cdn: 0, local: 0, stream: 0 };
+  const countsCat = { ALL: allClips.length, MINIMAL: 0, ABSTRACT: 0, FIGURA: 0, DENSE: 0, CHROMA: 0, 'STREAMS & YOUTUBE': 0, GENERATIVE: 0 };
+
+  allClips.forEach(c => {
+    const src = getClipSource(c);
+    if (src === 'cdn') countsSrc.cdn++;
+    else if (src === 'local' || src === 'downloaded') countsSrc.local++;
+    else if (src === 'youtube' || src === 'stream') countsSrc.stream++;
+
+    if (c.has_chroma || c.category === 'CHROMA') countsCat.CHROMA++;
+    else if (countsCat[c.category] !== undefined) countsCat[c.category]++;
+    else countsCat['STREAMS & YOUTUBE']++;
+  });
+
+  const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  setTxt('badge-count-src-all', countsSrc.ALL);
+  setTxt('badge-count-src-cdn', countsSrc.cdn);
+  setTxt('badge-count-src-local', countsSrc.local);
+  setTxt('badge-count-src-stream', countsSrc.stream);
+
+  setTxt('badge-count-cat-all', countsCat.ALL);
+  setTxt('badge-count-cat-minimal', countsCat.MINIMAL);
+  setTxt('badge-count-cat-abstract', countsCat.ABSTRACT);
+  setTxt('badge-count-cat-figura', countsCat.FIGURA);
+  setTxt('badge-count-cat-dense', countsCat.DENSE);
+  setTxt('badge-count-cat-chroma', countsCat.CHROMA);
+  setTxt('badge-count-cat-stream', countsCat['STREAMS & YOUTUBE']);
+  setTxt('badge-count-cat-gen', countsCat.GENERATIVE);
+}
+
+window.setClipCategory = function(clipId, newCat) {
+  const clip = allClips.find(c => c.id === clipId);
+  if (!clip) return;
+  clip.category = newCat;
+  if (clip.has_chroma && newCat !== 'CHROMA') clip.has_chroma = false;
+  if (newCat === 'CHROMA') clip.has_chroma = true;
+
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    fetch(`/api/clips/${clipId}/category`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: newCat })
+    }).catch(() => {});
+  }
+  saveCustomClipsToStorage();
+  renderMediaCards();
+};
+
+window.openCategorySelector = function(clipId, event) {
+  if (event) event.stopPropagation();
+  const clip = allClips.find(c => c.id === clipId);
+  if (!clip) return;
+
+  const categories = ['MINIMAL', 'ABSTRACT', 'FIGURA', 'DENSE', 'CHROMA', 'STREAMS & YOUTUBE', 'GENERATIVE'];
+  const newCat = prompt(`Alterar categoria do clipe "${clip.filename}":\n\nCategorias disponíveis:\n${categories.join(' · ')}`, clip.category || 'MINIMAL');
+  if (newCat && categories.includes(newCat.trim().toUpperCase())) {
+    window.setClipCategory(clipId, newCat.trim().toUpperCase());
+  } else if (newCat && newCat.trim()) {
+    window.setClipCategory(clipId, newCat.trim().toUpperCase());
+  }
+};
+
+window.downloadStreamClip = function(clipId, event) {
+  if (event) event.stopPropagation();
+  const clip = allClips.find(c => c.id === clipId);
+  if (!clip) return;
+  const targetUrl = clip.stream_url || clip.relative_path || clip.filename;
+  ingestStreamMedia(targetUrl, clip.category, clip.filename, 'download');
+};
+
+async function ingestStreamMedia(rawUrl, targetCategory, customTitle, mode = 'stream') {
+  const url = (rawUrl || '').trim();
+  if (!url) {
+    alert('Por favor, informe uma URL válida.');
+    return;
+  }
+  const category = targetCategory || 'STREAMS & YOUTUBE';
+  const title = (customTitle || '').trim();
+  const progressWrap = document.getElementById('mid-yt-progress-strip') || document.getElementById('nsd-progress-wrap');
+  const progressStatus = document.getElementById('mid-yt-progress-status') || document.getElementById('nsd-progress-status');
+  const progressMetrics = document.getElementById('mid-yt-progress-metrics') || document.getElementById('nsd-progress-metrics');
+  const progressBar = document.getElementById('mid-yt-progress-bar') || document.getElementById('nsd-progress-bar');
+
+  if (progressWrap) progressWrap.style.display = 'block';
+  if (progressStatus) progressStatus.textContent = mode === 'download' ? 'INICIANDO DOWNLOAD NO SERVIDOR...' : 'CONECTANDO FEED EXTERNO...';
+  if (progressBar) progressBar.style.width = '35%';
+
+  const isServerAvailable = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  if (mode === 'download' && isServerAvailable) {
+    try {
+      const res = await fetch('/api/stream/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, category, title })
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (progressStatus) progressStatus.textContent = 'DOWNLOAD EM ANDAMENTO...';
+        console.log('[Nexus Downloader] Job iniciado:', data.jobId);
+      } else {
+        throw new Error(data.error || 'Falha ao iniciar download');
+      }
+    } catch (err) {
+      console.warn('[Nexus Downloader] Erro no servidor:', err);
+      if (progressStatus) progressStatus.textContent = 'ERRO NO DOWNLOAD: ' + err.message;
+    }
+  } else if (mode === 'stream' && isServerAvailable) {
+    try {
+      const res = await fetch('/api/stream/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const streamClip = {
+          id: `stream_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          filename: title || data.title || url,
+          folder: "YOUTUBE & STREAMS",
+          relative_path: url,
+          stream_url: data.streamUrl || url,
+          category: category,
+          suggested_layer: 0,
+          has_chroma: false,
+          is_stream: true,
+          thumbnail: data.thumbnail || '',
+          duration: data.duration || 9999,
+          fps: 30,
+          width: 1920,
+          height: 1080,
+          notes: `Stream ativo: ${url}`,
+          project: "Feeds Externos",
+          project_folder: "STREAM",
+          source: data.is_youtube ? 'youtube' : 'stream',
+          youtube_id: data.videoId || null
+        };
+        allClips.unshift(streamClip);
+        saveCustomClipsToStorage();
+        renderMediaCards();
+        if (progressWrap) progressWrap.style.display = 'none';
+        console.log('[✓] Stream conectado com sucesso ao Media Pool:', streamClip);
+      } else {
+        throw new Error('Falha ao resolver stream');
+      }
+    } catch (err) {
+      console.warn('[Nexus Stream] Falha ao resolver via servidor, fallback direto:', err);
+      createDirectStreamClip(url, category, title);
+    }
+  } else {
+    createDirectStreamClip(url, category, title);
+  }
+}
+
+function createDirectStreamClip(url, category, customTitle) {
+  const isYt = isYouTubeUrl(url);
+  const ytId = extractYouTubeId(url);
+  const cleanTitle = customTitle || (isYt ? `YouTube [${ytId}]` : (url.split('/').pop().split('?')[0] || 'Stream Feed'));
+  const thumbUrl = isYt ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : '';
+
+  const streamClip = {
+    id: `stream_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    filename: cleanTitle,
+    folder: "YOUTUBE & STREAMS",
+    relative_path: url,
+    stream_url: url,
+    category: category || 'STREAMS & YOUTUBE',
+    suggested_layer: 0,
+    has_chroma: false,
+    is_stream: true,
+    thumbnail: thumbUrl,
+    duration: 9999,
+    fps: 30,
+    width: 1920,
+    height: 1080,
+    notes: `Stream ingest: ${url}`,
+    project: "Feeds Externos",
+    project_folder: "STREAM",
+    source: isYt ? 'youtube' : 'stream',
+    youtube_id: ytId
+  };
+
+  allClips.unshift(streamClip);
+  saveCustomClipsToStorage();
+  renderMediaCards();
+  const progressWrap = document.getElementById('nsd-progress-wrap');
+  if (progressWrap) progressWrap.style.display = 'none';
+}
+
+window.cacheMediaClip = async function(clipId, event) {
+  if (event) event.stopPropagation();
+  const clip = allClips.find(c => c.id === clipId);
+  if (!clip) return;
+
+  const btn = event?.currentTarget;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ BAIXANDO...';
+  }
+
+  // 1. If running with Node server controller
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    try {
+      const mediaUrl = MediaProvider.getMediaUrl(clip);
+      const res = await fetch('/api/cache/download-clip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clipId: clip.id,
+          url: mediaUrl,
+          filename: clip.filename,
+          category: clip.category
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        clip.is_downloaded = true;
+        clip.relative_path = data.local_path;
+        if (!UserProfileManager.profile.cached_media_registry) UserProfileManager.profile.cached_media_registry = {};
+        UserProfileManager.profile.cached_media_registry[clip.id] = {
+          filename: clip.filename,
+          local_path: data.local_path,
+          size_mb: data.size_mb,
+          is_downloaded: true
+        };
+        UserProfileManager.save(false);
+        renderMediaCards();
+        console.log(`[✓] Clipe ${clip.filename} salvo no cache local.`);
+        return;
+      }
+    } catch (e) {
+      console.warn('[Cache] Erro no download do servidor:', e);
+    }
+  }
+
+  // 2. Standalone Browser Cache Storage API Fallback
+  if ('caches' in window) {
+    try {
+      const mediaUrl = MediaProvider.getMediaUrl(clip);
+      const cache = await caches.open('penumbra-media-cache');
+      await cache.add(mediaUrl);
+      clip.is_downloaded = true;
+      if (!UserProfileManager.profile.cached_media_registry) UserProfileManager.profile.cached_media_registry = {};
+      UserProfileManager.profile.cached_media_registry[clip.id] = {
+        filename: clip.filename,
+        local_path: mediaUrl,
+        size_mb: clip.size_mb || 20,
+        is_downloaded: true,
+        is_browser_cache: true
+      };
+      UserProfileManager.save(true);
+      renderMediaCards();
+      console.log(`[✓] Clipe ${clip.filename} armazenado no Cache Storage do navegador.`);
+    } catch (err) {
+      console.warn('[Cache] Falha no Cache API:', err);
+      alert('Não foi possível salvar o clipe offline no navegador.');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '⬇️ CACHE';
+      }
+    }
+  }
+};
+
+window.exportUserProfile = function() {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    window.location.href = '/api/user/profile/export';
+    return;
+  }
+  const jsonStr = JSON.stringify(UserProfileManager.profile, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'penumbra_user_profile.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
+window.importUserProfileFromFile = function(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data || typeof data !== 'object') throw new Error('Formato inválido');
+
+      UserProfileManager.profile = {
+        ...UserProfileManager.profile,
+        ...data,
+        settings: { ...UserProfileManager.profile.settings, ...(data.settings || {}) },
+        category_overrides: { ...(data.category_overrides || {}) },
+        cached_media_registry: { ...(data.cached_media_registry || {}) }
+      };
+      if (Array.isArray(data.custom_clips)) {
+        UserProfileManager.profile.custom_clips = data.custom_clips;
+      }
+      UserProfileManager.save(true);
+      UserProfileManager.applyCategoryOverrides();
+      UserProfileManager.rehydrateCustomClips();
+      renderFolderPills();
+      renderMediaCards();
+      alert('✓ Perfil do usuário importado e restaurado com sucesso!');
+    } catch (err) {
+      alert(`Falha ao importar perfil: ${err.message}`);
+    }
+  };
+  reader.readAsText(file);
+};
+
+window.openCacheProfileSettings = function() {
+  openSettingsModal();
+  setSettingsTab('profile');
+};
+
+window.refreshCacheStatus = async function() {
+  await UserProfileManager.init();
+  renderMediaCards();
+};
+
+window.toggleHoverPreview = function(enabled) {
+  UserProfileManager.setSetting('hover_preview_enabled', Boolean(enabled));
+};
+
+window.downloadAllPendingClips = async function() {
+  const unCached = allClips.filter(c => !UserProfileManager.isClipCached(c) && !c.is_generative);
+  if (unCached.length === 0) {
+    alert('Todos os clipes já estão baixados e cacheados localmente no seu computador!');
+    return;
+  }
+  const confirmDl = confirm(`Deseja iniciar o download de ${unCached.length} clipes para o cache local permanente?`);
+  if (!confirmDl) return;
+
+  for (const c of unCached) {
+    try {
+      await window.cacheMediaClip(c.id);
+    } catch (e) {}
+  }
+  alert('Processamento de download em lote concluído!');
+};
+
+function createMediaCardElement(clip) {
+  const card = document.createElement('div');
+  const isGen = Boolean(clip.is_generative || clip.id === 'clip_gen_plexus_spine');
+  const clipSource = getClipSource(clip);
+  card.className = `media-card ${isGen ? 'is-generative' : ''} source-${clipSource}`;
+  const thumbSrc = MediaProvider.getThumbUrl(clip);
+  const animSrc = MediaProvider.getPreviewAnimUrl(clip) || thumbSrc;
+  const projName = clip.project || '1.In';
+
+  let srcBadgeHtml = '';
+  if (clipSource === 'cdn') srcBadgeHtml = '<span class="media-source-badge badge-source-cdn">CDN EDGE</span>';
+  else if (clipSource === 'local') srcBadgeHtml = '<span class="media-source-badge badge-source-local">SSD LOCAL</span>';
+  else if (clipSource === 'downloaded') srcBadgeHtml = '<span class="media-source-badge badge-source-dl">OFFLINE</span>';
+  else if (clipSource === 'youtube') srcBadgeHtml = '<span class="media-source-badge badge-source-yt">YOUTUBE</span>';
+  else if (clipSource === 'stream') srcBadgeHtml = '<span class="media-source-badge badge-source-stream">STREAM</span>';
+
+  // Cache Status Check
+  const cacheInfo = UserProfileManager.getCacheDetails(clip);
+  let cacheBadgeHtml = '';
+  if (cacheInfo.isCached) {
+    cacheBadgeHtml = `<span class="badge-cache-status is-cached" title="Salvo em disco no cache local (${cacheInfo.size_mb || '0'} MB)">CACHED</span>`;
+  } else if (clipSource === 'cdn') {
+    cacheBadgeHtml = `<span class="badge-cache-status not-cached" title="Disponível na Nuvem Bunny CDN">NUVEM</span>`;
+  } else if (clipSource === 'youtube' || clipSource === 'stream') {
+    cacheBadgeHtml = `<span class="badge-cache-status is-stream" title="Disponível via Stream Remoto">LIVE</span>`;
+  }
+
+  const categoryName = clip.has_chroma ? 'CHROMA' : (clip.category || 'MINIMAL');
+  const catClass = clip.has_chroma ? 'CHROMA' : (clip.category || 'MINIMAL').replace(/\s+/g, '-');
+
+  const showCacheBtn = !cacheInfo.isCached && (clipSource === 'cdn' || clipSource === 'youtube' || clipSource === 'stream');
+
+  card.innerHTML = `
+    <div class="media-card-thumb">
+      ${thumbSrc ? `<img src="${thumbSrc}" loading="lazy" alt="${clip.filename}" data-static="${thumbSrc}" data-anim="${animSrc}" class="dynamic-preview-img">` : '<div class="no-thumb">RAW 1.IN</div>'}
+      ${srcBadgeHtml}
+      ${cacheBadgeHtml}
+      ${isGen 
+        ? `<span class="badge-generative">3D GENERATIVE</span>`
+        : `<span class="media-cat-badge ${catClass}" onclick="openCategorySelector('${clip.id}', event)" title="Clique para reatribuir categoria">${categoryName}</span>`
+      }
+    </div>
+    <div class="media-card-info">
+      <div class="media-card-title" title="${clip.filename}">
+        <span class="media-project-badge">${projName}</span>${clip.display_title || clip.filename}
+      </div>
+      <div class="media-card-meta">${isGen ? '2.545 VÉRTICES · HOUDINI GENERATIVE MARINE SPINE · 60 FPS' : `${clip.project_folder || projName} · ${clip.width || '1920'}×${clip.height || '1080'} · ${clip.duration ? Math.round(clip.duration) + 's' : 'LOOP'}`}</div>
+      <div class="card-actions-row">
+        <button class="btn-route btn-bus-a" data-bus="A" data-tooltip-title="ENVIAR PARA PROGRAM (A)" data-tooltip-desc="Comuta para o telão/Program. Pressione [A]." data-shortcut="A">A PGM</button>
+        <button class="btn-route btn-bus-b" data-bus="B" data-tooltip-title="PREPARAR NO PREVIEW (B)" data-tooltip-desc="Arma no Preview Cue para o próximo take. Pressione [B]." data-shortcut="B">B PRV</button>
+        <button class="btn-route btn-edit-clip-tonal" onclick="event.stopPropagation(); editClipTonalParameters('${clip.id}')" title="Ajustar Color Grading e Look Tonal no Módulo 4">LOOK</button>
+        <button class="btn-route" data-layer="layer4" data-tooltip-title="CAMADA 4 (DROP CLÍMAX)" data-tooltip-desc="Arma clipe para sobreposição na camada de impacto do drop.">L4</button>
+        ${showCacheBtn ? `<button class="btn-route btn-card-cache-dl" onclick="window.cacheMediaClip('${clip.id}', event)" title="Baixar clipe para cache local permanente no SSD">CACHE</button>` : ''}
+      </div>
+    </div>
+  `;
+
+  // ON-DEMAND HOVER VIDEO PREVIEW (Netflix / Steam / YouTube Standard)
+  let hoverTimeout = null;
+  let hoverVideoEl = null;
+
+  card.addEventListener('mouseenter', () => {
+    focusedClipId = clip.id;
+    const img = card.querySelector('.dynamic-preview-img');
+    if (img && img.dataset.anim) img.src = img.dataset.anim;
+
+    const hoverEnabled = UserProfileManager.getSetting('hover_preview_enabled', true);
+    if (!hoverEnabled || isGen) return;
+
+    const delayMs = UserProfileManager.getSetting('hover_preview_delay_ms', 280);
+    hoverTimeout = setTimeout(() => {
+      const videoUrl = MediaProvider.getMediaUrl(clip);
+      if (!videoUrl) return;
+
+      const thumbContainer = card.querySelector('.media-card-thumb');
+      if (!thumbContainer || thumbContainer.querySelector('.card-hover-video')) return;
+
+      hoverVideoEl = document.createElement('video');
+      hoverVideoEl.className = 'card-hover-video';
+      hoverVideoEl.muted = true;
+      hoverVideoEl.playsInline = true;
+      hoverVideoEl.loop = true;
+      hoverVideoEl.preload = 'metadata';
+      hoverVideoEl.src = videoUrl;
+
+      hoverVideoEl.oncanplay = () => {
+        if (hoverVideoEl) {
+          hoverVideoEl.play().catch(() => {});
+          hoverVideoEl.classList.add('is-active');
+        }
+      };
+
+      thumbContainer.appendChild(hoverVideoEl);
+    }, delayMs);
+  });
+
+  card.addEventListener('mouseleave', () => {
+    const img = card.querySelector('.dynamic-preview-img');
+    if (img && img.dataset.static) img.src = img.dataset.static;
+
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+      hoverTimeout = null;
+    }
+    if (hoverVideoEl) {
+      hoverVideoEl.pause();
+      hoverVideoEl.removeAttribute('src');
+      hoverVideoEl.load();
+      hoverVideoEl.remove();
+      hoverVideoEl = null;
+    }
+    const stray = card.querySelectorAll('.card-hover-video');
+    stray.forEach(v => {
+      v.pause();
+      v.removeAttribute('src');
+      v.load();
+      v.remove();
+    });
+  });
+
+  const btnA = card.querySelector('.btn-bus-a');
+  if (btnA) {
+    btnA.addEventListener('click', (e) => {
+      e.stopPropagation();
+      routeClipToBus(clip.id, 'A');
+    });
+  }
+
+  const btnB = card.querySelector('.btn-bus-b');
+  if (btnB) {
+    btnB.addEventListener('click', (e) => {
+      e.stopPropagation();
+      routeClipToBus(clip.id, 'B');
+    });
+  }
+
+  const btnL4 = card.querySelector('[data-layer="layer4"]');
+  if (btnL4) {
+    btnL4.addEventListener('click', (e) => {
+      e.stopPropagation();
+      appState.layers.layer4.clipId = clip.id;
+      appState.layers.layer4.name = clip.filename;
+      sendAction('cue_clip', { layer: 'layer4', clipId: clip.id, name: clip.filename });
+      updateUI();
+      syncVideoSources();
+    });
+  }
+
+  card.addEventListener('click', () => {
+    routeClipToBus(clip.id, 'B');
+  });
+
+  return card;
+}
+
+// ============================================================================
+// UNIVERSAL CREATIVE ASSET LIBRARY (VIDEOS, MATTES, FX & PRESETS)
+// ============================================================================
+let activeLibraryAssetType = 'all'; // 'all' | 'clips' | 'mattes' | 'fx' | 'presets'
+
+const FX_LIBRARY_CATALOG = {
+  pixel_stretch: { title: 'Pixel Stretch (Satori)', summary: 'Alongamento subpixel não-linear por luminância e canais RGBA.', icon: '🌌' },
+  pixel_sorter: { title: 'Pixel Sorter 3 (Wunkolo)', summary: 'Ordenação de pixels por threshold de brilho sincronizada ao beat.', icon: '📶' },
+  bad_tv: { title: 'Bad TV (Motion Boutique)', summary: 'Distorção de tubo catódico analógico, scanlines CRT e ruído VHS.', icon: '📺' },
+  rxxr: { title: 'Rxxr2 (Defcon)', summary: 'Glitch cibernético avançado, deslocamento RGB e estilhaçamento de blocos.', icon: '⚡' },
+  modulation: { title: 'Modulation (Zaebects)', summary: 'Distorção analógica baseada em ondas oscilatórias e offset CMYK.', icon: '〰️' }
+};
+
+const PRESETS_LIBRARY_CATALOG = {
+  ambient_drift: { title: 'Ambient Drift', desc: 'Base hipnótica profunda, transições longas e saturação controlada.', icon: '🌙', bpm: '118 BPM' },
+  pixel_melt_drop: { title: 'Pixel Melt Drop', desc: 'Clímax agressivo com disparo automático no drop e modulação L1.', icon: '🔥', bpm: '132 BPM' },
+  cyber_matrix: { title: 'Cyber Matrix RXXR', desc: 'Estética industrial de alta frequência com glitch estocástico.', icon: '👾', bpm: '130 BPM' },
+  satori_stretch: { title: 'Satori Stretch', desc: 'Distorção cósmica subpixel sincronizada com acentos rítmicos.', icon: '✨', bpm: '126 BPM' },
+  zaebects_cmyk: { title: 'Zaebects CMYK', desc: 'Deslocamento cromático analógico e texturas retrô de fita.', icon: '🎞️', bpm: '124 BPM' },
+  bypass_clean: { title: 'Bypass Clean', desc: 'Sinal 100% puro para exibição direta das mídias originais.', icon: '💎', bpm: 'N/A' }
+};
+
+function selectLibraryAssetType(type) {
+  activeLibraryAssetType = type;
+  document.querySelectorAll('.lib-type-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.assetType === type);
+  });
+
+  const sourceStrip = document.querySelector('.pool-source-strip');
+  const catStrip = document.querySelector('.pool-category-strip');
+  const folderStrip = document.querySelector('.pool-folder-strip');
+
+  if (sourceStrip) sourceStrip.style.display = (type === 'all' || type === 'clips') ? 'flex' : 'none';
+  if (catStrip) catStrip.style.display = (type === 'all' || type === 'clips') ? 'flex' : 'none';
+  if (folderStrip) folderStrip.style.display = (type === 'all' || type === 'clips') ? 'flex' : 'none';
+
+  if (typeof UserProfileManager !== 'undefined') {
+    UserProfileManager.setSetting('library_active_asset_type', type);
+  }
+
+  renderMediaCards();
+}
+window.selectLibraryAssetType = selectLibraryAssetType;
+
+function createMatteCardForLibrary(matte) {
+  const card = document.createElement('div');
+  card.className = 'library-card-matte';
+  const targetL = appState.matte_target_layer || 'layer3';
+
+  card.innerHTML = `
+    <div class="library-card-thumb-wrap">
+      <img src="/mattes/${matte.path}" loading="lazy" alt="${matte.name}">
+      <span class="lib-badge-type lib-badge-matte">MATTE</span>
+    </div>
+    <div class="library-card-info">
+      <div class="library-card-title">${matte.name}</div>
+      <div class="library-card-desc">${matte.description || matte.category}</div>
+    </div>
+    <div class="library-card-actions">
+      <button class="btn btn-outline btn-xs" onclick="event.stopPropagation(); onLayerMatteChange('layer0', '${matte.path}')" title="Aplicar no Layer 0 (Master Base)">→ L0</button>
+      <button class="btn btn-outline btn-xs" onclick="event.stopPropagation(); onLayerMatteChange('layer1', '${matte.path}')" title="Aplicar no Layer 1 (Reflexo)">→ L1</button>
+      <button class="btn btn-primary btn-xs" onclick="event.stopPropagation(); onLayerMatteChange('layer3', '${matte.path}')" title="Aplicar no Layer 3 (Cue Deck B)">→ L3</button>
+      <button class="btn-edit-params btn-xs" onclick="event.stopPropagation(); editMatteParameters('${matte.path}', '${matte.name}')" title="Editar parâmetros e cinemática no Módulo 3">PARÂMETROS</button>
+    </div>
+  `;
+
+  card.addEventListener('click', () => {
+    editMatteParameters(matte.path, matte.name);
+  });
+
+  return card;
+}
+
+function createFxCardForLibrary(pluginId, pluginInfo) {
+  const card = document.createElement('div');
+  card.className = 'library-card-fx';
+  const isAct = Boolean(appState.fx?.enabled && appState.fx?.activeEffect === pluginId);
+
+  card.innerHTML = `
+    <div class="library-card-thumb-wrap">
+      <div class="library-card-fx-preview">${pluginInfo.code || pluginId.slice(0, 4).toUpperCase()}</div>
+      <span class="lib-badge-type lib-badge-fx">FX SHADER</span>
+    </div>
+    <div class="library-card-info">
+      <div class="library-card-title">${pluginInfo.title}</div>
+      <div class="library-card-desc">${pluginInfo.summary}</div>
+    </div>
+    <div class="library-card-actions">
+      <button class="btn ${isAct ? 'btn-primary' : 'btn-outline'} btn-xs" onclick="event.stopPropagation(); selectFxPlugin('${pluginId}'); if(!appState.fx.enabled) toggleFxMaster();">
+        ${isAct ? 'ATIVO' : '+ ATIVAR'}
+      </button>
+      <button class="btn btn-outline btn-xs" onclick="event.stopPropagation(); selectFxPlugin('${pluginId}'); setFxMasterParam('target', 'master');">→ MASTER</button>
+      <button class="btn-edit-params btn-xs" onclick="event.stopPropagation(); editFxParameters('${pluginId}')" title="Editar parâmetros deste efeito no Módulo 6">PARÂMETROS</button>
+    </div>
+  `;
+
+  card.addEventListener('click', () => {
+    editFxParameters(pluginId);
+  });
+
+  return card;
+}
+
+function createPresetCardForLibrary(presetId, presetInfo) {
+  const card = document.createElement('div');
+  card.className = 'library-card-preset';
+
+  card.innerHTML = `
+    <div class="library-card-thumb-wrap">
+      <div class="library-card-preset-preview">
+        <span style="font-family:var(--font-mono); font-size:16px; font-weight:800; color:var(--cyan);">${presetId.slice(0, 3).toUpperCase()}</span>
+        <span style="font-family:var(--font-mono); font-size:9px; color:#fff; font-weight:700;">${presetInfo.bpm || 'AUTO BPM'}</span>
+      </div>
+      <span class="lib-badge-type lib-badge-preset">PRESET</span>
+    </div>
+    <div class="library-card-info">
+      <div class="library-card-title">${presetInfo.title}</div>
+      <div class="library-card-desc">${presetInfo.desc}</div>
+    </div>
+    <div class="library-card-actions">
+      <button class="btn btn-studio-primary btn-xs" style="flex:1;" onclick="event.stopPropagation(); applyMacroPreset('${presetId}', 0, true);">
+        CARREGAR
+      </button>
+      <button class="btn-edit-params btn-xs" onclick="event.stopPropagation(); editPresetParameters('${presetId}')" title="Editar parâmetros no Conductor (Módulo 5)">
+        EDITAR
+      </button>
+    </div>
+  `;
+
+  card.addEventListener('click', () => {
+    editPresetParameters(presetId);
+  });
+
+  return card;
+}
+
+// ============================================================================
+// ASSET PARAMETER EDIT NAVIGATION & QUICK INSPECTOR METHODS
+// ============================================================================
+function editMatteParameters(mattePath, matteName) {
+  if (typeof setDockViewMode === 'function') setDockViewMode('modules');
+  switchTab('tab-mattes');
+  
+  const targetL = appState.matte_target_layer || 'layer3';
+  onLayerMatteChange(targetL, mattePath);
+
+  if (typeof switchMatteSub === 'function') switchMatteSub('kinematics');
+
+  const kinGrid = document.querySelector('#subview-kinematics .kinematics-dock-grid');
+  if (kinGrid) {
+    kinGrid.classList.remove('highlight-focus-ring');
+    void kinGrid.offsetWidth;
+    kinGrid.classList.add('highlight-focus-ring');
+  }
+
+  showMacroToast(`[MATTE] Editando parâmetros de "${matteName}" no Módulo 3`);
+  openQuickInspector('matte', { path: mattePath, name: matteName });
+}
+window.editMatteParameters = editMatteParameters;
+
+function editFxParameters(pluginId) {
+  if (typeof setDockViewMode === 'function') setDockViewMode('modules');
+  if (!appState.fx.enabled) toggleFxMaster();
+  selectFxPlugin(pluginId);
+  switchTab('tab-fx');
+
+  const activeCard = document.getElementById(`card-fx-${pluginId}`);
+  if (activeCard) {
+    activeCard.classList.remove('highlight-focus-ring');
+    void activeCard.offsetWidth;
+    activeCard.classList.add('highlight-focus-ring');
+  }
+
+  const fxInfo = FX_LIBRARY_CATALOG[pluginId] || { title: pluginId };
+  showMacroToast(`[FX ENGINE] Editando parâmetros de "${fxInfo.title}" no Módulo 6`);
+  openQuickInspector('fx', { pluginId, info: fxInfo });
+}
+window.editFxParameters = editFxParameters;
+
+function editPresetParameters(presetId) {
+  if (typeof setDockViewMode === 'function') setDockViewMode('modules');
+  applyMacroPreset(presetId, 0, true);
+  switchTab('tab-conductor');
+
+  const presetGrid = document.querySelector('#tab-conductor .macro-matrix-grid');
+  if (presetGrid) {
+    presetGrid.classList.remove('highlight-focus-ring');
+    void presetGrid.offsetWidth;
+    presetGrid.classList.add('highlight-focus-ring');
+  }
+
+  const pInfo = PRESETS_LIBRARY_CATALOG[presetId] || { title: presetId };
+  showMacroToast(`[CONDUCTOR] Preset "${pInfo.title}" aberto para edição no Módulo 5`);
+  openQuickInspector('preset', { presetId, info: pInfo });
+}
+window.editPresetParameters = editPresetParameters;
+
+function editClipTonalParameters(clipId) {
+  if (typeof setDockViewMode === 'function') setDockViewMode('modules');
+  routeClipToBus(clipId, 'B');
+  switchTab('tab-tonal');
+
+  const tonalGrid = document.querySelector('#tab-tonal .tonal-controls-grid') || document.querySelector('#tab-tonal');
+  if (tonalGrid) {
+    tonalGrid.classList.remove('highlight-focus-ring');
+    void tonalGrid.offsetWidth;
+    tonalGrid.classList.add('highlight-focus-ring');
+  }
+
+  const clip = allClips.find(c => c.id === clipId);
+  const title = clip?.display_title || clip?.filename || 'Clipe';
+  showMacroToast(`[TONAL] Grading aberto para "${title}" no Módulo 4`);
+  openQuickInspector('clip', { clipId, clip });
+}
+window.editClipTonalParameters = editClipTonalParameters;
+
+function toggleLibrarySidebar() {
+  const sb = document.getElementById('library-sidebar');
+  if (!sb) return;
+  const isCol = sb.classList.toggle('is-collapsed');
+  const btn = document.getElementById('btn-toggle-sidebar');
+  if (btn) btn.textContent = isCol ? '▸' : '◂';
+  if (typeof UserProfileManager !== 'undefined') {
+    UserProfileManager.setSetting('library_sidebar_collapsed', isCol);
+  }
+}
+window.toggleLibrarySidebar = toggleLibrarySidebar;
+
+function toggleTreeSection(headerEl) {
+  if (!headerEl) return;
+  const section = headerEl.closest('.lib-tree-section');
+  if (section) section.classList.toggle('is-collapsed');
+}
+window.toggleTreeSection = toggleTreeSection;
+
+let libraryViewMode = 'grid'; // 'grid' | 'compact'
+function setLibraryViewMode(mode) {
+  libraryViewMode = mode;
+  const grid = document.getElementById('media-cards-container');
+  if (grid) {
+    grid.classList.toggle('view-compact', mode === 'compact');
+  }
+  document.getElementById('btn-view-grid')?.classList.toggle('active', mode === 'grid');
+  document.getElementById('btn-view-compact')?.classList.toggle('active', mode === 'compact');
+  if (typeof UserProfileManager !== 'undefined') {
+    UserProfileManager.setSetting('library_view_mode', mode);
+  }
+}
+window.setLibraryViewMode = setLibraryViewMode;
+
+function toggleLibraryCategoryGrouping() {
+  isGroupedByCategory = !isGroupedByCategory;
+  const btn = document.getElementById('btn-toggle-group-categories');
+  if (btn) btn.classList.toggle('active', isGroupedByCategory);
+  const container = document.getElementById('media-cards-container');
+  if (container) container.classList.toggle('is-grouped', isGroupedByCategory);
+  renderMediaCards();
+}
+window.toggleLibraryCategoryGrouping = toggleLibraryCategoryGrouping;
+
+function clearMediaSearch() {
+  const inp = document.getElementById('input-media-search');
+  if (inp) {
+    inp.value = '';
+    renderMediaCards();
+    inp.focus();
+  }
+}
+window.clearMediaSearch = clearMediaSearch;
+
+function toggleQuickInspector(forceState) {
+  const drawer = document.getElementById('library-quick-inspector');
+  if (!drawer) return;
+  const show = typeof forceState === 'boolean' ? forceState : (drawer.style.display === 'none');
+  drawer.style.display = show ? 'flex' : 'none';
+  document.getElementById('btn-toggle-inspector')?.classList.toggle('active', show);
+}
+window.toggleQuickInspector = toggleQuickInspector;
+
+function openQuickInspector(assetType, data) {
+  const drawer = document.getElementById('library-quick-inspector');
+  const body = document.getElementById('lqi-body-content');
+  const title = document.getElementById('lqi-asset-title');
+  const icon = document.getElementById('lqi-asset-icon');
+  if (!drawer || !body) return;
+
+  drawer.style.display = 'flex';
+  document.getElementById('btn-toggle-inspector')?.classList.add('active');
+
+  if (assetType === 'matte') {
+    if (icon) icon.textContent = '🎭';
+    if (title) title.textContent = `MATTE: ${data.name || 'MÁSCARA'}`;
+    body.innerHTML = `
+      <div class="lqi-asset-card">
+        <div class="lqi-label"><span>CAMADA ALVO</span><strong>${(appState.matte_target_layer || 'layer3').toUpperCase()}</strong></div>
+        <div class="lqi-label"><span>ARQUIVO</span><small style="color:var(--cyan);">${data.path}</small></div>
+        <button class="btn btn-outline btn-xs" style="width:100%; margin-top:4px;" onclick="toggleCurrentTargetMatteInvert()">
+          INVERTER PRETO/BRANCO (INV)
+        </button>
+      </div>
+      <div class="lqi-asset-card">
+        <div class="lqi-label"><span>RESPIRAÇÃO (WIGGLE)</span><strong id="lqi-val-wiggle">6%</strong></div>
+        <input type="range" class="pro-slider" min="0" max="30" value="6" oninput="const s = document.getElementById('slider-wiggle-scale'); if(s) { s.value = this.value; s.dispatchEvent(new Event('input')); } document.getElementById('lqi-val-wiggle').textContent = this.value + '%';">
+      </div>
+      <button class="lqi-action-btn-full" onclick="switchTab('tab-mattes')">
+        ABRIR MÓDULO MATTES COMPLETO (TAB 3) ↗
+      </button>
+    `;
+  } else if (assetType === 'fx') {
+    const fxInfo = data.info || {};
+    if (icon) icon.textContent = '⚡';
+    if (title) title.textContent = `FX: ${fxInfo.title || data.pluginId}`;
+    body.innerHTML = `
+      <div class="lqi-asset-card">
+        <div class="lqi-label"><span>ESTADO FX MASTER</span><strong>${appState.fx.enabled ? '🟢 ATIVO' : '🔴 DESLIGADO'}</strong></div>
+        <button class="btn btn-primary btn-xs" style="width:100%; margin-top:4px;" onclick="toggleFxMaster(); openQuickInspector('fx', { pluginId: '${data.pluginId}', info: FX_LIBRARY_CATALOG['${data.pluginId}'] });">
+          ${appState.fx.enabled ? 'DESLIGAR FX MASTER' : 'LIGAR FX MASTER'}
+        </button>
+      </div>
+      <div class="lqi-asset-card">
+        <div class="lqi-label"><span>DRY / WET (INTENSIDADE)</span><strong id="lqi-val-drywet">80%</strong></div>
+        <input type="range" class="pro-slider" min="0" max="100" value="80" oninput="setFxMasterParam('masterIntensity', this.value / 100); document.getElementById('lqi-val-drywet').textContent = this.value + '%';">
+      </div>
+      <button class="lqi-action-btn-full" onclick="switchTab('tab-fx')">
+        ABRIR FX ENGINE COMPLETO (TAB 6) ↗
+      </button>
+    `;
+  } else if (assetType === 'preset') {
+    const pInfo = data.info || {};
+    if (icon) icon.textContent = '🎛️';
+    if (title) title.textContent = `PRESET: ${pInfo.title || data.presetId}`;
+    body.innerHTML = `
+      <div class="lqi-asset-card">
+        <div class="lqi-label"><span>TEMPO SUGERIDO</span><strong>${pInfo.bpm || 'AUTO'}</strong></div>
+        <div class="lqi-label"><span>NARRATIVA</span><p style="font-size:8.5px; color:#9ea5b5; margin:0;">${pInfo.desc || ''}</p></div>
+        <button class="btn btn-studio-primary btn-xs" style="width:100%; margin-top:6px;" onclick="applyMacroPreset('${data.presetId}', 0, true);">
+          DISPARAR PRESET NO PROGRAM
+        </button>
+      </div>
+      <button class="lqi-action-btn-full" onclick="switchTab('tab-conductor')">
+        ABRIR AUTOPILOT CONDUCTOR (TAB 5) ↗
+      </button>
+    `;
+  } else if (assetType === 'clip') {
+    const clip = data.clip || allClips.find(c => c.id === data.clipId);
+    if (icon) icon.textContent = '🎬';
+    if (title) title.textContent = `CLIPE: ${clip?.display_title || clip?.filename || data.clipId}`;
+    body.innerHTML = `
+      <div class="lqi-asset-card">
+        <div class="lqi-label"><span>ROTEAMENTO RÁPIDO</span></div>
+        <div style="display:flex; gap:4px; margin-top:4px;">
+          <button class="btn btn-outline btn-xs" style="flex:1;" onclick="routeClipToBus('${data.clipId}', 'A')">PGM (A)</button>
+          <button class="btn btn-primary btn-xs" style="flex:1;" onclick="routeClipToBus('${data.clipId}', 'B')">PRV (B)</button>
+        </div>
+      </div>
+      <button class="lqi-action-btn-full" onclick="switchTab('tab-tonal')">
+        ABRIR GRADING TONAL (TAB 4) ↗
+      </button>
+    `;
+  }
+}
+window.openQuickInspector = openQuickInspector;
+
 function renderMediaCards() {
   const container = document.getElementById('media-cards-container');
   if (!container) return;
   container.innerHTML = '';
 
+  updateCategoryAndSourceBadges();
+
   const searchVal = (document.getElementById('input-media-search')?.value || '').toLowerCase();
 
+  // Update counts on badges
+  const badgeClips = document.getElementById('lib-count-clips');
+  if (badgeClips) badgeClips.textContent = allClips.length;
+  const badgeMattes = document.getElementById('lib-count-mattes');
+  if (badgeMattes) badgeMattes.textContent = allMattes.length;
+  const badgeFx = document.getElementById('lib-count-fx');
+  if (badgeFx) badgeFx.textContent = Object.keys(FX_LIBRARY_CATALOG).length;
+  const badgePresets = document.getElementById('lib-count-presets');
+  if (badgePresets) badgePresets.textContent = Object.keys(PRESETS_LIBRARY_CATALOG).length;
+  const badgeAll = document.getElementById('lib-count-all');
+  if (badgeAll) badgeAll.textContent = allClips.length + allMattes.length + 5 + 6;
+
+  // 1. MATTES VIEW
+  if (activeLibraryAssetType === 'mattes') {
+    const filteredMattes = allMattes.filter(m => {
+      return !searchVal || m.name.toLowerCase().includes(searchVal) || m.description.toLowerCase().includes(searchVal) || m.category.toLowerCase().includes(searchVal);
+    });
+    const searchCountLbl = document.getElementById('lbl-search-count');
+    if (searchCountLbl) searchCountLbl.textContent = `${filteredMattes.length} / ${allMattes.length} MATTES`;
+
+    filteredMattes.forEach(m => {
+      container.appendChild(createMatteCardForLibrary(m));
+    });
+    return;
+  }
+
+  // 2. FX PLUGINS VIEW
+  if (activeLibraryAssetType === 'fx') {
+    const plugins = Object.entries(FX_LIBRARY_CATALOG).filter(([id, info]) => {
+      return !searchVal || id.includes(searchVal) || info.title.toLowerCase().includes(searchVal) || info.summary.toLowerCase().includes(searchVal);
+    });
+    const searchCountLbl = document.getElementById('lbl-search-count');
+    if (searchCountLbl) searchCountLbl.textContent = `${plugins.length} / ${Object.keys(FX_LIBRARY_CATALOG).length} PLUGINS FX`;
+
+    plugins.forEach(([id, info]) => {
+      container.appendChild(createFxCardForLibrary(id, info));
+    });
+    return;
+  }
+
+  // 3. PRESETS VIEW
+  if (activeLibraryAssetType === 'presets') {
+    const presets = Object.entries(PRESETS_LIBRARY_CATALOG).filter(([id, info]) => {
+      return !searchVal || id.includes(searchVal) || info.title.toLowerCase().includes(searchVal) || info.desc.toLowerCase().includes(searchVal);
+    });
+    const searchCountLbl = document.getElementById('lbl-search-count');
+    if (searchCountLbl) searchCountLbl.textContent = `${presets.length} / ${Object.keys(PRESETS_LIBRARY_CATALOG).length} PRESETS`;
+
+    presets.forEach(([id, info]) => {
+      container.appendChild(createPresetCardForLibrary(id, info));
+    });
+    return;
+  }
+
+  // 4. CLIPS & ALL VIEW
   const filtered = allClips.filter(c => {
     const projText = (c.project || '').toLowerCase();
     const folderText = (c.project_folder || '').toLowerCase();
     const nameText = (c.filename || '').toLowerCase();
-    const matchSearch = !searchVal || nameText.includes(searchVal) || projText.includes(searchVal) || folderText.includes(searchVal);
+    const titleText = (c.display_title || '').toLowerCase();
+    const matchSearch = !searchVal || nameText.includes(searchVal) || titleText.includes(searchVal) || projText.includes(searchVal) || folderText.includes(searchVal);
     if (!matchSearch) return false;
 
+    // Filter by Project / Folder
     if (activeProjectFilter !== 'ALL' && c.project !== activeProjectFilter) return false;
 
-    if (activeCategoryFilter === 'ALL') return true;
-    if (activeCategoryFilter === 'CHROMA') return c.has_chroma;
-    return c.category === activeCategoryFilter;
+    // Filter by Source
+    if (activeSourceFilter !== 'ALL') {
+      const src = getClipSource(c);
+      if (activeSourceFilter === 'cdn' && src !== 'cdn') return false;
+      if (activeSourceFilter === 'local' && (src !== 'local' && src !== 'downloaded')) return false;
+      if (activeSourceFilter === 'stream' && (src !== 'stream' && src !== 'youtube')) return false;
+    }
+
+    // Filter by Category
+    if (activeCategoryFilter !== 'ALL') {
+      if (activeCategoryFilter === 'CHROMA') return Boolean(c.has_chroma || c.category === 'CHROMA');
+      return c.category === activeCategoryFilter;
+    }
+
+    return true;
   });
 
   const searchCountLbl = document.getElementById('lbl-search-count');
@@ -5022,72 +6687,78 @@ function renderMediaCards() {
     searchCountLbl.textContent = `${filtered.length} / ${allClips.length} CLIPES`;
   }
 
-  filtered.forEach(clip => {
-    const card = document.createElement('div');
-    const isGen = Boolean(clip.is_generative || clip.id === 'clip_gen_plexus_spine');
-    card.className = `media-card ${isGen ? 'is-generative' : ''}`;
-    const thumbSrc = MediaProvider.getThumbUrl(clip);
-    const projName = clip.project || '1.In';
+  // Grouped by Category View Mode
+  if (isGroupedByCategory && activeCategoryFilter === 'ALL') {
+    container.classList.add('is-grouped');
+    const predefinedOrder = [
+      'MINIMAL',
+      'ABSTRACT',
+      'FIGURA',
+      'DENSE',
+      'CHROMA',
+      'STREAMS & YOUTUBE',
+      'GENERATIVE'
+    ];
 
-    card.innerHTML = `
-      <div class="media-card-thumb">
-        ${thumbSrc ? `<img src="${thumbSrc}" loading="lazy" alt="${clip.filename}">` : '<div class="no-thumb">RAW 1.IN</div>'}
-        ${isGen 
-          ? `<span class="badge-generative">3D GENERATIVE</span>`
-          : `<span class="media-cat-badge ${clip.has_chroma ? 'CHROMA' : clip.category}">${clip.has_chroma ? 'CHROMA' : clip.category}</span>`
-        }
-      </div>
-      <div class="media-card-info">
-        <div class="media-card-title" title="${clip.filename}">
-          <span class="media-project-badge">${projName}</span>${clip.filename}
-        </div>
-        <div class="media-card-meta">${isGen ? '2.545 VÉRTICES · HOUDINI GENERATIVE MARINE SPINE · 60 FPS' : `${clip.project_folder || projName} · ${clip.width}×${clip.height} · ${Math.round(clip.duration)}s`}</div>
-        <div class="card-actions-row">
-          <button class="btn-route btn-bus-a" data-bus="A" data-tooltip-title="ENVIAR PARA PROGRAM (A)" data-tooltip-desc="Comuta para o telão/Program. Pressione [A]." data-shortcut="A">A PGM</button>
-          <button class="btn-route btn-bus-b" data-bus="B" data-tooltip-title="PREPARAR NO PREVIEW (B)" data-tooltip-desc="Arma no Preview Cue para o próximo take. Pressione [B]." data-shortcut="B">B PRV</button>
-          <button class="btn-route" data-layer="layer4" data-tooltip-title="CAMADA 4 (DROP CLÍMAX)" data-tooltip-desc="Arma clipe para sobreposição na camada de impacto do drop.">L4 DROP</button>
-        </div>
-      </div>
-    `;
+    const grouped = {};
+    predefinedOrder.forEach(cat => { grouped[cat] = []; });
 
-    card.addEventListener('mouseenter', () => {
-      focusedClipId = clip.id;
+    filtered.forEach(clip => {
+      let cat = clip.has_chroma ? 'CHROMA' : (clip.category || 'MINIMAL');
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(clip);
     });
 
-    const btnA = card.querySelector('.btn-bus-a');
-    if (btnA) {
-      btnA.addEventListener('click', (e) => {
-        e.stopPropagation();
-        routeClipToBus(clip.id, 'A');
-      });
-    }
+    Object.keys(grouped).forEach(cat => {
+      const list = grouped[cat];
+      if (list.length === 0) return;
 
-    const btnB = card.querySelector('.btn-bus-b');
-    if (btnB) {
-      btnB.addEventListener('click', (e) => {
-        e.stopPropagation();
-        routeClipToBus(clip.id, 'B');
-      });
-    }
+      const section = document.createElement('div');
+      section.className = 'category-group-section';
 
-    const btnL4 = card.querySelector('[data-layer="layer4"]');
-    if (btnL4) {
-      btnL4.addEventListener('click', (e) => {
-        e.stopPropagation();
-        appState.layers.layer4.clipId = clip.id;
-        appState.layers.layer4.name = clip.filename;
-        sendAction('cue_clip', { layer: 'layer4', clipId: clip.id, name: clip.filename });
-        updateUI();
-        syncVideoSources();
-      });
-    }
+      const catHeader = document.createElement('div');
+      const catCssKey = cat.replace(/[^a-zA-Z]/g, '').toUpperCase();
+      catHeader.className = `category-section-header CAT-${catCssKey}`;
+      catHeader.innerHTML = `
+        <div class="cat-header-left">
+          <span class="cat-pill-indicator cat-ind-${cat.toLowerCase().split(' ')[0]}"></span>
+          <span class="cat-header-title">${cat}</span>
+          <span class="cat-header-count">${list.length} CLIPES</span>
+        </div>
+      `;
+      section.appendChild(catHeader);
 
-    card.addEventListener('click', () => {
-      routeClipToBus(clip.id, 'B');
+      const subgrid = document.createElement('div');
+      subgrid.className = 'category-subgrid';
+      list.forEach(clip => {
+        subgrid.appendChild(createMediaCardElement(clip));
+      });
+      section.appendChild(subgrid);
+
+      container.appendChild(section);
     });
+  } else {
+    container.classList.remove('is-grouped');
+    // Flat Grid View Mode
+    filtered.forEach(clip => {
+      container.appendChild(createMediaCardElement(clip));
+    });
+  }
 
-    container.appendChild(card);
-  });
+  // If in 'all' mode and search query matches mattes or fx, also append quick sections
+  if (activeLibraryAssetType === 'all' && searchVal) {
+    const matchingMattes = allMattes.filter(m => m.name.toLowerCase().includes(searchVal) || m.description.toLowerCase().includes(searchVal)).slice(0, 4);
+    if (matchingMattes.length > 0) {
+      const matteSec = document.createElement('div');
+      matteSec.className = 'category-group-section';
+      matteSec.innerHTML = `<div class="category-section-header" style="color:#ff65a5;"><span>🎭 MÁSCARAS MATTE RELACIONADAS (${matchingMattes.length})</span></div>`;
+      const subgrid = document.createElement('div');
+      subgrid.className = 'category-subgrid';
+      matchingMattes.forEach(m => subgrid.appendChild(createMatteCardForLibrary(m)));
+      matteSec.appendChild(subgrid);
+      container.appendChild(matteSec);
+    }
+  }
 }
 
 function setAudioSource(mode, deviceId = null) {
@@ -5116,8 +6787,161 @@ function updateAudioSourceUI(srcInfo) {
   if (lbl) {
     lbl.textContent = srcInfo.device_name || (mode ? mode.toUpperCase() : 'Áudio Ativo');
   }
+  const cfgLbl = document.getElementById('lbl-cfg-audio-dev');
+  if (cfgLbl) {
+    cfgLbl.textContent = srcInfo.device_name || (mode ? mode.toUpperCase() : 'Áudio Ativo');
+  }
 }
 window.updateAudioSourceUI = updateAudioSourceUI;
+
+// ============================================================================
+// WEB AUDIO API REAL-TIME ANALYSER & LOCAL FILE UPLOAD
+// ============================================================================
+let webAudioCtx = null;
+let webAudioAnalyser = null;
+let webAudioSourceNode = null;
+let webAudioFreqData = null;
+let webAudioAnimFrameId = null;
+
+function initWebAudioAnalyser() {
+  if (webAudioCtx && webAudioAnalyser) {
+    if (webAudioCtx.state === 'suspended') {
+      webAudioCtx.resume().catch(() => {});
+    }
+    return;
+  }
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass || !audioCuePlayer) return;
+    
+    webAudioCtx = new AudioContextClass();
+    webAudioAnalyser = webAudioCtx.createAnalyser();
+    webAudioAnalyser.fftSize = 256;
+    webAudioAnalyser.smoothingTimeConstant = 0.75;
+    webAudioFreqData = new Uint8Array(webAudioAnalyser.frequencyBinCount);
+    
+    webAudioSourceNode = webAudioCtx.createMediaElementSource(audioCuePlayer);
+    webAudioSourceNode.connect(webAudioAnalyser);
+    webAudioAnalyser.connect(webAudioCtx.destination);
+    
+    startWebAudioVisualizerLoop();
+  } catch (err) {
+    console.log('[WebAudio] Analyser init notice:', err.message);
+  }
+}
+
+function startWebAudioVisualizerLoop() {
+  if (webAudioAnimFrameId) return;
+  
+  function loop() {
+    webAudioAnimFrameId = requestAnimationFrame(loop);
+    if (!webAudioAnalyser || !webAudioFreqData || !audioCuePlayer || audioCuePlayer.paused) return;
+    
+    webAudioAnalyser.getByteFrequencyData(webAudioFreqData);
+    
+    const avg = (start, end) => {
+      let sum = 0;
+      const count = Math.max(1, end - start);
+      for (let i = start; i < end && i < webAudioFreqData.length; i++) sum += webAudioFreqData[i];
+      return (sum / count) / 255.0;
+    };
+    
+    const subVal = avg(0, 2);
+    const bassVal = avg(2, 5);
+    const lomidVal = avg(5, 10);
+    const himidVal = avg(10, 25);
+    const presVal = avg(25, 55);
+    const airVal = avg(55, 120);
+    
+    // Drive meters directly if WebSocket is offline or in test audio playback
+    if (!ws || ws.readyState !== WebSocket.OPEN || currentAudioSource.mode === 'test') {
+      if (meters.sub) meters.sub.style.height = `${Math.min(100, Math.round(subVal * 125))}%`;
+      if (meters.bass) meters.bass.style.height = `${Math.min(100, Math.round(bassVal * 125))}%`;
+      if (meters.lomid) meters.lomid.style.height = `${Math.min(100, Math.round(lomidVal * 125))}%`;
+      if (meters.himid) meters.himid.style.height = `${Math.min(100, Math.round(himidVal * 125))}%`;
+      if (meters.pres) meters.pres.style.height = `${Math.min(100, Math.round(presVal * 125))}%`;
+      if (meters.air) meters.air.style.height = `${Math.min(100, Math.round(airVal * 125))}%`;
+      
+      if (beatOrb && (bassVal > 0.45 || subVal > 0.55)) {
+        beatOrb.style.transform = `scale(${1 + Math.max(subVal, bassVal) * 0.45})`;
+        beatOrb.style.filter = `drop-shadow(0 0 16px rgba(0,240,255,0.85))`;
+      } else if (beatOrb) {
+        beatOrb.style.transform = 'scale(1)';
+        beatOrb.style.filter = 'none';
+      }
+    }
+  }
+  loop();
+}
+
+function handleLocalAudioFileUpload(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  try {
+    const objectUrl = URL.createObjectURL(file);
+    if (audioCuePlayer) {
+      audioCuePlayer.src = objectUrl;
+      audioCuePlayer.volume = Number(sliderCueVol?.value || 70) / 100.0;
+      audioCuePlayer.play().then(() => {
+        btnAudioMonitor?.classList.add('active');
+        if (txtAudioMonitor) txtAudioMonitor.textContent = 'CUE ON';
+        initWebAudioAnalyser();
+        showMacroToast(`Áudio Carregado: ${file.name.slice(0, 24)}`);
+        
+        currentAudioSource.mode = 'test';
+        currentAudioSource.device_name = `Arquivo: ${file.name.slice(0, 18)}`;
+        updateAudioSourceUI(currentAudioSource);
+      }).catch(err => {
+        console.warn('[Audio] Reprodução requer interação:', err);
+        showMacroToast(`Arquivo Selecionado: ${file.name.slice(0, 20)} (Clique no Fone)`);
+      });
+    }
+  } catch (err) {
+    console.error('[Audio] Erro ao carregar arquivo local:', err);
+    showMacroToast('Erro ao carregar arquivo de áudio local');
+  }
+}
+window.handleLocalAudioFileUpload = handleLocalAudioFileUpload;
+
+function playOnlineTestTrack() {
+  if (!audioCuePlayer) return;
+  const isOnline = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
+  audioCuePlayer.src = isOnline ? './assets/audio/test_preview.mp3' : '/api/audio-stream';
+  audioCuePlayer.volume = Number(sliderCueVol?.value || 70) / 100.0;
+  audioCuePlayer.play().then(() => {
+    btnAudioMonitor?.classList.add('active');
+    if (txtAudioMonitor) txtAudioMonitor.textContent = 'CUE ON';
+    initWebAudioAnalyser();
+    showMacroToast('Reproduzindo Faixa Teste (2:00)');
+    currentAudioSource.mode = 'test';
+    currentAudioSource.device_name = 'MP3 Teste (Online)';
+    updateAudioSourceUI(currentAudioSource);
+  }).catch(err => {
+    console.warn('[Audio] Falha ao tocar faixa teste, tentando fallback direto:', err);
+    audioCuePlayer.src = './assets/audio/test_preview.mp3';
+    audioCuePlayer.play().then(() => {
+      btnAudioMonitor?.classList.add('active');
+      if (txtAudioMonitor) txtAudioMonitor.textContent = 'CUE ON';
+      initWebAudioAnalyser();
+      showMacroToast('Reproduzindo Faixa Teste (Online CDN)');
+    }).catch(() => {});
+  });
+}
+window.playOnlineTestTrack = playOnlineTestTrack;
+
+function toggleAudioMonitor() {
+  if (btnAudioMonitor) btnAudioMonitor.click();
+}
+window.toggleAudioMonitor = toggleAudioMonitor;
+
+function switchAudioSource(mode) {
+  if (mode === 'test') {
+    playOnlineTestTrack();
+  } else {
+    setAudioSource(mode);
+  }
+}
+window.switchAudioSource = switchAudioSource;
 
 // ============================================================================
 // 10. EVENT LISTENERS & COCKPIT INTERACTIONS
@@ -5234,15 +7058,383 @@ function setupEvents() {
   initKeyboardShortcuts();
   initRichTooltips();
 
-  // Filter Pills (Media Pool Visual Categories)
-  document.querySelectorAll('.filter-pills:not(.folder-pills) .pill-btn').forEach(pill => {
+  // 1. Source Filter Pills (ALL / CDN / LOCAL / STREAM)
+  document.querySelectorAll('#source-pills-container .pill-btn').forEach(pill => {
     pill.addEventListener('click', () => {
-      document.querySelectorAll('.filter-pills:not(.folder-pills) .pill-btn').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('#source-pills-container .pill-btn').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      activeSourceFilter = pill.dataset.source;
+      renderMediaCards();
+    });
+  });
+
+  // 2. Category Filter Pills (ALL / MINIMAL / ABSTRACT / etc.)
+  document.querySelectorAll('#category-pills-container .pill-btn').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('#category-pills-container .pill-btn').forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
       activeCategoryFilter = pill.dataset.cat;
       renderMediaCards();
     });
   });
+
+  // 3. Toggle Grouped by Category View Mode
+  const btnToggleGroup = document.getElementById('btn-toggle-group-categories');
+  if (btnToggleGroup) {
+    btnToggleGroup.addEventListener('click', () => {
+      isGroupedByCategory = !isGroupedByCategory;
+      btnToggleGroup.classList.toggle('active', isGroupedByCategory);
+      btnToggleGroup.innerHTML = isGroupedByCategory ? '<span>▤ SEÇÕES DE CATEGORIA</span>' : '<span>▦ GRID CONTÍNUO</span>';
+      renderMediaCards();
+    });
+  }
+
+  // ============================================================================
+  // UNIFIED MEDIA INGESTION & SYNCHRONIZATION HUB CONTROLLER
+  // ============================================================================
+  let currentIngestMode = 'stream';
+
+  window.toggleMediaIngestDeck = function(forceState) {
+    const deck = document.getElementById('media-ingest-deck');
+    const mainBtn = document.getElementById('btn-open-ingest-hub');
+    if (!deck) return;
+    
+    const isVisible = deck.style.display !== 'none';
+    const newState = forceState !== undefined ? Boolean(forceState) : !isVisible;
+    
+    deck.style.display = newState ? 'block' : 'none';
+    if (mainBtn) mainBtn.classList.toggle('active', newState);
+    
+    if (newState) {
+      window.switchIngestMode(currentIngestMode);
+      updateIngestStats();
+    }
+  };
+
+  window.openMediaIngestTab = function(tabName) {
+    window.toggleMediaIngestDeck(true);
+    window.switchIngestMode(tabName);
+  };
+
+  window.switchIngestMode = function(mode) {
+    currentIngestMode = mode;
+    
+    ['local', 'cloud', 'stream'].forEach(m => {
+      const btn = document.getElementById(`mid-tab-btn-${m}`);
+      const panel = document.getElementById(`mid-panel-${m}`);
+      const pill = document.getElementById(`pill-quick-${m}`);
+      
+      const isActive = m === mode;
+      if (btn) btn.classList.toggle('active', isActive);
+      if (panel) panel.style.display = isActive ? 'block' : 'none';
+      if (pill) pill.classList.toggle('active', isActive);
+    });
+
+    if (mode === 'stream') {
+      const inp = document.getElementById('input-mid-yt-url');
+      if (inp) {
+        setTimeout(() => inp.focus(), 60);
+      }
+    }
+    updateIngestStats();
+  };
+
+  function updateIngestStats() {
+    // 1. Cloud Cached Count
+    const cloudCountEl = document.getElementById('mid-cloud-cached-count');
+    if (cloudCountEl) {
+      const cached = allClips.filter(c => UserProfileManager.isClipCached(c)).length;
+      cloudCountEl.textContent = `${cached} / ${allClips.length} CLIPES`;
+    }
+
+    // 2. Local Count
+    const localCountEl = document.getElementById('mid-local-count-text');
+    if (localCountEl) {
+      const locals = allClips.filter(c => c.is_local).length;
+      localCountEl.textContent = `${locals} clipe(s) local(is) ativo(s)`;
+    }
+  }
+
+  // --- LOCAL INGESTION HANDLERS ---
+  window.handleIngestPickFolder = async function() {
+    try {
+      if (typeof window.showDirectoryPicker !== 'function') {
+        alert('Seu navegador não suporta a File System Access API para seleção de pastas. Utilize o botão SELECIONAR ARQUIVOS.');
+        return;
+      }
+      const handle = await window.showDirectoryPicker();
+      const newClips = await MediaProvider.scanExtraDir(handle);
+      if (newClips.length > 0) {
+        allClips.push(...newClips);
+        saveCustomClipsToStorage();
+        renderFolderPills();
+        renderMediaCards();
+        updateSourceUI('local');
+        updateIngestStats();
+        if (typeof showHudMacroToast === 'function') {
+          showHudMacroToast(`[LOCAL SSD] +${newClips.length} clipes vinculados da pasta`);
+        }
+      }
+    } catch(e) {
+      if (e.name !== 'AbortError') {
+        console.warn('[Ingest Local] Seleção de pasta cancelada ou falhou:', e);
+      }
+    }
+  };
+
+  window.handleIngestLocalFiles = async function(fileList) {
+    if (!fileList || fileList.length === 0) return;
+    const catSelect = document.getElementById('select-mid-local-cat');
+    const targetCat = catSelect ? catSelect.value : 'LOCAL IMPORT';
+    let addedCount = 0;
+
+    for (const file of Array.from(fileList)) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      const isVideo = ['mp4', 'webm', 'mov'].includes(ext);
+      const isAudio = ['mp3', 'wav', 'ogg', 'm4a'].includes(ext);
+      if (!isVideo && !isAudio) continue;
+
+      const uniquePath = `LOCAL_${Date.now()}_${file.name}`;
+      MediaProvider.localFilesMap.set(uniquePath, file);
+      const blobUrl = URL.createObjectURL(file);
+
+      let thumbUrl = '';
+      if (isVideo) {
+        thumbUrl = await generateVideoThumbnailBlob(file);
+      }
+
+      const clip = {
+        id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 7)}`,
+        filename: file.name,
+        display_title: file.name.replace(/\.[^/.]+$/, ""),
+        folder: "LOCAL IMPORT",
+        relative_path: uniquePath,
+        absolute_path: uniquePath,
+        blob_url: blobUrl,
+        width: 1920,
+        height: 1080,
+        duration: 10.0,
+        fps: 60.0,
+        codec: ext,
+        category: targetCat,
+        suggested_layer: 0,
+        thumbnail: thumbUrl,
+        is_local: true,
+        source: 'local'
+      };
+      allClips.unshift(clip);
+      addedCount++;
+    }
+
+    if (addedCount > 0) {
+      saveCustomClipsToStorage();
+      renderFolderPills();
+      renderMediaCards();
+      updateSourceUI('local');
+      updateIngestStats();
+      if (typeof showHudMacroToast === 'function') {
+        showHudMacroToast(`[LOCAL] +${addedCount} arquivo(s) importado(s) com sucesso`);
+      }
+    }
+  };
+
+  function generateVideoThumbnailBlob(file) {
+    return new Promise((resolve) => {
+      try {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.muted = true;
+        video.playsInline = true;
+        const url = URL.createObjectURL(file);
+        video.src = url;
+        video.currentTime = 0.5;
+        video.onloadeddata = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 320;
+            canvas.height = 180;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, 320, 180);
+            const dataUri = canvas.toDataURL('image/jpeg', 0.7);
+            URL.revokeObjectURL(url);
+            resolve(dataUri);
+          } catch(e) {
+            URL.revokeObjectURL(url);
+            resolve('');
+          }
+        };
+        video.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve('');
+        };
+        setTimeout(() => resolve(''), 2500);
+      } catch(err) {
+        resolve('');
+      }
+    });
+  }
+
+  // File input change
+  const inputMidFiles = document.getElementById('input-mid-local-files');
+  if (inputMidFiles) {
+    inputMidFiles.addEventListener('change', (e) => {
+      handleIngestLocalFiles(e.target.files);
+      e.target.value = '';
+    });
+  }
+
+  // Drag & drop on dropzone
+  const dropzone = document.getElementById('mid-local-dropzone');
+  if (dropzone) {
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('dragover');
+    });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer && e.dataTransfer.files) {
+        handleIngestLocalFiles(e.dataTransfer.files);
+      }
+    });
+  }
+
+  // Global Drag & drop on main media library
+  const mediaGridTab = document.getElementById('tab-mediapool');
+  if (mediaGridTab) {
+    mediaGridTab.addEventListener('dragover', (e) => {
+      e.preventDefault();
+    });
+    mediaGridTab.addEventListener('drop', (e) => {
+      if (e.target.closest('#mid-local-dropzone')) return;
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        e.preventDefault();
+        handleIngestLocalFiles(e.dataTransfer.files);
+      }
+    });
+  }
+
+  // --- YOUTUBE & WEB STREAMS HANDLERS ---
+  const inputYt = document.getElementById('input-mid-yt-url');
+  if (inputYt) {
+    inputYt.addEventListener('input', (e) => {
+      handleYtUrlInput(e.target.value);
+    });
+    inputYt.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        executeIngestYt('stream');
+      }
+    });
+  }
+
+  window.clearIngestYtInput = function() {
+    if (inputYt) inputYt.value = '';
+    const strip = document.getElementById('mid-yt-preview-strip');
+    if (strip) strip.style.display = 'none';
+    const titleInp = document.getElementById('input-mid-yt-title');
+    if (titleInp) titleInp.value = '';
+  };
+
+  window.handleYtUrlInput = function(rawUrl) {
+    const clean = (rawUrl || '').trim();
+    const previewStrip = document.getElementById('mid-yt-preview-strip');
+    const imgThumb = document.getElementById('img-mid-yt-thumb');
+    const lblTitle = document.getElementById('lbl-mid-yt-title');
+    const lblUrl = document.getElementById('lbl-mid-yt-url');
+    const badgeType = document.getElementById('badge-mid-yt-type');
+    const titleInput = document.getElementById('input-mid-yt-title');
+
+    if (!clean) {
+      if (previewStrip) previewStrip.style.display = 'none';
+      return;
+    }
+
+    const isYt = isYouTubeUrl(clean);
+    const ytId = extractYouTubeId(clean);
+
+    if (isYt && ytId) {
+      if (previewStrip) previewStrip.style.display = 'block';
+      if (badgeType) {
+        badgeType.textContent = 'YOUTUBE';
+        badgeType.className = 'mid-yt-badge-type yt';
+      }
+      const thumb = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+      if (imgThumb) imgThumb.src = thumb;
+      if (lblUrl) lblUrl.textContent = clean;
+      if (lblTitle) lblTitle.textContent = `YouTube [${ytId}]`;
+
+      // Live oEmbed title resolution
+      fetch(`https://noembed.com/embed?url=${encodeURIComponent(clean)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.title) {
+            if (lblTitle) lblTitle.textContent = data.title;
+            if (titleInput && !titleInput.value) titleInput.value = data.title;
+          }
+        })
+        .catch(() => {});
+    } else if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      if (previewStrip) previewStrip.style.display = 'block';
+      if (badgeType) {
+        badgeType.textContent = clean.endsWith('.m3u8') ? 'HLS LIVE' : 'STREAM WEB';
+        badgeType.className = 'mid-yt-badge-type web';
+      }
+      if (imgThumb) imgThumb.src = 'favicon.svg';
+      const filename = clean.split('/').pop().split('?')[0] || 'Feed Externo';
+      if (lblTitle) lblTitle.textContent = filename;
+      if (lblUrl) lblUrl.textContent = clean;
+      if (titleInput && !titleInput.value) titleInput.value = filename;
+    } else {
+      if (previewStrip) previewStrip.style.display = 'none';
+    }
+  };
+
+  window.executeIngestYt = async function(mode = 'stream') {
+    const url = (inputYt ? inputYt.value : '').trim();
+    if (!url) {
+      alert('Por favor, informe uma URL do YouTube ou feed de vídeo válido.');
+      if (inputYt) inputYt.focus();
+      return;
+    }
+    const cat = document.getElementById('select-mid-yt-cat')?.value || 'STREAMS & YOUTUBE';
+    const title = document.getElementById('input-mid-yt-title')?.value?.trim() || '';
+
+    const progressStrip = document.getElementById('mid-yt-progress-strip');
+    const progressStatus = document.getElementById('mid-yt-progress-status');
+    const progressBar = document.getElementById('mid-yt-progress-bar');
+    const isOnline = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
+
+    if (mode === 'download' && isOnline) {
+      alert('MODO NUVEM ONLINE: O download direto no SSD em alta qualidade (yt-dlp) requer o Penumbra rodando no ambiente local. No navegador online, utilize a opção "PUXAR PARA O POOL (STREAM AO VIVO)" para carregar e mixar o vídeo em tempo real.');
+      return;
+    }
+
+    if (progressStrip) progressStrip.style.display = 'block';
+    if (progressStatus) progressStatus.textContent = mode === 'download' ? 'INICIANDO DOWNLOAD NO SERVIDOR LOCAL...' : 'CONECTANDO FEED DO YOUTUBE...';
+    if (progressBar) progressBar.style.width = '35%';
+
+    try {
+      await ingestStreamMedia(url, cat, title, mode);
+      if (progressBar) progressBar.style.width = '100%';
+      if (progressStatus) progressStatus.textContent = 'MÍDIA INGERIDA COM SUCESSO NO POOL!';
+      setTimeout(() => {
+        if (progressStrip) progressStrip.style.display = 'none';
+        if (progressBar) progressBar.style.width = '0%';
+        clearIngestYtInput();
+      }, 1400);
+      if (typeof showHudMacroToast === 'function') {
+        showHudMacroToast(`[INGESTÃO] Vídeo adicionado ao Media Pool (${cat})`);
+      }
+    } catch(err) {
+      if (progressStatus) progressStatus.textContent = 'ERRO NA INGESTÃO: ' + err.message;
+      setTimeout(() => {
+        if (progressStrip) progressStrip.style.display = 'none';
+      }, 3000);
+    }
+  };
 
   // Multi-Source Audio Input Selector Pills (TEST / MIC / P2 / USB)
   document.querySelectorAll('.src-pill').forEach(btn => {
@@ -5278,17 +7470,41 @@ function setupEvents() {
       const isAuditioning = btnAudioMonitor.classList.contains('active');
       if (isAuditioning) {
         audioCuePlayer.pause();
-        audioCuePlayer.src = '';
         btnAudioMonitor.classList.remove('active');
-        if (txtAudioMonitor) txtAudioMonitor.textContent = 'FONE OFF';
+        if (txtAudioMonitor) txtAudioMonitor.textContent = 'CUE OFF';
         sendAction('set_audio_monitor', { enabled: false });
       } else {
-        audioCuePlayer.src = '/api/audio-stream';
+        if (!audioCuePlayer.src || audioCuePlayer.src === window.location.href || audioCuePlayer.src.endsWith('/')) {
+          const isOnline = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
+          audioCuePlayer.src = isOnline ? './assets/audio/test_preview.mp3' : '/api/audio-stream';
+        }
         audioCuePlayer.volume = Number(sliderCueVol?.value || 70) / 100.0;
-        audioCuePlayer.play().catch(() => {});
-        btnAudioMonitor.classList.add('active');
-        if (txtAudioMonitor) txtAudioMonitor.textContent = 'FONE ON';
-        sendAction('set_audio_monitor', { enabled: true, volume: audioCuePlayer.volume });
+        audioCuePlayer.play().then(() => {
+          btnAudioMonitor.classList.add('active');
+          if (txtAudioMonitor) txtAudioMonitor.textContent = 'CUE ON';
+          initWebAudioAnalyser();
+          sendAction('set_audio_monitor', { enabled: true, volume: audioCuePlayer.volume });
+        }).catch(err => {
+          console.warn('[Audio] Falha ao tocar áudio inicial, tentando fallback:', err);
+          if (audioCuePlayer.src.includes('/api/audio-stream')) {
+            audioCuePlayer.src = './assets/audio/test_preview.mp3';
+            audioCuePlayer.play().then(() => {
+              btnAudioMonitor.classList.add('active');
+              if (txtAudioMonitor) txtAudioMonitor.textContent = 'CUE ON';
+              initWebAudioAnalyser();
+            }).catch(() => {});
+          }
+        });
+      }
+    });
+
+    audioCuePlayer.addEventListener('error', () => {
+      if (audioCuePlayer.src.includes('/api/audio-stream')) {
+        console.log('[Audio] /api/audio-stream indisponível, alternando para test_preview.mp3...');
+        audioCuePlayer.src = './assets/audio/test_preview.mp3';
+        if (btnAudioMonitor.classList.contains('active')) {
+          audioCuePlayer.play().catch(() => {});
+        }
       }
     });
   }
@@ -5699,58 +7915,478 @@ function applyTonalPreset(g, b, m, c, em, et) {
 }
 
 // ============================================================================
-// 11. BOOTSTRAP INITIALIZATION
+// 11. STUDIO LAUNCHER & MEDIA SOURCE ORCHESTRATION
 // ============================================================================
-window.addEventListener('DOMContentLoaded', () => {
+let activeMediaSource = localStorage.getItem('penumbra_media_source') || 'cdn';
+
+function updateSourceUI(sourceName) {
+  activeMediaSource = sourceName;
+  const headerIcon = document.getElementById('header-src-icon');
+  const headerLabel = document.getElementById('header-src-label');
+  const cfgBadge = document.getElementById('cfg-active-source-badge');
+  const cfgDesc = document.getElementById('cfg-active-source-desc');
+  const cfgCount = document.getElementById('cfg-media-count-val');
+  const chkRemember = document.getElementById('chk-cfg-remember-source');
+
+  const cardCloud = document.getElementById('card-mode-cloud');
+  const cardLocal = document.getElementById('card-mode-local');
+  const stCloud = document.getElementById('status-mode-cloud');
+  const stLocal = document.getElementById('status-mode-local');
+  const optCloud = document.getElementById('opt-src-cloud');
+  const optLocal = document.getElementById('opt-src-local');
+
+  if (chkRemember) {
+    chkRemember.checked = localStorage.getItem('penumbra_remember_source') === 'true';
+  }
+  if (cfgCount) {
+    cfgCount.textContent = (allClips && allClips.length) ? `${allClips.length} CLIPES` : '0 CLIPES';
+  }
+
+  if (sourceName === 'local') {
+    if (headerLabel) headerLabel.textContent = 'DISCO LOCAL';
+    if (cfgBadge) {
+      cfgBadge.className = 'cfg-badge text-emerald';
+      cfgBadge.textContent = 'DISCO LOCAL (SSD)';
+    }
+    if (cfgDesc) {
+      cfgDesc.textContent = 'Acesso direto ao sistema de arquivos local com zero-latência via File System API.';
+    }
+    if (cardLocal) cardLocal.classList.add('active');
+    if (stLocal) stLocal.textContent = 'ATIVO';
+    if (cardCloud) cardCloud.classList.remove('active');
+    if (stCloud) stCloud.textContent = 'DISPONÍVEL';
+    if (optLocal) optLocal.classList.add('active');
+    if (optCloud) optCloud.classList.remove('active');
+  } else if (sourceName === 'stream') {
+    if (headerLabel) headerLabel.textContent = 'STREAM URL';
+    if (cfgBadge) {
+      cfgBadge.className = 'cfg-badge text-purple';
+      cfgBadge.textContent = 'STREAM EXTERNO / YOUTUBE';
+    }
+    if (cfgDesc) {
+      cfgDesc.textContent = 'Ingestão de feeds externos em tempo real via HLS ou YouTube stream.';
+    }
+  } else {
+    // cdn
+    if (headerLabel) headerLabel.textContent = 'NUVEM CDN';
+    if (cfgBadge) {
+      cfgBadge.className = 'cfg-badge text-cyan';
+      cfgBadge.textContent = 'NUVEM CDN';
+    }
+    if (cfgDesc) {
+      cfgDesc.textContent = 'Streaming direto via Edge CDN de alta performance (São Paulo) com miniaturas e cache local.';
+    }
+    if (cardCloud) cardCloud.classList.add('active');
+    if (stCloud) stCloud.textContent = 'ATIVO';
+    if (cardLocal) cardLocal.classList.remove('active');
+    if (stLocal) stLocal.textContent = 'DISPONÍVEL';
+    if (optCloud) optCloud.classList.add('active');
+    if (optLocal) optLocal.classList.remove('active');
+  }
+}
+window.updateSourceUI = updateSourceUI;
+
+async function switchStorageMode(mode) {
+  const dd = document.getElementById('source-quick-dropdown');
+  if (dd) dd.style.display = 'none';
+
+  if (mode === 'cloud') {
+    try {
+      showMacroToast('Conectando à Nuvem Edge CDN...');
+      await reconnectCloudSource();
+      updateSourceUI('cdn');
+      showMacroToast('Armazenamento alternado para Nuvem (Edge CDN)');
+    } catch (err) {
+      console.error('[Storage] Erro ao alternar para nuvem:', err);
+    }
+  } else if (mode === 'local') {
+    try {
+      if (MediaProvider.activeSource === 'local' && allClips && allClips.length > 0) {
+        updateSourceUI('local');
+        showMacroToast('Armazenamento ativo: Disco Local (SSD)');
+      } else {
+        await selectLocalDirectorySource();
+      }
+    } catch (err) {
+      console.error('[Storage] Erro ao alternar para local:', err);
+    }
+  }
+}
+window.switchStorageMode = switchStorageMode;
+
+function toggleHeaderSourceMenu(e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  const dd = document.getElementById('source-quick-dropdown');
+  if (!dd) return;
+  const isShown = dd.style.display === 'flex';
+  dd.style.display = isShown ? 'none' : 'flex';
+}
+window.toggleHeaderSourceMenu = toggleHeaderSourceMenu;
+
+// Fechar menu de fonte ao clicar fora
+document.addEventListener('click', (e) => {
+  const ctrl = document.getElementById('header-source-control');
+  const dd = document.getElementById('source-quick-dropdown');
+  if (ctrl && dd && !ctrl.contains(e.target)) {
+    dd.style.display = 'none';
+  }
+});
+
+function openStudioLauncher() {
+  const nexusModal = document.getElementById('media-nexus-modal');
+  if (!nexusModal) return;
+
+  const stepSource = document.getElementById('nexus-step-source');
+  const stepPin = document.getElementById('nexus-step-pin');
+  const stepLoading = document.getElementById('nexus-step-loading');
+  const btnCloseX = document.getElementById('btn-nexus-close-x');
+  const chkRemember = document.getElementById('chk-nexus-remember-source');
+
+  if (chkRemember) {
+    chkRemember.checked = localStorage.getItem('penumbra_remember_source') === 'true';
+  }
+
+  if (stepSource) stepSource.style.display = 'block';
+  if (stepPin) stepPin.style.display = 'none';
+  if (stepLoading) stepLoading.style.display = 'none';
+
+  if (btnCloseX) {
+    btnCloseX.style.display = (allClips && allClips.length > 0) ? 'block' : 'none';
+  }
+
+  try {
+    if (!nexusModal.open) nexusModal.showModal();
+  } catch (e) {
+    nexusModal.setAttribute('open', '');
+  }
+}
+window.openStudioLauncher = openStudioLauncher;
+
+function closeStudioLauncher() {
+  const nexusModal = document.getElementById('media-nexus-modal');
+  if (!nexusModal) return;
+  nexusModal.classList.add('dialog-closing');
+  setTimeout(() => {
+    try { nexusModal.close(); } catch (e) { nexusModal.removeAttribute('open'); }
+    nexusModal.classList.remove('dialog-closing');
+  }, 240);
+}
+window.closeStudioLauncher = closeStudioLauncher;
+
+function toggleRememberSource(checked) {
+  localStorage.setItem('penumbra_remember_source', checked ? 'true' : 'false');
+  const chkModal = document.getElementById('chk-nexus-remember-source');
+  const chkCfg = document.getElementById('chk-cfg-remember-source');
+  if (chkModal) chkModal.checked = checked;
+  if (chkCfg) chkCfg.checked = checked;
+}
+window.toggleRememberSource = toggleRememberSource;
+
+function resetSourcePreference() {
+  localStorage.removeItem('penumbra_media_source');
+  localStorage.removeItem('penumbra_remember_source');
+  localStorage.removeItem('penumbra_cdn_pin');
+  const chkModal = document.getElementById('chk-nexus-remember-source');
+  const chkCfg = document.getElementById('chk-cfg-remember-source');
+  if (chkModal) chkModal.checked = false;
+  if (chkCfg) chkCfg.checked = false;
+  alert('Preferência de inicialização removida. O seletor de fonte (Studio Launcher) será exibido sempre ao abrir o Penumbra.');
+}
+window.resetSourcePreference = resetSourcePreference;
+
+async function reconnectCloudSource() {
+  try {
+    const clips = await MediaProvider.initCDN();
+    await loadMediaPool(clips);
+    await loadMattesCatalog();
+    updateSourceUI('cdn');
+    localStorage.setItem('penumbra_media_source', 'cdn');
+    console.log('[Media Nexus] Nuvem Edge reconectada com sucesso.');
+  } catch (err) {
+    console.error('[CDN] Falha ao reconectar nuvem:', err);
+    openStudioLauncher();
+  }
+}
+window.reconnectCloudSource = reconnectCloudSource;
+
+async function selectLocalDirectorySource() {
+  try {
+    const dirHandle = await window.showDirectoryPicker({ mode: 'read', startIn: 'videos' });
+    closeStudioLauncher();
+    const clips = await MediaProvider.initLocal(dirHandle);
+    await loadMediaPool(clips);
+    await loadMattesCatalog();
+    updateSourceUI('local');
+    localStorage.setItem('penumbra_media_source', 'local');
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.warn('[Media Nexus] Seleção de diretório falhou:', err);
+    }
+  }
+}
+window.selectLocalDirectorySource = selectLocalDirectorySource;
+
+// ============================================================================
+// BOOTSTRAP INITIALIZATION
+// ============================================================================
+function bootstrapApp() {
   initWebSocket();
-  
-  // Initialize Media Nexus Modal
+
   const nexusModal = document.getElementById('media-nexus-modal');
   if (nexusModal) {
-    nexusModal.showModal();
-    
-    document.getElementById('btn-nexus-local').addEventListener('click', async () => {
-      try {
-        const dirHandle = await window.showDirectoryPicker({
-          mode: 'read',
-          startIn: 'videos'
-        });
-        console.log('[Media Nexus] Local directory mounted:', dirHandle.name);
-        nexusModal.close();
-        
-        // Pass dirHandle to Media Pool Provider
-        const clips = await MediaProvider.initLocal(dirHandle);
-        await loadMediaPool(clips);
-        await loadMattesCatalog();
-      } catch (err) {
-        console.warn('[Media Nexus] Directory selection cancelled or failed:', err);
+    const stepSource = document.getElementById('nexus-step-source');
+    const stepPin = document.getElementById('nexus-step-pin');
+    const stepLoading = document.getElementById('nexus-step-loading');
+
+    const pinInput = document.getElementById('pin-hidden-input');
+    const pinSlots = document.querySelectorAll('.pin-cell');
+    const pinFeedback = document.getElementById('pin-feedback-msg');
+    const pinSlotsWrap = document.getElementById('pin-slots');
+    const btnPinBack = document.getElementById('btn-pin-back');
+    const btnPinSubmit = document.getElementById('btn-pin-submit');
+
+    // Update PIN display slots
+    const updatePinSlots = (val) => {
+      pinSlots.forEach((slot, idx) => {
+        if (idx < val.length) {
+          slot.classList.add('filled');
+        } else {
+          slot.classList.remove('filled');
+        }
+        slot.classList.remove('pin-error', 'pin-success');
+      });
+    };
+
+    // PIN Verification Logic
+    const verifyPin = async () => {
+      const pin = (pinInput ? pinInput.value : '').trim();
+      if (pin.length !== 4) return;
+
+      if (pin === '2026') {
+        pinSlots.forEach(s => s.classList.add('pin-success'));
+        if (pinFeedback) {
+          pinFeedback.className = 'pin-feedback-line text-emerald';
+          pinFeedback.textContent = 'ACESSO AUTORIZADO // CONECTANDO EDGE CDN...';
+        }
+
+        setTimeout(async () => {
+          if (stepPin) stepPin.style.display = 'none';
+          if (stepLoading) stepLoading.style.display = 'flex';
+
+          try {
+            console.log('[Media Nexus] CDN Mode Activated (PIN 2026 Verified)');
+            const clips = await MediaProvider.initCDN();
+            await loadMediaPool(clips);
+            await loadMattesCatalog();
+            updateSourceUI('cdn');
+            localStorage.setItem('penumbra_media_source', 'cdn');
+            localStorage.setItem('penumbra_cdn_pin', '2026');
+            closeStudioLauncher();
+          } catch (err) {
+            console.error('[CDN] Ingestion error:', err);
+            if (stepLoading) stepLoading.style.display = 'none';
+            if (stepSource) stepSource.style.display = 'block';
+          }
+        }, 350);
+      } else {
+        pinSlots.forEach(s => s.classList.add('pin-error'));
+        if (pinFeedback) {
+          pinFeedback.className = 'pin-feedback-line text-crimson';
+          pinFeedback.textContent = 'PIN INCORRETO. TENTE NOVAMENTE (2026).';
+        }
+        if (pinSlotsWrap) {
+          pinSlotsWrap.classList.add('shake-anim');
+          setTimeout(() => {
+            pinSlotsWrap.classList.remove('shake-anim');
+            if (pinInput) {
+              pinInput.value = '';
+              updatePinSlots('');
+              pinInput.focus();
+            }
+          }, 450);
+        }
       }
+    };
+
+    // 1. LOCAL DRIVE BUTTON
+    const btnLocal = document.getElementById('btn-nexus-local');
+    if (btnLocal) {
+      btnLocal.addEventListener('click', async () => {
+        await selectLocalDirectorySource();
+      });
+    }
+
+    // 2. NUVEM GIGANTERA (CDN) BUTTON
+    const btnCDN = document.getElementById('btn-nexus-cdn');
+    if (btnCDN) {
+      btnCDN.addEventListener('click', () => {
+        if (stepSource) stepSource.style.display = 'none';
+        if (stepPin) stepPin.style.display = 'block';
+        if (pinInput) {
+          pinInput.value = '';
+          updatePinSlots('');
+          pinInput.focus();
+        }
+        if (pinFeedback) {
+          pinFeedback.className = 'pin-feedback-line';
+          pinFeedback.textContent = 'DIGITE O PIN (TECLADO OU BOTÕES ABAIXO)';
+        }
+      });
+    }
+
+    // 3. PIN INPUT & KEYPAD LISTENERS
+    if (pinInput) {
+      pinInput.addEventListener('input', () => {
+        pinInput.value = pinInput.value.replace(/\D/g, '').slice(0, 4);
+        updatePinSlots(pinInput.value);
+        if (pinInput.value.length === 4) {
+          verifyPin();
+        }
+      });
+
+      pinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') verifyPin();
+        if (e.key === 'Escape' && btnPinBack) btnPinBack.click();
+      });
+    }
+
+    // On-screen keypad buttons
+    document.querySelectorAll('.pin-key').forEach(keyBtn => {
+      keyBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!pinInput) return;
+        const action = keyBtn.getAttribute('data-key');
+        if (action === 'clear') {
+          pinInput.value = '';
+        } else if (action === 'backspace') {
+          pinInput.value = pinInput.value.slice(0, -1);
+        } else if (pinInput.value.length < 4) {
+          pinInput.value += action;
+        }
+        updatePinSlots(pinInput.value);
+        if (pinInput.value.length === 4) {
+          verifyPin();
+        } else {
+          pinInput.focus();
+        }
+      });
     });
 
-    document.getElementById('btn-nexus-cdn').addEventListener('click', async () => {
-      console.log('[Media Nexus] CDN Mode Activated');
-      nexusModal.close();
-      // Connect to Bunny.net manifest
-      const clips = await MediaProvider.initCDN();
-      await loadMediaPool(clips);
-      await loadMattesCatalog();
-    });
+    if (btnPinSubmit) {
+      btnPinSubmit.addEventListener('click', (e) => {
+        e.preventDefault();
+        verifyPin();
+      });
+    }
+
+    if (btnPinBack) {
+      btnPinBack.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (stepPin) stepPin.style.display = 'none';
+        if (stepSource) stepSource.style.display = 'block';
+        if (pinInput) {
+          pinInput.value = '';
+          updatePinSlots('');
+        }
+      });
+    }
+
+    // 4. YOUTUBE / STREAM INGESTION & DOWNLOADER IN STUDIO LAUNCHER
+    const btnYTStream = document.getElementById('btn-nexus-yt-connect');
+    const btnYTDl = document.getElementById('btn-nexus-yt-download');
+    const inputYT = document.getElementById('input-nexus-yt');
+    const selectYTCat = document.getElementById('select-nexus-yt-cat');
+
+    const handleLauncherStream = (mode) => {
+      const url = (inputYT ? inputYT.value : '').trim();
+      if (!url) return;
+      const cat = selectYTCat ? selectYTCat.value : 'STREAMS & YOUTUBE';
+      console.log(`[Studio Launcher] YouTube/Stream Ingest (${mode}):`, url);
+      ingestStreamMedia(url, cat, '', mode);
+      updateSourceUI('stream');
+      closeStudioLauncher();
+    };
+
+    if (btnYTStream) btnYTStream.addEventListener('click', () => handleLauncherStream('stream'));
+    if (btnYTDl) btnYTDl.addEventListener('click', () => handleLauncherStream('download'));
+    if (inputYT) {
+      inputYT.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleLauncherStream('stream');
+      });
+    }
+
+    // Check saved preference on startup
+    const savedSource = localStorage.getItem('penumbra_media_source');
+    const rememberSource = localStorage.getItem('penumbra_remember_source') === 'true';
+    const savedPin = localStorage.getItem('penumbra_cdn_pin');
+
+    if (rememberSource && savedSource === 'cdn' && savedPin === '2026') {
+      console.log('[Media Nexus] Autoconectando à Nuvem Edge (preferência salva)...');
+      MediaProvider.initCDN().then(clips => {
+        loadMediaPool(clips);
+        loadMattesCatalog();
+        updateSourceUI('cdn');
+      }).catch(err => {
+        console.warn('[Media Nexus] Falha ao autoconectar, abrindo Studio Launcher:', err);
+        openStudioLauncher();
+      });
+    } else {
+      // Pergunta sempre se quer Nuvem ou Local se preferência não estiver salva
+      openStudioLauncher();
+    }
   } else {
     loadMediaPool();
     loadMattesCatalog();
   }
+
+  // Add Extra Local Folder logic
+  const btnAddLocal = document.getElementById('btn-add-local-folder');
+  if (btnAddLocal) {
+    btnAddLocal.addEventListener('click', async () => {
+      try {
+        const handle = await window.showDirectoryPicker();
+        const newClips = await MediaProvider.scanExtraDir(handle);
+        if (newClips.length > 0) {
+          allClips.push(...newClips);
+          renderFolderPills();
+          renderMediaCards();
+          updateSourceUI('local');
+          console.log(`[Media Nexus] Adicionado ${newClips.length} novos clipes locais.`);
+        }
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          console.warn('[Media Nexus] Seleção extra de pasta cancelada ou falha:', e);
+        }
+      }
+    });
+  }
+
   setupEvents();
   setupProFaders();
+  if (typeof initWorkspaceSplitter === 'function') initWorkspaceSplitter();
+  if (typeof initDockViewModes === 'function') initDockViewModes();
+  if (typeof initKeyboardShortcuts === 'function') initKeyboardShortcuts();
   applyMacroPreset(appState.macro_state || 'GROOVE', 0, false);
   renderMacroPresetsMatrix();
   updateMatteRibbonActiveStatus();
   updateFxUI();
   renderVisuals();
   updateUI();
+  updateSourceUI(activeMediaSource);
+
   window.addEventListener('resize', () => {
     if (typeof renderQueueCards === 'function') renderQueueCards();
   });
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootstrapApp);
+} else {
+  bootstrapApp();
+}
 
 // ============================================================================
 // PRO-APP UX: FADERS & KNOBS (DOUBLE CLICK RESET & SHIFT FINE-TUNING)
@@ -5990,12 +8626,15 @@ window.openSettingsModal = openSettingsModal;
 window.closeSettingsModal = closeSettingsModal;
 
 function setSettingsTab(tabId) {
-  document.querySelectorAll('.settings-tab-btn').forEach(b => {
+  document.querySelectorAll('.settings-tab-btn, .cfg-nav-item').forEach(b => {
     b.classList.toggle('active', b.dataset.tab === tabId);
   });
   document.querySelectorAll('.settings-tab-panel').forEach(p => {
     p.classList.toggle('active', p.id === `settings-panel-${tabId}`);
   });
+  if (tabId === 'midi' && window.penumbraHwTwin) {
+    window.penumbraHwTwin.updateView();
+  }
 }
 window.setSettingsTab = setSettingsTab;
 
@@ -6069,12 +8708,20 @@ function initKeyboardShortcuts() {
       return;
     }
 
-    // Number keys 1-5: Switch Dock Modules
-    if (key === '1') { e.preventDefault(); switchTab('tab-mediapool'); return; }
-    if (key === '2') { e.preventDefault(); switchTab('tab-layers'); return; }
-    if (key === '3') { e.preventDefault(); switchTab('tab-mattes'); return; }
-    if (key === '4') { e.preventDefault(); switchTab('tab-tonal'); return; }
-    if (key === '5') { e.preventDefault(); switchTab('tab-queue'); return; }
+    // TAB: Alternar entre Módulos de Trabalho e Timeline Pro
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      toggleDockViewMode();
+      return;
+    }
+
+    // Number keys 1-6: Switch Dock Modules
+    if (key === '1') { e.preventDefault(); setDockViewMode('modules'); switchTab('tab-mediapool'); return; }
+    if (key === '2') { e.preventDefault(); setDockViewMode('modules'); switchTab('tab-layers'); return; }
+    if (key === '3') { e.preventDefault(); setDockViewMode('modules'); switchTab('tab-mattes'); return; }
+    if (key === '4') { e.preventDefault(); setDockViewMode('modules'); switchTab('tab-tonal'); return; }
+    if (key === '5') { e.preventDefault(); setDockViewMode('modules'); switchTab('tab-queue'); return; }
+    if (key === '6') { e.preventDefault(); setDockViewMode('modules'); switchTab('tab-fx'); return; }
 
     // Route focused or selected clip: A for Program, B for Preview
     if (key === 'a' || key === 'A') {
@@ -6168,10 +8815,23 @@ function initKeyboardShortcuts() {
       return;
     }
 
+    // I: Toggle Media Ingest Deck (Local / Bunny / YouTube)
+    if (key === 'i' || key === 'I') {
+      e.preventDefault();
+      switchTab('tab-mediapool');
+      if (typeof window.toggleMediaIngestDeck === 'function') {
+        window.toggleMediaIngestDeck();
+      }
+      return;
+    }
+
     // Escape: Close modals
     if (key === 'Escape') {
       closeShortcutsModal();
       closeTheater();
+      if (typeof window.toggleMediaIngestDeck === 'function') {
+        window.toggleMediaIngestDeck(false);
+      }
       return;
     }
   });
@@ -6381,3 +9041,189 @@ setTimeout(() => {
     }
   });
 }, 500);
+
+// ============================================================================
+// WORKSPACE RESIZE SPLITTER (DUAL MONITORS vs PRO DOCK)
+// ============================================================================
+function initWorkspaceSplitter() {
+  const splitter = document.getElementById('workspace-splitter');
+  const topZone = document.querySelector('.top-zone');
+  if (!splitter || !topZone) return;
+
+  // Restore saved height from UserProfileManager
+  if (typeof UserProfileManager !== 'undefined') {
+    const savedH = UserProfileManager.getSetting('workspace_top_height', null);
+    if (savedH && typeof savedH === 'number' && savedH >= 160 && savedH <= window.innerHeight * 0.75) {
+      topZone.style.height = `${savedH}px`;
+    }
+  }
+
+  let isDragging = false;
+  let startY = 0;
+  let startHeight = 0;
+
+  const onPointerDown = (e) => {
+    isDragging = true;
+    startY = e.clientY;
+    startHeight = topZone.getBoundingClientRect().height;
+    splitter.classList.add('is-dragging');
+    document.body.classList.add('resizing-workspace-active');
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    e.preventDefault();
+  };
+
+  const onPointerMove = (e) => {
+    if (!isDragging) return;
+    const deltaY = e.clientY - startY;
+    const minH = 160;
+    const maxH = Math.max(minH, window.innerHeight - 180);
+    const newHeight = Math.min(Math.max(startHeight + deltaY, minH), maxH);
+    topZone.style.height = `${newHeight}px`;
+    if (typeof renderQueueCards === 'function') {
+      renderQueueCards();
+    }
+  };
+
+  const onPointerUp = () => {
+    if (!isDragging) return;
+    isDragging = false;
+    splitter.classList.remove('is-dragging');
+    document.body.classList.remove('resizing-workspace-active');
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+
+    const finalH = Math.round(topZone.getBoundingClientRect().height);
+    if (typeof UserProfileManager !== 'undefined') {
+      UserProfileManager.setSetting('workspace_top_height', finalH);
+    }
+    if (typeof renderQueueCards === 'function') {
+      renderQueueCards();
+    }
+  };
+
+  splitter.addEventListener('pointerdown', onPointerDown);
+
+  // Double-click resets default 32% viewport height
+  splitter.addEventListener('dblclick', () => {
+    const defH = Math.round(window.innerHeight * 0.32);
+    topZone.style.height = `${defH}px`;
+    if (typeof UserProfileManager !== 'undefined') {
+      UserProfileManager.setSetting('workspace_top_height', defH);
+    }
+    if (typeof renderQueueCards === 'function') {
+      renderQueueCards();
+    }
+  });
+}
+window.initWorkspaceSplitter = initWorkspaceSplitter;
+
+// ============================================================================
+// DOCK VIEW MODES: MÓDULOS & ASSETS vs PRO TIMELINE (ZERO SPACE COMPETITION)
+// ============================================================================
+let currentDockViewMode = 'modules'; // 'modules' | 'timeline'
+
+function setDockViewMode(mode) {
+  currentDockViewMode = mode;
+  const btnModules = document.getElementById('btn-mode-modules');
+  const btnTimeline = document.getElementById('btn-mode-timeline');
+  const viewModules = document.getElementById('dock-modules-view');
+  const viewTimeline = document.getElementById('dock-timeline-view');
+  const tabsBar = document.getElementById('dock-tabs-bar');
+  const lblQuick = document.getElementById('lbl-quick-switch-text');
+
+  if (mode === 'timeline') {
+    if (btnModules) btnModules.classList.remove('active');
+    if (btnTimeline) btnTimeline.classList.add('active');
+    if (viewModules) viewModules.style.display = 'none';
+    if (viewTimeline) viewTimeline.style.display = 'flex';
+    if (tabsBar) tabsBar.style.display = 'none';
+    if (lblQuick) lblQuick.textContent = '▤ VER MÓDULOS';
+
+    // Trigger canvas render to match full expanded height
+    requestAnimationFrame(() => {
+      if (typeof renderQueueCards === 'function') renderQueueCards();
+    });
+  } else {
+    if (btnModules) btnModules.classList.add('active');
+    if (btnTimeline) btnTimeline.classList.remove('active');
+    if (viewModules) viewModules.style.display = 'flex';
+    if (viewTimeline) viewTimeline.style.display = 'none';
+    if (tabsBar) tabsBar.style.display = 'flex';
+    if (lblQuick) lblQuick.textContent = '⏱️ TIMELINE PRO';
+  }
+
+  if (typeof UserProfileManager !== 'undefined') {
+    UserProfileManager.setSetting('dock_view_mode', mode);
+  }
+}
+window.setDockViewMode = setDockViewMode;
+
+function toggleDockViewMode() {
+  setDockViewMode(currentDockViewMode === 'timeline' ? 'modules' : 'timeline');
+}
+window.toggleDockViewMode = toggleDockViewMode;
+
+function initDockViewModes() {
+  if (typeof UserProfileManager !== 'undefined') {
+    const savedMode = UserProfileManager.getSetting('dock_view_mode', 'modules');
+    if (savedMode === 'timeline') {
+      setDockViewMode('timeline');
+    }
+    const savedAssetType = UserProfileManager.getSetting('library_active_asset_type', 'all');
+    if (savedAssetType && typeof selectLibraryAssetType === 'function') {
+      selectLibraryAssetType(savedAssetType);
+    }
+  }
+}
+window.initDockViewModes = initDockViewModes;
+
+function cueNextFromQueue() {
+  if (queueList && queueList.length > 0) {
+    const nextItem = queueList[0];
+    if (nextItem && nextItem.id) {
+      routeClipToBus(nextItem.id, 'B');
+    }
+  }
+}
+window.cueNextFromQueue = cueNextFromQueue;
+
+// ============================================================================
+// PRO PREFERENCES SEARCH & FILTERING ENGINE
+// ============================================================================
+function filterPreferencesSearch(query) {
+  const q = (query || '').toLowerCase().trim();
+  const rows = document.querySelectorAll('.cfg-prop-row');
+  let firstMatchTab = null;
+
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    const match = !q || text.includes(q);
+    row.style.display = match ? 'flex' : 'none';
+
+    if (match && !firstMatchTab && q) {
+      const panel = row.closest('.settings-tab-panel');
+      if (panel) {
+        firstMatchTab = panel.id.replace('settings-panel-', '');
+      }
+    }
+  });
+
+  // If search term entered, automatically navigate to first tab with matches if active has 0
+  if (q && firstMatchTab) {
+    const activePanel = document.querySelector('.settings-tab-panel.active');
+    const visibleCount = activePanel ? Array.from(activePanel.querySelectorAll('.cfg-prop-row')).filter(r => r.style.display !== 'none').length : 0;
+    if (visibleCount === 0) {
+      setSettingsTab(firstMatchTab);
+    }
+  }
+}
+window.filterPreferencesSearch = filterPreferencesSearch;
+
+function clearPreferencesSearch() {
+  const input = document.getElementById('cfg-search-input');
+  if (input) input.value = '';
+  filterPreferencesSearch('');
+}
+window.clearPreferencesSearch = clearPreferencesSearch;
+
