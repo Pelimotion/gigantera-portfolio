@@ -1196,12 +1196,12 @@
           <div class="form-grid-2" style="margin-bottom: 1rem;">
             <div class="form-group">
               <label class="form-label">Bunny Pull Zone Host (CDN de Entrega)</label>
-              <input type="text" id="bunnyPullZone" class="form-input" value="https://pelimotion-portfolio.b-cdn.net" placeholder="https://pelimotion-portfolio.b-cdn.net" />
+              <input type="text" id="bunnyPullZone" class="form-input" value="https://gigantera-penumbra.b-cdn.net" placeholder="https://gigantera-penumbra.b-cdn.net" />
             </div>
 
             <div class="form-group">
               <label class="form-label">Bunny Storage Zone Name</label>
-              <input type="text" id="bunnyStorageZone" class="form-input" value="pelimotion-portfolio" placeholder="Nome da Storage Zone" />
+              <input type="text" id="bunnyStorageZone" class="form-input" value="gigantera" placeholder="Nome da Storage Zone" />
             </div>
           </div>
 
@@ -1923,7 +1923,7 @@
         let thumbUrl = art.imageSrc || '';
         if (!thumbUrl.startsWith('http')) {
           const filename = thumbUrl.replace(/^.*[\\\/]/, '');
-          thumbUrl = `https://pelimotion-portfolio.b-cdn.net/gigantera/stills/${filename}`;
+          thumbUrl = `https://gigantera-penumbra.b-cdn.net/stills/${filename}`;
         }
 
         const tr = document.createElement('tr');
