@@ -5,6 +5,22 @@
   "cleanUrls": true,
   "rewrites": [
     {
+      "source": "/styles.css",
+      "destination": "/penumbra/styles.css"
+    },
+    {
+      "source": "/app.js",
+      "destination": "/penumbra/app.js"
+    },
+    {
+      "source": "/midi.js",
+      "destination": "/penumbra/midi.js"
+    },
+    {
+      "source": "/media_manifest.json",
+      "destination": "/penumbra/media_manifest.json"
+    },
+    {
       "source": "/penumbra",
       "destination": "/penumbra/index.html"
     },
