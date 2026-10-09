@@ -5,12 +5,12 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/penumbra/:path*",
-      "destination": "https://gigantera-penumbra.b-cdn.net/:path*"
+      "source": "/penumbra",
+      "destination": "/penumbra/index.html"
     },
     {
-      "source": "/penumbra",
-      "destination": "https://gigantera-penumbra.b-cdn.net/index.html"
+      "source": "/penumbra/",
+      "destination": "/penumbra/index.html"
     },
     {
       "source": "/ar",
