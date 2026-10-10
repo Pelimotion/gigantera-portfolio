@@ -353,8 +353,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const layout = computeModularGalleryLayout(ARTWORKS_CATALOG);
     const list = layout.artworksWithCoords;
     if (list.length === 0) return;
-    const boundedIdx = (idx + list.length) % list.length;
-    const target = list[boundedIdx];
+    const clampedIdx = Math.max(0, Math.min(list.length - 1, idx));
+    const target = list[clampedIdx];
     if (!target) return;
 
     const dx = target.computedCoords.x - target.viewingSpot.x;
@@ -362,7 +362,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const targetYaw = Math.atan2(-dx, -dz);
 
     set({
-      currentArtworkIndex: boundedIdx,
+      currentArtworkIndex: clampedIdx,
       targetGlideSpot: {
         x: target.viewingSpot.x,
         z: target.viewingSpot.z,

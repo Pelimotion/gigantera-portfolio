@@ -504,21 +504,30 @@ export class CDViewmodel3D {
     this.isVisible = true;
     soundEngine.playCaseSnapSound();
 
+    const isMob = useAppStore.getState().isMobile || (typeof window !== 'undefined' && window.innerWidth < 768);
     if (isFirstEver) {
       this.isFirstTakeInspecting = true;
       this.firstTakeStartTime = performance.now();
-      this.currentY = -0.06;
-      this.targetY = -0.06;
-      this.currentZ = -0.62;
-      this.targetZ = -0.62;
+      this.currentY = isMob ? -0.01 : -0.06;
+      this.targetY = isMob ? -0.01 : -0.06;
+      this.currentZ = isMob ? -0.58 : -0.62;
+      this.targetZ = isMob ? -0.58 : -0.62;
       this.currentFlipAngle = 0; // Inicia mostrando capa frontal CAPA.jpeg
       this.targetFlipAngle = 0;
     } else {
       this.isFirstTakeInspecting = false;
-      this.targetY = -0.04;
-      this.targetZ = -0.46;
+      this.targetY = isMob ? -0.01 : -0.04;
+      this.targetZ = isMob ? -0.54 : -0.46;
       this.targetFlipAngle = 0; // Inicia mostrando a arte da capa frontal (GIGA 'N' TERA)
     }
+  }
+
+  public getTargetFlipAngle(): number {
+    return this.targetFlipAngle;
+  }
+
+  public getIsVisible(): boolean {
+    return this.isVisible;
   }
 
   /**
@@ -629,21 +638,22 @@ export class CDViewmodel3D {
     // 0. Sequência de Inspeção Inicial (2s apenas na primeira pegada de CD)
     if (this.isFirstTakeInspecting) {
       const elapsed = (performance.now() - this.firstTakeStartTime) / 1000;
+      const isMob = useAppStore.getState().isMobile || (typeof window !== 'undefined' && window.innerWidth < 768);
       if (elapsed < 0.75) {
         // Exibe a capa frontal afastada
         this.targetFlipAngle = 0;
-        this.targetZ = -0.62;
-        this.targetY = -0.06;
+        this.targetZ = isMob ? -0.60 : -0.62;
+        this.targetY = isMob ? -0.02 : -0.06;
       } else if (elapsed < 1.45) {
         // Gira 180° revelando a contracapa
         this.targetFlipAngle = Math.PI;
-        this.targetZ = -0.52;
-        this.targetY = -0.05;
+        this.targetZ = isMob ? -0.56 : -0.52;
+        this.targetY = isMob ? -0.01 : -0.05;
       } else if (elapsed < 2.1) {
         // Aproxima para o POV confortável de seleção de faixas
         this.targetFlipAngle = Math.PI;
-        this.targetZ = -0.46;
-        this.targetY = -0.04;
+        this.targetZ = isMob ? -0.54 : -0.46;
+        this.targetY = isMob ? -0.01 : -0.04;
       } else {
         this.isFirstTakeInspecting = false;
         useAppStore.getState().setHasInspectedCDBefore(true);
@@ -668,8 +678,8 @@ export class CDViewmodel3D {
     const breathingY = Math.sin(time * 1.8) * 0.0018;
     const breathingX = Math.cos(time * 0.9) * 0.001;
 
-    const isMob = useAppStore.getState().isMobile;
-    const baseTargetX = isMob ? 0.02 : 0.18;
+    const isMob = useAppStore.getState().isMobile || (typeof window !== 'undefined' && window.innerWidth < 768);
+    const baseTargetX = isMob ? 0.0 : 0.18;
 
     this.rootGroup.position.x = baseTargetX + breathingX;
     this.rootGroup.position.y = this.currentY + breathingY;

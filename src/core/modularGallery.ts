@@ -220,3 +220,12 @@ export function computeModularGalleryLayout(artworks: Artwork[]): ModularGallery
     }
   };
 }
+
+let cachedOrderedArtworks: ModularGalleryLayout['artworksWithCoords'] | null = null;
+export function getGalleryOrderedArtworks(artworks: Artwork[]): ModularGalleryLayout['artworksWithCoords'] {
+  if (!cachedOrderedArtworks || cachedOrderedArtworks.length !== artworks.length) {
+    const layout = computeModularGalleryLayout(artworks);
+    cachedOrderedArtworks = layout.artworksWithCoords;
+  }
+  return cachedOrderedArtworks;
+}

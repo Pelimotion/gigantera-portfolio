@@ -103,6 +103,9 @@ a {
   z-index: 1;
   background-color: var(--bg-primary);
   transition: opacity 0.4s ease, filter 0.4s ease;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 [data-mode='archive'] .gallery-3d-container {
@@ -3363,25 +3366,74 @@ a {
 /* Responsividade Mobile para CD Split Stage */
 @media (max-width: 768px) {
   .cd-split-stage {
-    flex-direction: column;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    overflow: hidden;
   }
 
+  /* Em mobile, o visualizador de partículas vira um halo atmosférico atrás do CD */
   .cd-visualizer-pane {
+    position: absolute;
+    inset: 0;
     width: 100%;
-    height: 38%;
-    padding: 20px 16px 10px 16px;
+    height: 100%;
+    padding: 16px 16px 0 16px;
     border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    background: linear-gradient(
-      180deg,
-      rgba(7, 9, 10, 0.85) 0%,
-      rgba(7, 9, 10, 0.6) 80%,
-      rgba(7, 9, 10, 0) 100%
-    );
+    border-bottom: none;
+    background: transparent !important;
+    pointer-events: none;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  [data-theme='light'] .cd-visualizer-pane {
+    background: transparent !important;
+    border-right: none;
+  }
+
+  .cd-visualizer-header {
+    background: rgba(10, 13, 12, 0.76);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    padding: 12px 14px 14px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    pointer-events: auto;
+    max-width: 100%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  }
+
+  [data-theme='light'] .cd-visualizer-header {
+    background: rgba(245, 247, 248, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  .cd-visualizer-canvas-wrap {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.65;
+    z-index: 1;
+    mask-image: radial-gradient(circle at 50% 40%, black 45%, transparent 78%);
+    -webkit-mask-image: radial-gradient(circle at 50% 40%, black 45%, transparent 78%);
   }
 
   .cd-current-title {
-    font-size: 18px;
+    font-size: 16px;
+    letter-spacing: -0.01em;
+  }
+
+  .cd-current-sub {
+    font-size: 10px;
+    opacity: 0.7;
   }
 
   .cd-visualizer-footer {
@@ -3389,19 +3441,49 @@ a {
   }
 
   .cd-jewel-pane {
+    position: absolute;
+    inset: 0;
     width: 100%;
-    height: 62%;
-    padding: 12px 16px 80px 16px;
+    height: 100%;
+    padding: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
     align-items: center;
+    z-index: 3;
   }
 
   .cd-jewel-top-info {
+    position: absolute;
+    bottom: 82px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
     align-items: center;
+    pointer-events: auto;
+    white-space: nowrap;
   }
 
   .cd-jewel-status-capsule {
     align-items: center;
-    padding: 6px 12px;
+    padding: 4px 12px;
+    background: rgba(14, 18, 16, 0.78);
+    border: 1px solid rgba(228, 195, 121, 0.28);
+    border-radius: 9999px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  .cd-view-badge {
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  .cd-action-subhint {
+    font-size: 8px;
+    color: var(--text-secondary);
   }
 }
 
@@ -3533,6 +3615,19 @@ a {
 .cd-mobile-action-btn:active {
   transform: scale(0.96);
   background: rgba(255, 255, 255, 0.16);
+}
+
+.cd-mobile-btn-step {
+  padding: 8px 11px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--accent-cyan);
+}
+
+.cd-mobile-btn-flip {
+  flex: 1;
+  justify-content: center;
 }
 
 .cd-mobile-btn-stow {
@@ -4586,238 +4681,269 @@ a {
   padding-bottom: env(safe-area-inset-bottom, 10px);
 }
 
-.mobile-dock-surface {
-  pointer-events: auto;
-  margin: 0 10px 8px;
-  background: var(--bg-surface-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-  overflow: hidden;
-}
-
-/* Architectural Sectors Strip (1 · SOM | 2 · VÍDEOS | 3 · STILLS) */
-.mobile-sectors-strip {
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--border-subtle);
-  background: rgba(0, 0, 0, 0.25);
-}
-
-.mobile-sector-pill {
-  flex: 1;
-  height: 28px;
+/* Toast / Notificação do Giroscópio (Janela Mágica) */
+.mobile-gyro-toast {
+  pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  font-size: 9px;
+  gap: 8px;
+  margin: 0 auto 10px auto;
+  max-width: fit-content;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(12, 16, 15, 0.9);
+  border: 1px solid rgba(77, 238, 234, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 14px rgba(77, 238, 234, 0.25);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--accent-cyan, #4deeea);
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: var(--text-tertiary);
-  background: transparent;
-  border: none;
-  border-right: 1px solid var(--border-subtle);
+  text-align: center;
+  animation: gyroToastPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-theme='light'] .mobile-gyro-toast {
+  background: rgba(248, 250, 252, 0.94);
+  border: 1px solid rgba(2, 132, 199, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  color: var(--accent-cyan, #0284c7);
+}
+
+.gyro-toast-icon {
+  font-size: 13px;
+  display: inline-block;
+  animation: gyroSpin 2s linear infinite;
+}
+
+@keyframes gyroSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes gyroToastPop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =====================================================================
+   MODERN CURATORIAL MOBILE INTERFACE (SPATIAL MINIMALISM & THUMB ZONE)
+   ===================================================================== */
+
+/* 1. Micro-Barra Superior Flutuante de Utilitários */
+.mobile-floating-utilities {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto 8px;
+  padding: 0 16px;
+  pointer-events: auto;
+  max-width: 440px;
+}
+
+.mobile-util-pill {
+  height: 30px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   touch-action: manipulation;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
 }
 
-.mobile-sector-pill:last-child {
-  border-right: none;
+.mobile-util-pill:active {
+  transform: scale(0.94);
+  background: var(--border-subtle);
 }
 
-.mobile-sector-pill:active {
-  background: rgba(255, 255, 255, 0.05);
-  transform: scale(0.97);
-}
-
-.mobile-sector-pill.is-active {
+.mobile-util-pill.is-active {
+  background: rgba(184, 141, 52, 0.18);
+  border-color: var(--accent-gold);
   color: var(--accent-gold);
-  background: rgba(184, 141, 52, 0.12);
+  box-shadow: 0 0 12px rgba(184, 141, 52, 0.3);
 }
 
-.mobile-sector-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
-  transition: all 0.15s ease;
+.mobile-util-pill.is-playing {
+  background: rgba(217, 71, 38, 0.18);
+  border-color: var(--accent-coral);
+  color: var(--accent-coral);
+  box-shadow: 0 0 12px rgba(217, 71, 38, 0.3);
 }
 
-.mobile-sector-pill.is-active .mobile-sector-dot {
-  background: var(--accent-gold);
-  box-shadow: 0 0 6px var(--accent-gold);
-}
-
-/* Stepper Row (◄ [Obra 01 / 12] [VER] ►) */
-.mobile-stepper-row {
+/* 2. Ilha Curatorial Flutuante (Single Sleek Island) */
+.mobile-curatorial-island {
+  pointer-events: auto;
+  margin: 0 auto;
+  max-width: 440px;
+  height: 72px;
+  padding: 8px 10px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
-.mobile-stepper-nav-btn {
-  width: 38px;
-  height: 42px;
+/* Circular Steppers (44px min tap targets) */
+.curatorial-step-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: 18px;
+  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-surface-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  color: var(--text-primary);
-  font-size: 13px;
   cursor: pointer;
   touch-action: manipulation;
-  transition: background 0.15s ease, transform 0.1s ease;
   flex-shrink: 0;
+  transition: all 0.15s ease;
 }
 
-.mobile-stepper-nav-btn:active {
+.curatorial-step-btn:active:not(:disabled) {
   background: var(--border-subtle);
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
-.mobile-current-art-card {
+.curatorial-step-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* Cartão Central de Metadados da Obra */
+.curatorial-info-card {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  justify-content: center;
+  gap: 3px;
   padding: 2px 6px;
   cursor: pointer;
   text-align: left;
+  border-radius: 10px;
+  transition: background 0.15s ease;
 }
 
-.art-card-top-info {
+.curatorial-info-card:active {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.curatorial-top-tagline {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
 }
 
-.art-drawer-cue {
+.curatorial-presence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--accent-gold);
+}
+
+.curatorial-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  box-shadow: 0 0 8px var(--accent-gold);
+  animation: curatorialPulse 2s infinite ease-in-out;
+}
+
+@keyframes curatorialPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.55; }
+}
+
+.curatorial-foyer-badge {
+  color: var(--accent-coral);
+}
+
+.curatorial-index-badge {
+  color: var(--text-tertiary);
+}
+
+.curatorial-open-cue {
   margin-left: auto;
   font-size: 8px;
-  letter-spacing: 0.05em;
-  color: var(--text-tertiary);
-  opacity: 0.85;
+  letter-spacing: 0.06em;
+  opacity: 0.6;
 }
 
-.art-counter-badge {
-  font-weight: 700;
-  color: var(--accent-gold);
-}
-
-.art-medium-pill {
-  font-size: 9px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  letter-spacing: 0.04em;
-}
-
-.art-medium-pill.is-video {
-  background: rgba(217, 71, 38, 0.18);
-  color: var(--accent-coral);
-  border: 1px solid rgba(217, 71, 38, 0.3);
-}
-
-.art-medium-pill.is-still {
-  background: rgba(184, 141, 52, 0.18);
-  color: var(--accent-gold);
-  border: 1px solid rgba(184, 141, 52, 0.3);
-}
-
-.art-medium-pill.is-interactive {
-  background: rgba(56, 189, 248, 0.18);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.35);
-}
-
-.art-card-title-text {
-  font-size: 12px;
+.curatorial-work-title {
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
-.mobile-inspect-action-btn {
-  height: 42px;
-  padding: 0 12px;
+/* Botão de Ação Primária (VER / INTERAGIR / OUVIR) */
+.curatorial-primary-action-btn {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
   background: var(--accent-coral);
-  color: #fff;
+  color: #ffffff;
   border: none;
-  border-radius: 8px;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   cursor: pointer;
   touch-action: manipulation;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(217, 71, 38, 0.35);
-  transition: opacity 0.15s ease, transform 0.1s ease;
-}
-
-.mobile-inspect-action-btn:active {
-  opacity: 0.88;
-  transform: scale(0.96);
-}
-
-/* Quick Tools Row (GIRO, CD, ACERVO, GUIA) */
-.mobile-tools-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 7px 8px;
-  gap: 6px;
-  background: var(--bg-surface-elevated);
-}
-
-.mobile-tool-pill {
-  flex: 1;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  font-size: 10px;
-  font-weight: 600;
-  border-radius: 6px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  cursor: pointer;
-  touch-action: manipulation;
+  box-shadow: 0 4px 14px rgba(217, 71, 38, 0.4);
   transition: all 0.15s ease;
-  white-space: nowrap;
 }
 
-.mobile-tool-pill:active {
-  transform: scale(0.96);
+.curatorial-primary-action-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 8px rgba(217, 71, 38, 0.25);
 }
 
-.mobile-tool-pill.is-active {
-  background: rgba(184, 141, 52, 0.15);
-  border-color: var(--accent-gold);
-  color: var(--accent-gold);
-}
-
-.mobile-tool-pill.is-playing {
-  background: rgba(217, 71, 38, 0.15);
-  border-color: var(--accent-coral);
-  color: var(--accent-coral);
+.curatorial-primary-action-btn.is-audio {
+  background: var(--accent-gold);
+  box-shadow: 0 4px 14px rgba(184, 141, 52, 0.4);
 }
 
 /* Mobile Drawer Carousel */
@@ -5067,6 +5193,107 @@ a {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* ==========================================================================
+   MOBILE TOUCHSCREEN DYNAMIC JOYSTICK & WALKING HUD (AAA WebGL Experience)
+   ========================================================================== */
+
+.mobile-touch-joystick-base {
+  position: fixed;
+  width: 92px;
+  height: 92px;
+  margin-left: -46px;
+  margin-top: -46px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 55;
+  background: radial-gradient(circle, rgba(228, 195, 121, 0.08) 0%, rgba(18, 22, 20, 0.48) 80%);
+  border: 1.5px solid rgba(228, 195, 121, 0.35);
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.4), inset 0 0 16px rgba(228, 195, 121, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: joystickPop 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mobile-touch-joystick-base::after {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  border: 1px dashed rgba(228, 195, 121, 0.22);
+  pointer-events: none;
+}
+
+.mobile-touch-joystick-knob {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  top: 50%;
+  left: 50%;
+  margin-top: -22px;
+  margin-left: -22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fffbf0 0%, #e4c379 55%, #b88d34 100%);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 18px rgba(228, 195, 121, 0.45);
+  pointer-events: none;
+  will-change: transform;
+}
+
+@keyframes joystickPop {
+  0% {
+    transform: scale(0.65);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Micro-pílula de dica de caminhada no mobile (desaparece assim que o usuário anda) */
+.mobile-walk-gesture-hint {
+  position: fixed;
+  top: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(14, 17, 16, 0.78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(228, 195, 121, 0.28);
+  border-radius: 9999px;
+  color: rgba(245, 243, 238, 0.92);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+  z-index: 45;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  animation: mobileHintFloat 3s ease-in-out infinite;
+}
+
+.mobile-walk-gesture-hint .walk-gesture-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.mobile-walk-gesture-hint .walk-gesture-separator {
+  color: var(--accent-gold);
+  opacity: 0.6;
+}
+
+@keyframes mobileHintFloat {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-3px);
+  }
 }
 
 @media (max-width: 768px) {

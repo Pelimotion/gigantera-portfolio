@@ -3,6 +3,7 @@ import { useAppStore } from '../../core/store';
 import { soundEngine } from '../../core/soundEngine';
 import { CDVisualizerField } from './CDVisualizerField';
 import { DJFilterKnob } from '../ui/DJFilterKnob';
+import { AUTHORIAL_TRACKS_CATALOG } from '../../data/artworks';
 
 export const CDJewelCasePOV: React.FC = () => {
   const isHoldingCD = useAppStore((s) => s.isHoldingCD);
@@ -35,6 +36,17 @@ export const CDJewelCasePOV: React.FC = () => {
     flipCD();
     window.dispatchEvent(new CustomEvent('gigantera:flip-cd'));
     soundEngine.playCaseSnapSound();
+  };
+
+  const handleStepTrack = (delta: number) => {
+    soundEngine.playTactileHoverTick();
+    const curIdx = AUTHORIAL_TRACKS_CATALOG.findIndex((t) => t.id === currentAudioTrack.id);
+    const validCurIdx = curIdx >= 0 ? curIdx : 0;
+    const nextIdx = (validCurIdx + delta + AUTHORIAL_TRACKS_CATALOG.length) % AUTHORIAL_TRACKS_CATALOG.length;
+    const targetTrack = AUTHORIAL_TRACKS_CATALOG[nextIdx];
+    useAppStore.getState().setCurrentAudioTrack(targetTrack);
+    soundEngine.playTrackPreview(targetTrack);
+    useAppStore.getState().setIsAudioPlaying(true);
   };
 
   useEffect(() => {
@@ -150,18 +162,40 @@ export const CDJewelCasePOV: React.FC = () => {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                handleStepTrack(-1);
+              }}
+              className="cd-mobile-action-btn cd-mobile-btn-step"
+              title="Faixa anterior"
+              aria-label="Faixa anterior"
+            >
+              <span className="cd-action-icon">◄</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
                 handleFlip();
               }}
-              className="cd-mobile-action-btn"
+              className="cd-mobile-action-btn cd-mobile-btn-flip"
               title="Girar o CD entre capa frontal e contracapa com faixas"
             >
               <span className="cd-action-icon">⟲</span>
               <span>{cdFlipped ? 'VER CAPA' : 'VER FAIXAS'}</span>
             </button>
 
-            <div className="cd-mobile-touch-hint">
-              <span>{cdFlipped ? 'TOQUE NA FAIXA P/ TOCAR' : 'TOQUE NO CD P/ FAIXAS'}</span>
-            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleStepTrack(1);
+              }}
+              className="cd-mobile-action-btn cd-mobile-btn-step"
+              title="Próxima faixa"
+              aria-label="Próxima faixa"
+            >
+              <span className="cd-action-icon">►</span>
+            </button>
 
             <button
               type="button"

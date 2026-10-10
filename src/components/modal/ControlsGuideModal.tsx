@@ -77,16 +77,24 @@ export const ControlsGuideModal: React.FC = () => {
                   <h3 className="guide-section-title">EXPLORAR O PAVILHÃO</h3>
                   <div className="guide-rows">
                     <div className="guide-row">
-                      <span className="guide-key"><span className="icon-finger">☝️</span> 1 DEDO</span>
-                      <span className="guide-desc">arrastar para olhar em volta</span>
+                      <span className="guide-key">🕹️ POLEGAR ESQ.</span>
+                      <span className="guide-desc">joystick 360° para caminhar</span>
                     </div>
                     <div className="guide-row">
-                      <span className="guide-key">◄ ►</span>
-                      <span className="guide-desc">mover de obra em obra</span>
+                      <span className="guide-key">👀 POLEGAR DIR.</span>
+                      <span className="guide-desc">arrastar para olhar ao redor</span>
                     </div>
                     <div className="guide-row">
-                      <span className="guide-key">TOCAR</span>
-                      <span className="guide-desc">abrir uma obra</span>
+                      <span className="guide-key">📍 TOCAR CHÃO</span>
+                      <span className="guide-desc">caminhar até o ponto (waypoint)</span>
+                    </div>
+                    <div className="guide-row">
+                      <span className="guide-key">🖼️ TOCAR OBRA</span>
+                      <span className="guide-desc">aproximar ou abrir vitrine 3D</span>
+                    </div>
+                    <div className="guide-row">
+                      <span className="guide-key">◄ ► ILHA</span>
+                      <span className="guide-desc">passo guiado entre estações</span>
                     </div>
                   </div>
                 </section>

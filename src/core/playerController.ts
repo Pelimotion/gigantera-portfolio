@@ -78,6 +78,26 @@ export class PlayerController {
   public onScrollCD?: (delta: number) => void;
   public onStepTrackCD?: (step: number) => void;
   public onPointerLockChange?: (locked: boolean) => void;
+
+  // Suporte a Entrada Analógica Tátil / Joystick Touchscreen (360° Walk)
+  public touchMoveVector = { x: 0, z: 0 };
+  public onTouchJoystickChange?: (state: {
+    active: boolean;
+    originX: number;
+    originY: number;
+    currentX: number;
+    currentY: number;
+    deltaX: number;
+    deltaY: number;
+  } | null) => void;
+
+  private moveTouchId: number | null = null;
+  private moveOriginX: number = 0;
+  private moveOriginY: number = 0;
+  private lookTouchId: number | null = null;
+  private lookPrevX: number = 0;
+  private lookPrevY: number = 0;
+  private tapCandidate: { id: number; startX: number; startY: number; startTime: number; moved: boolean } | null = null;
   public onNextStill?: () => void;
   public onPrevStill?: () => void;
   public onResetStillZoom?: () => void;
@@ -99,6 +119,7 @@ export class PlayerController {
   private gyroCalibrated: boolean = false;
   private gyroBaseAlpha: number = 0;
   private gyroBaseBeta: number = 0;
+  private gyroBaseGamma: number = 0;
   private gyroTargetYaw: number = 0;
   private gyroTargetPitch: number = 0;
   private curGyroYaw: number = 0;
@@ -559,71 +580,230 @@ export class PlayerController {
   private touchMoved = false;
 
   private handleTouchStart = (e: TouchEvent): void => {
-    if (this.isHoldingCD || this.isCinemaActive || this.isArchiveActive) return;
-    if (e.touches.length === 1) {
-      this.touchStartX = e.touches[0].clientX;
-      this.touchStartY = e.touches[0].clientY;
-      this.touchStartTime = performance.now();
-      this.touchMoved = false;
-      this.isPointerDown = true;
+    if (this.isCinemaActive || this.isArchiveActive) return;
+
+    // Se o toque iniciou sobre a interface de navegação/botões/modais, deixa a UI nativa processar
+    const target = e.target as HTMLElement | null;
+    const isUI = !!target?.closest?.('header, nav, aside, button, a, [role="dialog"], input, select, textarea, .modal-backdrop, .mobile-curatorial-island, .mobile-floating-utilities, .mobile-drawer-sheet');
+    if (isUI) return;
+
+    // Se estiver segurando o CD na mão, mantém toque focado no estojo
+    if (this.isHoldingCD) {
+      if (e.touches.length === 1) {
+        this.touchStartX = e.touches[0].clientX;
+        this.touchStartY = e.touches[0].clientY;
+        this.touchStartTime = performance.now();
+        this.touchMoved = false;
+        this.isPointerDown = true;
+      }
+      return;
     }
-  };
 
-  private handleTouchMove = (e: TouchEvent): void => {
-    if (this.isHoldingCD || this.isCinemaActive || this.isArchiveActive) return;
-    if (!this.isPointerDown || e.touches.length !== 1) return;
+    const screenWidth = window.innerWidth;
 
-    const deltaX = e.touches[0].clientX - this.touchStartX;
-    const deltaY = e.touches[0].clientY - this.touchStartY;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      const isLeftSide = touch.clientX < screenWidth * 0.52;
 
-    if (Math.hypot(deltaX, deltaY) > 8) {
-      this.touchMoved = true;
-      if (this.isGliding) {
-        this.stopGlide();
+      // Toque na metade esquerda: Ativa o Joystick Virtual Flutuante de Caminhada
+      if (this.moveTouchId === null && isLeftSide) {
+        this.moveTouchId = touch.identifier;
+        this.moveOriginX = touch.clientX;
+        this.moveOriginY = touch.clientY;
+        this.touchMoveVector.x = 0;
+        this.touchMoveVector.z = 0;
+
+        this.tapCandidate = {
+          id: touch.identifier,
+          startX: touch.clientX,
+          startY: touch.clientY,
+          startTime: performance.now(),
+          moved: false
+        };
+
+        if (this.onTouchJoystickChange) {
+          this.onTouchJoystickChange({
+            active: true,
+            originX: touch.clientX,
+            originY: touch.clientY,
+            currentX: touch.clientX,
+            currentY: touch.clientY,
+            deltaX: 0,
+            deltaY: 0
+          });
+        }
+      } else if (this.lookTouchId === null) {
+        // Metade direita: Controle de Visão/Olhar da Câmera
+        this.lookTouchId = touch.identifier;
+        this.lookPrevX = touch.clientX;
+        this.lookPrevY = touch.clientY;
+
+        if (!this.tapCandidate) {
+          this.tapCandidate = {
+            id: touch.identifier,
+            startX: touch.clientX,
+            startY: touch.clientY,
+            startTime: performance.now(),
+            moved: false
+          };
+        }
       }
     }
 
-    this.touchStartX = e.touches[0].clientX;
-    this.touchStartY = e.touches[0].clientY;
+    this.isPointerDown = true;
+  };
 
-    this.yaw -= deltaX * this.config.mouseSensitivity * 1.6;
-    this.pitch -= deltaY * this.config.mouseSensitivity * 1.6;
-    this.pitch = Math.max(-0.68, Math.min(0.68, this.pitch));
+  private handleTouchMove = (e: TouchEvent): void => {
+    if (this.isCinemaActive || this.isArchiveActive || this.isHoldingCD) return;
 
+    const maxRadius = 46.0;
+
+    for (let i = 0; i < e.touches.length; i++) {
+      const touch = e.touches[i];
+
+      // Caso 1: Dedo do Joystick Virtual de Movimento (Caminhar / Andar)
+      if (touch.identifier === this.moveTouchId) {
+        const rawDx = touch.clientX - this.moveOriginX;
+        const rawDy = touch.clientY - this.moveOriginY;
+        const dist = Math.hypot(rawDx, rawDy);
+
+        if (dist > 7 && this.tapCandidate?.id === touch.identifier) {
+          this.tapCandidate.moved = true;
+        }
+
+        if (dist > 10 && this.isGliding) {
+          this.stopGlide();
+        }
+
+        const angle = Math.atan2(rawDy, rawDx);
+        const clampedDist = Math.min(dist, maxRadius);
+        const knobX = this.moveOriginX + Math.cos(angle) * clampedDist;
+        const knobY = this.moveOriginY + Math.sin(angle) * clampedDist;
+
+        // Normalização analógica suave com deadzone de 5px
+        const normX = clampedDist > 5 ? (Math.cos(angle) * (clampedDist / maxRadius)) : 0;
+        const normZ = clampedDist > 5 ? (-Math.sin(angle) * (clampedDist / maxRadius)) : 0;
+
+        this.touchMoveVector.x = normX;
+        this.touchMoveVector.z = normZ;
+
+        if (this.onTouchJoystickChange) {
+          this.onTouchJoystickChange({
+            active: true,
+            originX: this.moveOriginX,
+            originY: this.moveOriginY,
+            currentX: knobX,
+            currentY: knobY,
+            deltaX: normX,
+            deltaY: normZ
+          });
+        }
+      }
+
+      // Caso 2: Dedo de Orientação da Câmera (Olhar / Girar)
+      if (touch.identifier === this.lookTouchId) {
+        const deltaX = touch.clientX - this.lookPrevX;
+        const deltaY = touch.clientY - this.lookPrevY;
+
+        if (Math.hypot(deltaX, deltaY) > 7 && this.tapCandidate?.id === touch.identifier) {
+          this.tapCandidate.moved = true;
+        }
+
+        this.lookPrevX = touch.clientX;
+        this.lookPrevY = touch.clientY;
+
+        this.yaw -= deltaX * this.config.mouseSensitivity * 1.5;
+        this.pitch -= deltaY * this.config.mouseSensitivity * 1.5;
+        this.pitch = Math.max(-0.68, Math.min(0.68, this.pitch));
+      }
+    }
   };
 
   private handleTouchEnd = (e: TouchEvent): void => {
-    this.isPointerDown = false;
-    const elapsed = performance.now() - this.touchStartTime;
+    if (this.isHoldingCD) {
+      this.isPointerDown = false;
+      const elapsed = performance.now() - this.touchStartTime;
+      if (!this.touchMoved && elapsed < 350 && this.onTouchTap) {
+        const clientX = e.changedTouches?.[0]?.clientX ?? this.touchStartX;
+        const clientY = e.changedTouches?.[0]?.clientY ?? this.touchStartY;
+        this.onTouchTap(clientX, clientY);
+      }
+      return;
+    }
 
-    // Se o toque foi rápido e sem arrasto, dispara Tap tátil para seleção e aproximação
-    if (!this.touchMoved && elapsed < 280 && this.onTouchTap) {
-      const clientX = e.changedTouches?.[0]?.clientX ?? this.touchStartX;
-      const clientY = e.changedTouches?.[0]?.clientY ?? this.touchStartY;
-      this.onTouchTap(clientX, clientY);
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+
+      // Finaliza o Joystick de Movimento
+      if (touch.identifier === this.moveTouchId) {
+        this.moveTouchId = null;
+        this.touchMoveVector.x = 0;
+        this.touchMoveVector.z = 0;
+        if (this.onTouchJoystickChange) {
+          this.onTouchJoystickChange(null);
+        }
+      }
+
+      // Finaliza o dedo de visão
+      if (touch.identifier === this.lookTouchId) {
+        this.lookTouchId = null;
+      }
+
+      // Se foi um toque limpo e rápido (tap sem arrasto), aciona a ação tátil (Tap-to-Walk ou Abrir Obra)
+      if (this.tapCandidate && this.tapCandidate.id === touch.identifier) {
+        const elapsed = performance.now() - this.tapCandidate.startTime;
+        if (!this.tapCandidate.moved && elapsed < 360 && this.onTouchTap) {
+          this.onTouchTap(touch.clientX, touch.clientY);
+        }
+        this.tapCandidate = null;
+      }
+    }
+
+    if (e.touches.length === 0) {
+      this.isPointerDown = false;
+      this.moveTouchId = null;
+      this.lookTouchId = null;
+      this.touchMoveVector.x = 0;
+      this.touchMoveVector.z = 0;
+      if (this.onTouchJoystickChange) {
+        this.onTouchJoystickChange(null);
+      }
     }
   };
 
   private handleDeviceOrientation = (e: DeviceOrientationEvent): void => {
     if (!this.isGyroActive || this.isHoldingCD || this.isCinemaActive || this.isArchiveActive) return;
-    if (e.beta === null || e.gamma === null) return;
+    if (e.beta === null) return;
 
     if (!this.gyroCalibrated) {
       this.gyroBaseAlpha = e.alpha ?? 0;
       this.gyroBaseBeta = e.beta;
+      this.gyroBaseGamma = e.gamma ?? 0;
       this.gyroCalibrated = true;
       return;
     }
 
+    // 1. Pitch (Inclinação vertical: olhar para cima/teto ou para baixo/chão)
     const deltaBeta = e.beta - this.gyroBaseBeta;
-    const deltaGamma = e.gamma;
+    const clampedBeta = Math.max(-60, Math.min(60, deltaBeta));
+    this.gyroTargetPitch = THREE.MathUtils.degToRad(clampedBeta) * 0.9;
 
-    // Converte inclinação suave do smartphone em offsets radianos
-    const targetP = THREE.MathUtils.degToRad(Math.max(-35, Math.min(35, deltaBeta))) * 0.65;
-    const targetY = THREE.MathUtils.degToRad(Math.max(-50, Math.min(50, deltaGamma))) * 0.75;
-
-    this.gyroTargetPitch = targetP;
-    this.gyroTargetYaw = targetY;
+    // 2. Yaw (Giro horizontal 360° pelo salão do pavilhão)
+    if (e.alpha !== null) {
+      let deltaAlpha = e.alpha - this.gyroBaseAlpha;
+      // Normalização angular -180 a +180 para rotação contínua sem saltos
+      while (deltaAlpha > 180) deltaAlpha -= 360;
+      while (deltaAlpha < -180) deltaAlpha += 360;
+      const yawFromAlpha = -THREE.MathUtils.degToRad(deltaAlpha);
+      const yawFromGamma = (e.gamma !== null)
+        ? THREE.MathUtils.degToRad(Math.max(-45, Math.min(45, e.gamma - this.gyroBaseGamma))) * 0.35
+        : 0;
+      this.gyroTargetYaw = yawFromAlpha + yawFromGamma;
+    } else if (e.gamma !== null) {
+      // Fallback em navegadores que não reportam alpha absoluto
+      const deltaGamma = e.gamma - this.gyroBaseGamma;
+      this.gyroTargetYaw = THREE.MathUtils.degToRad(Math.max(-60, Math.min(60, deltaGamma))) * 0.9;
+    }
   };
 
   private wheelCDAccumulator = 0;
@@ -735,14 +915,27 @@ export class PlayerController {
       if (this.isGliding) this.stopGlide();
     }
 
+    // Entrada Analógica Tátil Touchscreen (Joystick Virtual / Polegar)
+    const touchLen = Math.hypot(this.touchMoveVector.x, this.touchMoveVector.z);
+    if (touchLen > 0.04) {
+      if (this.isGliding) this.stopGlide();
+      // Entrada proporcional analógica (direção do joystick combinada com o yaw da câmera)
+      moveDirX += forwardX * this.touchMoveVector.z + rightX * this.touchMoveVector.x;
+      moveDirZ += forwardZ * this.touchMoveVector.z + rightZ * this.touchMoveVector.x;
+      useAppStore.getState().setHasPlayerMoved(true);
+    }
+
     // Normaliza vetor de movimento se houver movimento diagonal
     const len = Math.hypot(moveDirX, moveDirZ);
     if (len > 0.001) {
+      const speedScale = touchLen > 0.04 && !this.keys.forward && !this.keys.backward && !this.keys.left && !this.keys.right
+        ? Math.min(1.0, touchLen)
+        : 1.0;
       moveDirX /= len;
       moveDirZ /= len;
 
-      this.velocity.x += moveDirX * currentSpeed * delta * 4;
-      this.velocity.z += moveDirZ * currentSpeed * delta * 4;
+      this.velocity.x += moveDirX * currentSpeed * speedScale * delta * 4;
+      this.velocity.z += moveDirZ * currentSpeed * speedScale * delta * 4;
     }
 
     // Aplica fricção / amortecimento

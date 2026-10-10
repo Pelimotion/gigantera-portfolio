@@ -69,7 +69,7 @@ export const GalleryHeader: React.FC = () => {
   };
 
   return (
-    <header className={`minimal-feathered-header ${cinemaArtwork ? 'is-hidden-in-cinema' : ''}`} role="banner">
+    <header className={`minimal-feathered-header ${cinemaArtwork || isHoldingCD ? 'is-hidden-in-cinema' : ''}`} role="banner">
       {/* Esquerda: Marca GIGANTERA // Pavilhão Digital */}
       <div className="header-brand-group">
         <button
@@ -123,37 +123,39 @@ export const GalleryHeader: React.FC = () => {
 
       {/* Direita: Qualidade Gráfica com FPS integrado, Tema & Bio do Artista */}
       <div className="header-actions-group font-mono">
-        {/* Pílula de Fidelidade Gráfica: MÉDIO / ALTO */}
-        <div className="header-quality-control header-minimal-btn" style={{ padding: '0 4px', gap: '4px' }}>
-          <div
-            className="header-fps-badge"
-            title={`Opções gráficas (Taxa atual: ${currentFps} FPS)`}
-            style={{ border: 'none', background: 'transparent', padding: '0 4px', opacity: 0.7 }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
-              <polyline points="17 2 12 7 7 2"></polyline>
-            </svg>
-          </div>
+        {/* Pílula de Fidelidade Gráfica: MÉDIO / ALTO (Apenas Desktop para preservar respiros no mobile) */}
+        {!isMobile && (
+          <div className="header-quality-control header-minimal-btn" style={{ padding: '0 4px', gap: '4px' }}>
+            <div
+              className="header-fps-badge"
+              title={`Opções gráficas (Taxa atual: ${currentFps} FPS)`}
+              style={{ border: 'none', background: 'transparent', padding: '0 4px', opacity: 0.7 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
+                <polyline points="17 2 12 7 7 2"></polyline>
+              </svg>
+            </div>
 
-          <div className="quality-segmented-toggle" role="group" aria-label="Ajuste de fidelidade gráfica" style={{ border: 'none', background: 'transparent' }}>
-            <button
-              onClick={() => setGraphicsQuality('med')}
-              className={`quality-seg-btn ${graphicsQuality === 'med' ? 'is-active' : ''}`}
-              title="Modo Médio: Equilíbrio ótimo entre fidelidade e fluidez"
-            >
-              <span>{isMobile ? 'MED' : 'MÉDIO'}</span>
-            </button>
-            <button
-              onClick={() => setGraphicsQuality('high')}
-              className={`quality-seg-btn ${graphicsQuality === 'high' ? 'is-active' : ''}`}
-              title="Modo Alto: Fidelidade máxima, sombras e reflexões aveludadas"
-            >
-              <span>{isMobile ? 'ALT' : 'ALTO'}</span>
-            </button>
-            {!isMobile && <kbd className="header-keycap-hint" title="Pressione G para alternar gráficos">G</kbd>}
+            <div className="quality-segmented-toggle" role="group" aria-label="Ajuste de fidelidade gráfica" style={{ border: 'none', background: 'transparent' }}>
+              <button
+                onClick={() => setGraphicsQuality('med')}
+                className={`quality-seg-btn ${graphicsQuality === 'med' ? 'is-active' : ''}`}
+                title="Modo Médio: Equilíbrio ótimo entre fidelidade e fluidez"
+              >
+                <span>MÉDIO</span>
+              </button>
+              <button
+                onClick={() => setGraphicsQuality('high')}
+                className={`quality-seg-btn ${graphicsQuality === 'high' ? 'is-active' : ''}`}
+                title="Modo Alto: Fidelidade máxima, sombras e reflexões aveludadas"
+              >
+                <span>ALTO</span>
+              </button>
+              <kbd className="header-keycap-hint" title="Pressione G para alternar gráficos">G</kbd>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Alternador de Tema Claro / Escuro */}
         <button

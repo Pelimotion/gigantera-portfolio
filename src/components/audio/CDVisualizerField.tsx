@@ -99,9 +99,12 @@ export const CDVisualizerField: React.FC<CDVisualizerFieldProps> = ({ className 
       animId = requestAnimationFrame(render);
       t += 0.016;
 
-      // Limpeza suave com persistência para trilha de luz
-      ctx.fillStyle = isDark ? 'rgba(5, 8, 10, 0.28)' : 'rgba(240, 244, 248, 0.32)';
+      // Desvanecimento suave de trilhas em canvas 100% transparente (sem acúmulo de cor sólida)
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
       ctx.fillRect(0, 0, width, height);
+      ctx.restore();
 
       // Obtenção de dados FFT em tempo real
       let bass = 0, mid = 0, treble = 0, overall = 0;
@@ -129,9 +132,9 @@ export const CDVisualizerField: React.FC<CDVisualizerFieldProps> = ({ className 
       const cy = height / 2;
 
       ctx.save();
-      // Blending aditivo apenas em qualidades média e alta
+      // Blending luminoso suave
       if (graphicsQuality !== 'light') {
-        ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply';
+        ctx.globalCompositeOperation = isDark ? 'screen' : 'source-over';
       }
 
       const shape = trackTheme.shape;

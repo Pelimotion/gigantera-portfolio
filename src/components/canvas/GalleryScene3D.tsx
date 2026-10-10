@@ -508,6 +508,13 @@ export const GalleryScene3D: React.FC = () => {
   const [isPromptDocked, setIsPromptDocked] = useState(false);
   const dragHintTimerRef = useRef<number | null>(null);
   const playerControllerRef = useRef<PlayerController | null>(null);
+  const [joystickData, setJoystickData] = useState<{
+    active: boolean;
+    originX: number;
+    originY: number;
+    currentX: number;
+    currentY: number;
+  } | null>(null);
 
   // Auto-dismiss do aviso de mira após 20 segundos
   useEffect(() => {
@@ -604,6 +611,13 @@ export const GalleryScene3D: React.FC = () => {
     sunLight.shadow.bias = -0.0003;
     scene.add(sunLight);
 
+    // Materiais dinâmicos do Santuário para suporte ao teto escuro e troca de tema
+    let sanctuaryCeilingMat: THREE.MeshStandardMaterial | null = null;
+    let sanctuaryBeamMat: THREE.MeshStandardMaterial | null = null;
+
+    // Pisos caminháveis para navegação tátil por raycast (Tap-to-Walk)
+    const walkableFloors: THREE.Mesh[] = [];
+
     // Encontrar a posição Z da obra interativa para posicionar a penumbra
     const interactiveArt = layout.artworksWithCoords.find(a => a.medium === 'interactive');
     const penumbraZ = interactiveArt ? interactiveArt.computedCoords.z : -76.5;
@@ -682,6 +696,22 @@ export const GalleryScene3D: React.FC = () => {
       penumbraFloorMesh.position.set(0, -3.185, sanctuaryCenterZ);
       penumbraFloorMesh.receiveShadow = true;
       scene.add(penumbraFloorMesh);
+      walkableFloors.push(penumbraFloorMesh);
+
+      // 4.1 Teto Escuro Mineral Acústico do Santuário (Z: -52m até a parede de fundo)
+      // Converte o teto da câmara 3D do Espinhaço em ardósia/basalto escuro monumental (Desktop & Mobile)
+      const sanctuaryCeilingGeo = new THREE.PlaneGeometry(layout.roomWidth + 6, sanctuaryFloorLength);
+      sanctuaryCeilingGeo.rotateX(Math.PI / 2); // Face virada para baixo (olhando para cima a partir do chão)
+      sanctuaryCeilingMat = new THREE.MeshStandardMaterial({
+        color: isLight ? 0x161817 : 0x070908,
+        roughness: 0.94,
+        metalness: 0.02,
+        side: THREE.DoubleSide
+      });
+      const sanctuaryCeilingMesh = new THREE.Mesh(sanctuaryCeilingGeo, sanctuaryCeilingMat);
+      sanctuaryCeilingMesh.position.set(0, 11.95, sanctuaryCenterZ);
+      sanctuaryCeilingMesh.receiveShadow = true;
+      scene.add(sanctuaryCeilingMesh);
 
       // 5. Paredes do Santuário com degradê acústico harmonizado
       const sanctuaryWallGeo = new THREE.PlaneGeometry(sanctuaryFloorLength, 24);
@@ -770,6 +800,7 @@ export const GalleryScene3D: React.FC = () => {
     floorMesh.position.set(0, -3.2, hallCenterZ);
     floorMesh.receiveShadow = true;
     scene.add(floorMesh);
+    walkableFloors.push(floorMesh);
 
     // Reflexão Planar em Tempo Real do Piso (Simulação Raytracing Suave — revela a textura do piso)
     // Reduzida a resolução para 256/512 para simular o "blur" (roughness) e não parecer um espelho limpo
@@ -784,6 +815,7 @@ export const GalleryScene3D: React.FC = () => {
     (floorReflector.material as any).transparent = true;
     (floorReflector.material as any).opacity = isLight ? 0.12 : 0.16;
     scene.add(floorReflector);
+    walkableFloors.push(floorReflector as any);
 
     const wallGeo = new THREE.PlaneGeometry(hallLen + 12, 24);
     const wallMat = new THREE.MeshStandardMaterial({
@@ -856,6 +888,12 @@ export const GalleryScene3D: React.FC = () => {
       roughness: 0.9
     });
 
+    sanctuaryBeamMat = new THREE.MeshStandardMaterial({
+      color: isLight ? 0x181b1a : 0x0a0c0b,
+      roughness: 0.92,
+      metalness: 0.04
+    });
+
     const lightShaftGroup = new THREE.Group();
     // Cone exterior amplo (luz dispersa suave e aveludada, sem causar grande branco)
     const shaftGeo = new THREE.CylinderGeometry(0.8, 5.2, 18, 16, 1, true);
@@ -890,7 +928,8 @@ export const GalleryScene3D: React.FC = () => {
     const skylightIndices = new Set([0, midBeamIdx, lastBrightBeamIdx]);
 
     layout.ceilingBeamsZ.forEach((bz, bIdx) => {
-      const beam = new THREE.Mesh(beamGeo, beamMat);
+      const isSanctuary = bz <= -50;
+      const beam = new THREE.Mesh(beamGeo, (isSanctuary && sanctuaryBeamMat) ? sanctuaryBeamMat : beamMat);
       beam.position.set(0, 11, bz);
       beam.castShadow = true;
       beam.receiveShadow = true;
@@ -1076,6 +1115,50 @@ export const GalleryScene3D: React.FC = () => {
       viewingSpotRings.push({ mesh: ringMesh, mat: ringMat, spot });
     });
     scene.add(viewingSpotsGroup);
+
+    // 3.3 WAYPOINT LUMINOSO NO PISO (Feedback Tátil/Visual estilo Matterport e Museus Interativos)
+    const waypointGroup = new THREE.Group();
+    waypointGroup.position.set(0, -3.18, 0);
+    waypointGroup.visible = false;
+
+    const waypointOuterGeo = new THREE.RingGeometry(0.35, 0.48, 36);
+    waypointOuterGeo.rotateX(-Math.PI / 2);
+    const waypointOuterMat = new THREE.MeshBasicMaterial({
+      color: isLight ? 0xb88d34 : 0xe4c379,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const waypointOuterRing = new THREE.Mesh(waypointOuterGeo, waypointOuterMat);
+    waypointGroup.add(waypointOuterRing);
+
+    const waypointInnerGeo = new THREE.RingGeometry(0.05, 0.12, 24);
+    waypointInnerGeo.rotateX(-Math.PI / 2);
+    const waypointInnerMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const waypointInnerRing = new THREE.Mesh(waypointInnerGeo, waypointInnerMat);
+    waypointGroup.add(waypointInnerRing);
+
+    scene.add(waypointGroup);
+
+    const waypointAnim = {
+      active: false,
+      startTime: 0,
+      duration: 0.75
+    };
+
+    const triggerWaypointRing = (x: number, y: number, z: number) => {
+      waypointGroup.position.set(x, y, z);
+      waypointGroup.visible = true;
+      waypointAnim.active = true;
+      waypointAnim.startTime = performance.now();
+    };
 
     // 4. Estação do CD Jewel Case logo na Entrada (Z = +18, X = 2.8)
     const cdStationGroup = new THREE.Group();
@@ -1808,6 +1891,10 @@ export const GalleryScene3D: React.FC = () => {
       useAppStore.getState().setPointerLocked(locked);
     };
 
+    playerController.onTouchJoystickChange = (data) => {
+      setJoystickData(data);
+    };
+
     playerController.onSectorSelect = (sectorNum) => {
       const state = useAppStore.getState();
       if (sectorNum === 1) state.warpToSector('entrance-audio');
@@ -1839,7 +1926,7 @@ export const GalleryScene3D: React.FC = () => {
         cdBackMesh
       ];
       const hits = raycaster.intersectObjects(candidates);
-      const validHits = hits.filter((h) => h.distance <= 6.5);
+      const validHits = hits.filter((h) => ((h.object as any).isCDStation ? h.distance <= 3.5 : h.distance <= 12.0));
       if (validHits.length > 0) {
         const hitObj = validHits[0].object as any;
         if (hitObj.artworkData) {
@@ -1962,7 +2049,11 @@ export const GalleryScene3D: React.FC = () => {
         if (hitArt) {
           const foundItem = artworkItems.find((a) => a.artwork.id === hitArt.id);
           if (foundItem) {
-            if (hit.distance <= 6.8) {
+            const artIdx = layout.artworksWithCoords.findIndex((a) => a.id === hitArt.id);
+            if (artIdx !== -1) {
+              state.setCurrentArtworkIndex(artIdx);
+            }
+            if (hit.distance <= 12.0) {
               soundEngine.playGlassPassSound();
               openCinema(hitArt);
             } else {
@@ -1972,10 +2063,6 @@ export const GalleryScene3D: React.FC = () => {
                 const dz = foundItem.group.position.z - spot.z;
                 const targetYaw = Math.atan2(-dx, -dz);
                 playerController.glideTo(spot.x, spot.z, targetYaw);
-                const artIdx = layout.artworksWithCoords.findIndex((a) => a.id === hitArt.id);
-                if (artIdx !== -1) {
-                  state.setCurrentArtworkIndex(artIdx);
-                }
               }
             }
             return;
@@ -2002,6 +2089,21 @@ export const GalleryScene3D: React.FC = () => {
             return;
           }
         }
+      }
+
+      // 4. Toque Livre no Piso para Caminhar (Tap-to-Walk Waypoint - Padrão Obras Imersivas / Matterport)
+      const floorHits = raycaster.intersectObjects(walkableFloors, false);
+      if (floorHits.length > 0) {
+        const hitPoint = floorHits[0].point;
+        // Limites de segurança arquitetônica para manter o visitante dentro do salão
+        const clampedX = Math.max(-5.2, Math.min(5.2, hitPoint.x));
+        const clampedZ = Math.max(layout.backWallZ + 3.0, Math.min(layout.frontWallZ - 3.0, hitPoint.z));
+
+        triggerWaypointRing(clampedX, -3.18, clampedZ);
+        soundEngine.playFootstepSound();
+        playerController.glideTo(clampedX, clampedZ);
+        useAppStore.getState().setHasPlayerMoved(true);
+        return;
       }
     };
 
@@ -2291,7 +2393,7 @@ export const GalleryScene3D: React.FC = () => {
         cdBackMesh
       ];
       const hits = raycaster.intersectObjects(candidates);
-      const validHits = hits.filter((h) => h.distance <= 6.5);
+      const validHits = hits.filter((h) => ((h.object as any).isCDStation ? h.distance <= 3.5 : h.distance <= 12.0));
 
       if (validHits.length > 0) {
         const hitObj = validHits[0].object as any;
@@ -2514,6 +2616,12 @@ export const GalleryScene3D: React.FC = () => {
       coneMat.color.set(isL ? 0xd0cec7 : 0x333635);
       bracketMat.color.set(isL ? 0x666866 : 0x242826);
       backingMat.color.set(isL ? 0x141615 : 0x050606);
+      if (sanctuaryCeilingMat) {
+        sanctuaryCeilingMat.color.set(isL ? 0x161817 : 0x070908);
+      }
+      if (sanctuaryBeamMat) {
+        sanctuaryBeamMat.color.set(isL ? 0x181b1a : 0x0a0c0b);
+      }
     };
 
     const unsubTheme = useAppStore.subscribe((state, prev) => {
@@ -2537,6 +2645,33 @@ export const GalleryScene3D: React.FC = () => {
       playerController.setGyroActive(state.isGyroscopeActive);
     });
 
+    // Inscrição para controle de estado do CD POV (Mobile Bottom Dock e Atalhos)
+    if (useAppStore.getState().isHoldingCD) {
+      cdViewmodel.take(false);
+    }
+
+    const unsubCD = useAppStore.subscribe((state, prev) => {
+      if (state.isHoldingCD !== prev.isHoldingCD) {
+        if (state.isHoldingCD) {
+          const isFirst = !state.hasInspectedCDBefore;
+          cdViewmodel.take(isFirst);
+          useAppStore.getState().setHasInspectedCDBefore(true);
+        } else {
+          cdViewmodel.stow();
+        }
+      }
+      if (state.cdFlipped !== prev.cdFlipped) {
+        if (state.cdFlipped && Math.abs(cdViewmodel.getTargetFlipAngle() - Math.PI) > 0.2) {
+          cdViewmodel.flip();
+        } else if (!state.cdFlipped && Math.abs(cdViewmodel.getTargetFlipAngle()) > 0.2) {
+          cdViewmodel.flip();
+        }
+      }
+      if (state.currentAudioTrack.id !== prev.currentAudioTrack.id) {
+        cdViewmodel.setActiveTrack(state.currentAudioTrack.id);
+      }
+    });
+
     const checkMobile = () => {
       const isMob = window.innerWidth <= 960 || ('ontouchstart' in window);
       useAppStore.getState().setIsMobile(isMob);
@@ -2555,6 +2690,8 @@ export const GalleryScene3D: React.FC = () => {
     let playerSavedYaw = 0;
     let playerSavedPitch = 0;
     const archiveCamPos = new THREE.Vector3(0, 0.6, 9.5);
+    const camDirVec = new THREE.Vector3();
+    const toArtVec = new THREE.Vector3();
 
     let lastTime = performance.now();
     let clockElapsedTime = 0;
@@ -2944,6 +3081,23 @@ export const GalleryScene3D: React.FC = () => {
             mesh.scale.setScalar(1.0);
           }
         });
+
+        // Animação de expansão suave do Waypoint Ring de caminhada no piso
+        if (waypointAnim.active) {
+          const elapsedSec = (currentTimeMs - waypointAnim.startTime) / 1000;
+          const t = Math.min(1.0, elapsedSec / waypointAnim.duration);
+          if (t >= 1.0) {
+            waypointAnim.active = false;
+            waypointGroup.visible = false;
+          } else {
+            const scale = 0.4 + Math.sin(t * Math.PI * 0.5) * 1.5;
+            waypointOuterRing.scale.set(scale, 1, scale);
+            waypointInnerRing.scale.set(scale * 0.75, 1, scale * 0.75);
+            const fade = Math.sin((1.0 - t) * Math.PI * 0.5);
+            waypointOuterMat.opacity = fade * 0.85;
+            waypointInnerMat.opacity = Math.max(0, 1.0 - t * 2.2) * 0.95;
+          }
+        }
       }
 
       // DISTORÇÃO DE AR ACÚSTICO & ATENUAÇÃO ESPACIAL FÍSICA
@@ -3240,25 +3394,14 @@ export const GalleryScene3D: React.FC = () => {
         });
       }
 
-      // Detecção de Proximidade das Obras com Culling Inteligente de Vídeo
-      let closestArt: Artwork | null = null;
-      let minDistance = Infinity;
-
+      // 1. Culling Inteligente de Vídeo baseado no Frustum
       for (const item of artworkItems) {
-        const d = camera.position.distanceTo(item.group.position);
-        if (d < minDistance) {
-          minDistance = d;
-          closestArt = item.artwork;
-        }
-
         if (item.videoEl) {
           if (currentCinemaArt) {
-            // Se estiver inspecionando uma obra no cinema, pausa todas as outras vitrines de vídeo
             if (currentCinemaArt.id !== item.artwork.id && !item.videoEl.paused) {
               item.videoEl.pause();
             }
           } else if (isArchiveMode && item.gridScale > 0.1) {
-            // No modo Acervo 3D em grade, todos os vídeos ativos na tela rodam simultaneamente
             if (item.videoEl.paused) {
               item.videoEl.play().catch(() => {});
             }
@@ -3276,8 +3419,72 @@ export const GalleryScene3D: React.FC = () => {
         }
       }
 
-      if (minDistance < TOKENS.navigation.proximityThreshold && closestArt && !currentCinemaArt && !isArchiveMode) {
-        setProximityArtwork(closestArt);
+      // 2. Detecção Precisa de Proximidade Espacial + Vetor de Olhar (Gaze-Aware Scoring)
+      let detectedArt: Artwork | null = null;
+      let detectedDist = Infinity;
+
+      const camZ = camera.position.z;
+      const isSanctuaryZone = camZ <= -50.0;
+      const isEntranceFoyer = camZ >= 13.8;
+
+      if (!currentCinemaArt && !isArchiveMode) {
+        if (isSanctuaryZone) {
+          // No Santuário ao fundo (Z <= -50m), a escultura monumental Espinhaço domina a nave
+          const espinhacoItem = artworkItems.find(
+            (item) => item.artwork.medium === 'interactive' || (item.artwork as any).interactiveExperience === 'espinhaco'
+          );
+          if (espinhacoItem) {
+            const dEsp = camera.position.distanceTo(espinhacoItem.group.position);
+            if (dEsp <= 30.0) {
+              detectedArt = espinhacoItem.artwork;
+              detectedDist = dEsp;
+            }
+          }
+        } else if (!isEntranceFoyer) {
+          // No Corredor Arquitetural (Z de +13.8m até -50m):
+          // Calcula a distância física 3D ponderada pelo vetor do olhar do visitante
+          camera.getWorldDirection(camDirVec);
+          let bestScore = Infinity;
+
+          for (const item of artworkItems) {
+            if (item.artwork.medium === 'interactive') continue;
+
+            const d3D = camera.position.distanceTo(item.group.position);
+            const deltaZ = Math.abs(camZ - item.hallwayPos.z);
+
+            // Se o visitante está a mais de 7.2m no eixo Z ou a mais de 14m da vitrine, ignora
+            if (deltaZ > 7.2 || d3D > 14.0) continue;
+
+            toArtVec.subVectors(item.group.position, camera.position).normalize();
+            const gazeDot = camDirVec.dot(toArtVec);
+
+            let score = d3D;
+            if (gazeDot > 0.15) {
+              score *= (1.0 - 0.42 * gazeDot); // Bônus curatorial: olhar voltado para a obra
+            } else if (gazeDot < -0.1) {
+              score *= (1.0 + 0.35 * Math.abs(gazeDot)); // Penalidade: de costas para a obra
+            }
+
+            if (deltaZ < 4.8) {
+              score *= 0.82; // Bônus de alinhamento frontal na baía
+            }
+
+            if (score < bestScore) {
+              bestScore = score;
+              detectedArt = item.artwork;
+              detectedDist = d3D;
+            }
+          }
+        }
+      }
+
+      // Aplica a obra detectada se estiver dentro do raio contemplativo da baía
+      if (detectedArt && (detectedDist <= 12.8 || (isSanctuaryZone && detectedDist <= 30.0))) {
+        setProximityArtwork(detectedArt);
+        const artIdx = layout.artworksWithCoords.findIndex((a) => a.id === detectedArt!.id);
+        if (artIdx !== -1 && storeState.currentArtworkIndex !== artIdx) {
+          storeState.setCurrentArtworkIndex(artIdx);
+        }
       } else {
         setProximityArtwork(null);
       }
@@ -3293,8 +3500,8 @@ export const GalleryScene3D: React.FC = () => {
         setGameControlPrompt(null);
       } else if (currentHoveredTarget === 'cd' && distToCD < 4.5) {
         setGameControlPrompt('cd');
-      } else if ((currentHoveredTarget === 'artwork' || currentHoveredTarget === 'plaque') && closestArt && minDistance < 6.5) {
-        setGameControlPrompt(`art:${closestArt.title.toUpperCase()}`);
+      } else if ((currentHoveredTarget === 'artwork' || currentHoveredTarget === 'plaque') && detectedArt && detectedDist < 12.0) {
+        setGameControlPrompt(`art:${detectedArt.title.toUpperCase()}`);
       } else {
         setGameControlPrompt(null);
       }
@@ -3333,6 +3540,7 @@ export const GalleryScene3D: React.FC = () => {
       unsubLoupe();
       unsubGlide();
       unsubGyro();
+      unsubCD();
 
       playerController.dispose();
       soundEngine.setEspinhacoProximityHum(0);
@@ -3423,6 +3631,36 @@ export const GalleryScene3D: React.FC = () => {
               <span className="keycap-label">{gameControlPrompt}</span>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Dynamic Floating Touchscreen Virtual Joystick (Padrão AAA Mobile) */}
+      {isMobile && joystickData?.active && (
+        <div
+          className="mobile-touch-joystick-base"
+          style={{
+            left: `${joystickData.originX}px`,
+            top: `${joystickData.originY}px`,
+          }}
+          aria-hidden="true"
+        >
+          <div
+            className="mobile-touch-joystick-knob"
+            style={{
+              transform: `translate(${joystickData.currentX - joystickData.originX}px, ${joystickData.currentY - joystickData.originY}px)`,
+            }}
+          />
+        </div>
+      )}
+
+      {/* Guia Intuitivo Tátil Inicial para Mobile (Some suavemente assim que o usuário se move) */}
+      {isMobile && !hasPlayerMoved && !cinemaArtwork && !isHoldingCD && viewMode !== 'archive' && (
+        <div className="mobile-walk-gesture-hint font-mono" aria-hidden="true">
+          <span className="walk-gesture-icon">🕹️</span>
+          <span>ARRASTE P/ ANDAR</span>
+          <span className="walk-gesture-separator">·</span>
+          <span className="walk-gesture-icon">📍</span>
+          <span>TOQUE NO CHÃO P/ CAMINHAR</span>
         </div>
       )}
 
