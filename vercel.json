@@ -33,6 +33,18 @@
       "destination": "/penumbra/index.html"
     },
     {
+      "source": "/penumbra-app",
+      "destination": "/penumbra/index.html"
+    },
+    {
+      "source": "/penumbra-app/",
+      "destination": "/penumbra/index.html"
+    },
+    {
+      "source": "/penumbra-app/(.*)",
+      "destination": "/penumbra/$1"
+    },
+    {
       "source": "/ar",
       "destination": "/ar/index.html"
     },
