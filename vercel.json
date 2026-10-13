@@ -21,6 +21,10 @@
       "destination": "/penumbra/media_manifest.json"
     },
     {
+      "source": "/mattes_manifest.json",
+      "destination": "/penumbra/mattes_manifest.json"
+    },
+    {
       "source": "/penumbra",
       "destination": "/penumbra/index.html"
     },
