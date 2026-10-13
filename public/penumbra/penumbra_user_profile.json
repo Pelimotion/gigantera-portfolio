@@ -1,7 +1,7 @@
 {
   "schema_version": "1.2.0",
   "app": "Penumbra System VJ Engine",
-  "last_saved": "2026-10-09T15:21:48.460Z",
+  "last_saved": "2026-10-12T01:05:10.025Z",
   "settings": {
     "media_source": "cdn",
     "remember_source": true,
@@ -32,7 +32,13 @@
     },
     "library_active_asset_type": "all",
     "dock_view_mode": "modules",
-    "library_sidebar_collapsed": false
+    "library_sidebar_collapsed": true,
+    "workspace_top_height": 140,
+    "library_sidebar_width": 258,
+    "library_view_mode": "grid",
+    "fx_active": false,
+    "fx_manual_locked": false,
+    "autopilot_delegation_fx": true
   },
   "custom_clips": [],
   "category_overrides": {},
@@ -51,5 +57,36 @@
       "cached_at": "2026-10-09T08:39:48.343Z",
       "is_downloaded": true
     }
+  },
+  "last_local_folder_name": "",
+  "custom_clip_transforms": {
+    "clip_006": {
+      "rotation": -90,
+      "scale": 1.11,
+      "pos_x": -4,
+      "pos_y": 0,
+      "flip_h": true,
+      "flip_v": true
+    }
+  },
+  "autopilot_pool": {
+    "excluded_folders": [
+      "GENERATIVE 3D",
+      "Nostalgia/1. In",
+      "Sta Teresa/takes rj",
+      "Vo David/1. In",
+      "Zimbro/1. In"
+    ],
+    "excluded_clips": [
+      "clip_008"
+    ],
+    "active_folders": [
+      "Espinhaço/1. In",
+      "Espinhaço/1. In/mar",
+      "Tetropode/1. In",
+      "Video Art Drinkzinho/1. In"
+    ],
+    "view_filter": "ALL",
+    "toolbar_expanded": false
   }
 }
