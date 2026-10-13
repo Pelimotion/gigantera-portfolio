@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PENUMBRA SYSTEM · Janela Destacada (Pop-out)</title>
+  <title>PENUMBRA SYSTEM · Janela Destacada (Saída de Projeção)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
@@ -15,7 +15,7 @@
       user-select: none;
     }
     body {
-      background: #050608;
+      background: #000000;
       color: #e2e8f0;
       font-family: 'Inter', sans-serif;
       width: 100vw;
@@ -24,17 +24,78 @@
       display: flex;
       flex-direction: column;
     }
+
+    /* HEADER CONTROLS */
     .popout-header {
-      height: 40px;
-      background: rgba(10, 13, 20, 0.95);
-      backdrop-filter: blur(12px);
+      height: 42px;
+      min-height: 42px;
+      background: rgba(8, 10, 16, 0.94);
+      backdrop-filter: blur(16px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 16px;
-      z-index: 10;
+      z-index: 50;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
     }
+
+    /* Clean Projector Feed Mode: 100% PURE VIDEO, ZERO HUD, ZERO STRIPS, ZERO BORDERS */
+    body.clean-feed-mode .popout-header {
+      display: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateY(-100%) !important;
+      visibility: hidden !important;
+    }
+    body.clean-feed-mode .clean-feed-trigger {
+      display: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      visibility: hidden !important;
+    }
+    body.clean-feed-mode .overlay-hud {
+      display: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      visibility: hidden !important;
+    }
+    body.clean-feed-mode,
+    body.clean-feed-mode * {
+      cursor: none !important;
+    }
+
+    .clean-feed-trigger {
+      display: none;
+    }
+
+    .hud-toast {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: rgba(10, 15, 24, 0.94);
+      border: 1px solid rgba(0, 240, 255, 0.45);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85), 0 0 16px rgba(0, 240, 255, 0.25);
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      padding: 8px 18px;
+      border-radius: 6px;
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s;
+    }
+    .hud-toast.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
     .header-left {
       display: flex;
       align-items: center;
@@ -43,44 +104,77 @@
     .badge {
       font-size: 9px;
       font-weight: 700;
-      padding: 3px 6px;
-      border-radius: 3px;
-      letter-spacing: 0.6px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.8px;
+      font-family: 'JetBrains Mono', monospace;
     }
-    .badge-preview { background: #00f0ff; color: #000; }
-    .badge-live { background: #00ff88; color: #000; }
+    .badge-preview { background: #00f0ff; color: #000; box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
+    .badge-live { background: #00ff88; color: #000; box-shadow: 0 0 10px rgba(0, 255, 136, 0.3); }
+    
     .title {
       font-size: 11px;
       font-weight: 700;
       font-family: 'JetBrains Mono', monospace;
       color: #fff;
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
+
     .header-right {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
     }
     .timecode {
       font-size: 10px;
       font-family: 'JetBrains Mono', monospace;
       color: #94a3b8;
+      margin-right: 6px;
     }
-    .btn-fs {
+
+    .btn-action {
       background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #fff;
-      font-size: 9px;
-      padding: 4px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #e2e8f0;
+      font-size: 9.5px;
+      padding: 5px 10px;
       border-radius: 4px;
       cursor: pointer;
-      font-family: 'Inter', sans-serif;
+      font-family: 'JetBrains Mono', monospace;
       font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
       transition: all 0.15s ease;
+      white-space: nowrap;
     }
-    .btn-fs:hover {
-      background: rgba(0, 240, 255, 0.18);
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #fff;
+    }
+    .btn-action.btn-accent {
+      background: rgba(0, 240, 255, 0.12);
+      border-color: rgba(0, 240, 255, 0.45);
+      color: #00f0ff;
+    }
+    .btn-action.btn-accent:hover {
+      background: rgba(0, 240, 255, 0.25);
       border-color: #00f0ff;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
     }
+    .btn-action.active {
+      background: #00ff88;
+      border-color: #00ff88;
+      color: #000;
+      font-weight: 700;
+      box-shadow: 0 0 12px rgba(0, 255, 136, 0.4);
+    }
+
+    /* VIEWPORT CANVAS CONTAINER */
     .viewport-box {
       flex: 1;
       position: relative;
@@ -88,12 +182,18 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
     }
     canvas {
       width: 100%;
       height: 100%;
       display: block;
+      object-fit: contain;
+      cursor: pointer;
     }
+
+    /* OVERLAY HUD */
     .overlay-hud {
       position: absolute;
       bottom: 12px;
@@ -102,63 +202,185 @@
       display: flex;
       justify-content: space-between;
       pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    body.clean-feed-mode .overlay-hud {
+      display: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
     .hud-tag {
-      background: rgba(0, 0, 0, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       padding: 3px 8px;
-      border-radius: 3px;
+      border-radius: 4px;
       font-size: 9px;
       font-family: 'JetBrains Mono', monospace;
       color: #94a3b8;
+      backdrop-filter: blur(8px);
+    }
+
+    /* MAC HELP MODAL */
+    .mac-help-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .mac-help-modal.open {
+      display: flex;
+    }
+    .modal-card {
+      background: #0d1017;
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 24px rgba(0, 240, 255, 0.15);
+      border-radius: 8px;
+      max-width: 580px;
+      width: 100%;
+      padding: 24px;
+    }
+    .modal-card h3 {
+      font-size: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #00f0ff;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal-card p {
+      font-size: 12px;
+      line-height: 1.6;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+    }
+    .modal-card ol {
+      font-size: 11.5px;
+      line-height: 1.7;
+      color: #94a3b8;
+      padding-left: 20px;
+      margin-bottom: 16px;
+    }
+    .modal-card strong {
+      color: #fff;
+    }
+    .modal-card code {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 5px;
+      border-radius: 3px;
+      color: #00ff88;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
     }
   </style>
 </head>
 <body>
-  <header class="popout-header">
+  <!-- TOAST FEEDBACK FLUTUANTE -->
+  <div class="hud-toast" id="hud-toast" aria-live="polite"></div>
+
+  <header class="popout-header" id="popout-header">
     <div class="header-left">
       <span class="badge badge-preview" id="feed-badge">PREVIEW DESTACADO</span>
       <span class="title" id="clip-title">CONECTANDO AO COCKPIT...</span>
     </div>
     <div class="header-right">
       <span class="timecode" id="feed-tc">TC 00:00:00.00</span>
-      <button class="btn-fs" id="btn-toggle-rotate" style="display: none;" title="Rotacionar sinal HDMI 90° para projetor montado fisicamente na vertical">⤾ PROJETOR 90°: ATIVO</button>
-      <button class="btn-fs" id="btn-fullscreen">⛶ TELA CHEIA</button>
+      <button class="btn-action" id="btn-toggle-rotate" style="display: none;" title="Rotacionar sinal 90° para projetores instalados na vertical">⤾ PROJETOR 90°: ATIVO</button>
+      <button class="btn-action btn-accent" id="btn-borderless-projector" title="Modo Telão/Projetor Borderless (Clique na tela ou pressione H para alternar)">🖥️ MODO PROJETOR (BORDERLESS)</button>
+      <button class="btn-action" id="btn-native-fullscreen" title="Tela Cheia Nativa do Navegador">⛶ NATIVO</button>
+      <button class="btn-action" id="btn-mac-help" title="Instruções para Mac e Projetor HDMI">💡 AJUDA MAC</button>
     </div>
   </header>
 
-  <main class="viewport-box">
-    <canvas id="popout-canvas" width="1280" height="720"></canvas>
+  <main class="viewport-box" id="viewport-box" title="Clique para alternar o modo Projeção Limpa (Atalho: H ou Esc)">
+    <canvas id="popout-canvas" width="1920" height="1080"></canvas>
     <div class="overlay-hud">
-      <span class="hud-tag" id="hud-mode">ASPECT FILL (SEM BORDAS PRETAS)</span>
-      <span class="hud-tag" id="hud-status">JANELA FLUTUANTE ATIVA</span>
+      <span class="hud-tag" id="hud-mode">FEED DIRETO // ULTRA LOW LATENCY</span>
+      <span class="hud-tag" id="hud-status">JANELA CONECTADA · CLIQUE PARA MODO LIMPO [H]</span>
     </div>
   </main>
 
+  <!-- MODAL AJUDA MAC MULTI-MONITOR -->
+  <div class="mac-help-modal" id="mac-help-modal">
+    <div class="modal-card">
+      <h3>🖥️ PROJETOR NO MAC: COMO EVITAR A TELA PRETA</h3>
+      <p>No macOS, ao abrir qualquer janela em <strong>Tela Cheia nativa</strong> num projetor ou segundo monitor HDMI, o sistema pode escurecer o display principal do MacBook por padrão de gerenciamento de Spaces.</p>
+      <p><strong>Soluções recomendadas pelo Penumbra Engine:</strong></p>
+      <ol>
+        <li><strong>Projeção Limpa Direta (Recomendado):</strong> Basta <strong>clicar no vídeo</strong> ou usar o botão <code>🖥️ MODO PROJETOR (BORDERLESS)</code>. A janela fica 100% limpa, sem cursor e sem barras. Para voltar o HUD a qualquer momento, pressione <code>H</code> ou <code>ESC</code>.</li>
+        <li><strong>Se preferir Tela Cheia nativa:</strong> No seu Mac, acesse <strong>Ajustes do Sistema > Mesa e Dock</strong>, role até o final até <em>Missão de Controle</em> e <strong>ATIVE</strong> a opção <code>As telas têm Spaces separados</code> (Displays have separate Spaces). Depois encerre e reabra a sessão do usuário.</li>
+      </ol>
+      <div class="modal-footer">
+        <button class="btn-action btn-accent" onclick="document.getElementById('mac-help-modal').classList.remove('open')">ENTENDI / FECHAR</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const canvas = document.getElementById('popout-canvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
     const urlParams = new URLSearchParams(window.location.search);
     const viewMode = urlParams.get('view') || 'preview'; // 'preview' or 'program'
     
     const feedBadge = document.getElementById('feed-badge');
     const clipTitle = document.getElementById('clip-title');
     const feedTc = document.getElementById('feed-tc');
-    const btnFullscreen = document.getElementById('btn-fullscreen');
+    const btnBorderless = document.getElementById('btn-borderless-projector');
+    const btnNativeFs = document.getElementById('btn-native-fullscreen');
     const btnToggleRotate = document.getElementById('btn-toggle-rotate');
-    let rotateCompensate = true; // Auto-active for physical projector compensation
+    const btnMacHelp = document.getElementById('btn-mac-help');
+    const macHelpModal = document.getElementById('mac-help-modal');
+    const viewportBox = document.getElementById('viewport-box');
+    
+    let rotateCompensate = true; // Auto-active for physical projector 90 deg mount
+    let isCleanFeed = false;
+    let toastTimeout = null;
 
+    // Toast de feedback visual elegante (desaparece completamente)
+    function showFeedbackToast(msg, durationMs = 2000) {
+      const toast = document.getElementById('hud-toast');
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.classList.add('visible');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('visible');
+      }, durationMs);
+    }
+
+    // Atualiza estado visual do botão de rotação
+    function updateRotateButtonUI() {
+      if (!btnToggleRotate) return;
+      btnToggleRotate.textContent = rotateCompensate ? '⤾ PROJETOR 90°: ATIVO' : '⬍ NATIVO HORIZ (CENTRO)';
+      btnToggleRotate.style.borderColor = rotateCompensate ? '#00ff88' : '#00f0ff';
+      btnToggleRotate.style.color = rotateCompensate ? '#00ff88' : '#00f0ff';
+    }
+
+    // View mode config
     if (viewMode === 'program') {
-      feedBadge.textContent = 'PROGRAM (AO VIVO NO BÊ)';
+      feedBadge.textContent = 'PROGRAM (SAÍDA PROJETOR)';
       feedBadge.className = 'badge badge-live';
-      document.title = 'PENUMBRA · PROGRAM AO VIVO (POP-OUT)';
+      document.title = 'PENUMBRA · SAÍDA PROGRAM (PROJETOR)';
       if (btnToggleRotate) {
-        btnToggleRotate.style.display = 'inline-block';
-        btnToggleRotate.addEventListener('click', () => {
+        btnToggleRotate.style.display = 'inline-flex';
+        updateRotateButtonUI();
+        btnToggleRotate.addEventListener('click', (e) => {
+          e.stopPropagation();
           rotateCompensate = !rotateCompensate;
-          btnToggleRotate.textContent = rotateCompensate ? '⤾ PROJETOR 90°: ATIVO' : '⬍ NATIVO RETO (9:16)';
-          btnToggleRotate.style.borderColor = rotateCompensate ? '#00ff88' : '#00f0ff';
-          btnToggleRotate.style.color = rotateCompensate ? '#00ff88' : '#00f0ff';
+          if (window.opener && window.opener.toggleProjectorCompensation) {
+            window.opener.toggleProjectorCompensation(rotateCompensate);
+          }
+          updateRotateButtonUI();
+          showFeedbackToast(rotateCompensate ? 'ROTAÇÃO 90° ATIVA (PROJETOR FÍSICO)' : 'MODO RETO NO CENTRO (TELÃO COMUM / SEM CORTES)');
         });
       }
     } else {
@@ -167,54 +389,248 @@
       document.title = 'PENUMBRA · PREVIEW DESTACADO (POP-OUT)';
     }
 
-    btnFullscreen.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
+    // Modal Help
+    btnMacHelp.addEventListener('click', (e) => {
+      e.stopPropagation();
+      macHelpModal.classList.add('open');
+    });
+    macHelpModal.addEventListener('click', (e) => {
+      if (e.target === macHelpModal) macHelpModal.classList.remove('open');
+    });
+
+    // CONTROLE DE MODO LIMPO / PURE PROJECTOR FEED
+    function setCleanMode(active, showToast = true) {
+      isCleanFeed = !!active;
+      if (isCleanFeed) {
+        document.body.classList.add('clean-feed-mode');
+        btnBorderless.classList.add('active');
+        btnBorderless.textContent = '🖥️ SAIR PROJETOR (ESC / H)';
+        if (showToast) showFeedbackToast('PROJEÇÃO LIMPA · PRESSIONE [H] OU ESC PARA CONTROLES');
       } else {
-        document.exitFullscreen().catch(() => {});
+        document.body.classList.remove('clean-feed-mode');
+        btnBorderless.classList.remove('active');
+        btnBorderless.textContent = '🖥️ MODO PROJETOR (BORDERLESS)';
+        if (showToast) showFeedbackToast('CONTROLES ATIVOS · CLIQUE NA TELA PARA MODO LIMPO');
+      }
+    }
+
+    function toggleCleanMode() {
+      setCleanMode(!isCleanFeed);
+    }
+
+    // 1. MODO PROJETOR BORDERLESS (VANGUARD / MAC MULTI-DISPLAY FRIENDLY)
+    async function toggleBorderlessProjectorMode() {
+      const target = !isCleanFeed;
+      setCleanMode(target);
+      if (target) {
+        // Tenta usar Window Management API se disponível para ajustar ao monitor atual
+        try {
+          if ('getScreenDetails' in window) {
+            const screenDetails = await window.getScreenDetails();
+            const curScreen = screenDetails.currentScreen;
+            window.moveTo(curScreen.availLeft, curScreen.availTop);
+            window.resizeTo(curScreen.availWidth, curScreen.availHeight);
+          } else {
+            window.moveTo(screen.availLeft || 0, screen.availTop || 0);
+            window.resizeTo(screen.availWidth, screen.availHeight);
+          }
+        } catch (e) {
+          window.resizeTo(screen.availWidth, screen.availHeight);
+        }
+      }
+    }
+
+    btnBorderless.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleBorderlessProjectorMode();
+    });
+
+    // CLIQUE ÚNICO OU DUPLO NA TELA: Alterna Projeção Limpa
+    viewportBox.addEventListener('click', (e) => {
+      if (e.target.closest('.mac-help-modal') || e.target.closest('.popout-header')) return;
+      toggleCleanMode();
+    });
+
+    // 2. TELA CHEIA NATIVA (COM DETECÇÃO E RESGATE)
+    btnNativeFs.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+          btnNativeFs.classList.add('active');
+          setCleanMode(true);
+        }).catch(err => {
+          console.warn('[Popout] Falha no fullscreen nativo:', err);
+          // Fallback automático para o modo borderless
+          toggleBorderlessProjectorMode();
+        });
+      } else {
+        document.exitFullscreen().then(() => {
+          btnNativeFs.classList.remove('active');
+          setCleanMode(false);
+        }).catch(() => {});
       }
     });
 
-    // Render Loop directly syncing from parent window opener or WebSocket
-    function syncAndRender() {
-      if (window.opener && !window.opener.closed) {
-        const sourceCanvasId = viewMode === 'program' ? 'program-canvas' : 'preview-canvas';
-        const srcCanvas = window.opener.document.getElementById(sourceCanvasId);
-        const srcTc = window.opener.document.getElementById(viewMode === 'program' ? 'prg-timecode' : 'prv-timecode');
-        const srcTitle = window.opener.document.getElementById(viewMode === 'program' ? 'hud-clip-title' : 'preview-clip-title');
-
-        if (srcTc && feedTc) feedTc.textContent = srcTc.textContent;
-        if (srcTitle && clipTitle) clipTitle.textContent = srcTitle.textContent;
-
-        if (srcCanvas && srcCanvas.width > 0) {
-          const isSrcVertical = srcCanvas.height > srcCanvas.width;
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-          if (isSrcVertical && rotateCompensate && viewMode === 'program') {
-            // Projector is physically tilted 90 degrees. Rotate 9:16 vertical signal into 16:9 HDMI output
-            ctx.save();
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate(Math.PI / 2);
-            const scale = canvas.width / srcCanvas.height;
-            const drawW = srcCanvas.width * scale;
-            const drawH = srcCanvas.height * scale;
-            ctx.drawImage(srcCanvas, -drawW / 2, -drawH / 2, drawW, drawH);
-            ctx.restore();
-          } else {
-            // Draw normal / native portrait or landscape
-            ctx.drawImage(srcCanvas, 0, 0, canvas.width, canvas.height);
-          }
-        }
+    document.addEventListener('fullscreenchange', () => {
+      if (document.fullscreenElement) {
+        setCleanMode(true);
+        btnNativeFs.classList.add('active');
       } else {
-        // Fallback connecting to WebSocket directly
-        ctx.fillStyle = '#050608';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#718096';
-        ctx.font = '14px JetBrains Mono';
-        ctx.fillText('Aguardando sinal do Cockpit...', canvas.width / 2 - 120, canvas.height / 2);
+        setCleanMode(false);
+        btnNativeFs.classList.remove('active');
+      }
+    });
+
+    // TECLAS DE ATALHO ERGONÔMICAS:
+    // 'H' -> Alterna HUD on/off (Projeção Limpa)
+    // 'ESC' -> Restaura HUD / Sai do modo limpo
+    // 'F' -> Alterna Fullscreen
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'h' || e.key === 'H') {
+        e.preventDefault();
+        toggleCleanMode();
+      } else if (e.key === 'Escape') {
+        if (macHelpModal.classList.contains('open')) {
+          macHelpModal.classList.remove('open');
+          return;
+        }
+        if (isCleanFeed) {
+          setCleanMode(false);
+        }
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().then(() => {
+            setCleanMode(true);
+          }).catch(() => {
+            toggleBorderlessProjectorMode();
+          });
+        } else {
+          document.exitFullscreen().then(() => {
+            setCleanMode(false);
+          }).catch(() => {});
+        }
+      }
+    });
+
+    // Auto-redimensionar canvas para resolução física nativa da tela (Anti-Blur)
+    function resizeCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = viewportBox.clientWidth || window.innerWidth;
+      const h = viewportBox.clientHeight || window.innerHeight;
+      const targetW = Math.round(w * dpr);
+      const targetH = Math.round(h * dpr);
+
+      if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+      }
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Loop de renderização sincronizado com a janela principal (Zero-Drop 60 FPS)
+    let lastPopoutTick = performance.now();
+    let isRenderingFrame = false;
+
+    function syncAndRender() {
+      if (isRenderingFrame) return;
+      isRenderingFrame = true;
+      try {
+        lastPopoutTick = performance.now();
+
+        if (window.opener && !window.opener.closed) {
+          // Sincroniza configuração de compensação de projetor da janela principal
+          const openerState = window.opener.appState;
+          if (openerState && openerState.projector_compensation !== undefined) {
+            const desiredComp = Boolean(openerState.projector_compensation);
+            if (rotateCompensate !== desiredComp) {
+              rotateCompensate = desiredComp;
+              updateRotateButtonUI();
+            }
+          }
+
+          const sourceCanvasId = viewMode === 'program' ? 'program-canvas' : 'preview-canvas';
+          const srcCanvas = window.opener.document.getElementById(sourceCanvasId);
+          const srcTc = window.opener.document.getElementById(viewMode === 'program' ? 'prg-timecode' : 'prv-timecode');
+          const srcTitle = window.opener.document.getElementById(viewMode === 'program' ? 'hud-clip-title' : 'preview-clip-title');
+
+          if (srcTc && feedTc && srcTc.textContent !== feedTc.textContent) {
+            feedTc.textContent = srcTc.textContent;
+          }
+          if (srcTitle && clipTitle && srcTitle.textContent !== clipTitle.textContent) {
+            clipTitle.textContent = srcTitle.textContent;
+          }
+
+          if (srcCanvas && srcCanvas.width > 0 && srcCanvas.height > 0) {
+            const isSrcVertical = srcCanvas.height > srcCanvas.width;
+            const cw = canvas.width;
+            const ch = canvas.height;
+
+            // Fundo preto obsidiana absoluto (#000000) para áreas de pillarbox/letterbox
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, cw, ch);
+
+            if (isSrcVertical && rotateCompensate && viewMode === 'program') {
+              // CENÁRIO A: Projetor montado fisicamente virado a 90° (Totem Físico)
+              // Gira o feixe de vídeo 90° para que saia vertical no espaço físico
+              ctx.save();
+              ctx.translate(cw / 2, ch / 2);
+              ctx.rotate(Math.PI / 2);
+              const scale = Math.min(cw / srcCanvas.height, ch / srcCanvas.width);
+              const drawW = srcCanvas.width * scale;
+              const drawH = srcCanvas.height * scale;
+              ctx.drawImage(srcCanvas, -drawW / 2, -drawH / 2, drawW, drawH);
+              ctx.restore();
+            } else {
+              // CENÁRIO B: Telão ou Projetor comum na horizontal (16:9)
+              // Vídeo vertical (ou de qualquer aspect ratio) é mantido em pé, ESCALADO NO CENTRO DA TELA
+              // com Aspect Fit estrito (ZERO CORTES, 100% visível, bordas pretas puras nas laterais)
+              const scale = Math.min(cw / srcCanvas.width, ch / srcCanvas.height);
+              const drawW = srcCanvas.width * scale;
+              const drawH = srcCanvas.height * scale;
+              const dx = (cw - drawW) / 2;
+              const dy = (ch - drawH) / 2;
+              ctx.drawImage(srcCanvas, dx, dy, drawW, drawH);
+            }
+          }
+        } else {
+          // Fallback quando janela principal fecha ou desconecta
+          ctx.fillStyle = '#050608';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = '#718096';
+          ctx.font = '14px JetBrains Mono';
+          ctx.textAlign = 'center';
+          ctx.fillText('Aguardando sinal do Cockpit Penumbra...', canvas.width / 2, canvas.height / 2);
+        }
+      } finally {
+        isRenderingFrame = false;
       }
       requestAnimationFrame(syncAndRender);
     }
+
+    // Background Anti-Freeze Worker Ticker
+    // Permite mudar de janela/app no Mac sem que o macOS suspenda a renderização na popup
+    try {
+      const workerBlob = new Blob([
+        "var timer = null; self.onmessage = function(e) { if (e.data === 'start') { if (timer) clearInterval(timer); timer = setInterval(function() { self.postMessage('tick'); }, 1000 / 60); } };"
+      ], { type: 'application/javascript' });
+      const keepAliveWorker = new Worker(URL.createObjectURL(workerBlob));
+      keepAliveWorker.onmessage = function() {
+        const now = performance.now();
+        // Se a janela perdeu o foco ou o requestAnimationFrame foi throttled pelo OS:
+        if (document.hidden || !document.hasFocus() || (now - lastPopoutTick > 25)) {
+          syncAndRender();
+        }
+      };
+      keepAliveWorker.postMessage('start');
+      console.log('[Popout] Background Anti-Freeze Worker ativo (60 FPS contínuo no segundo monitor).');
+    } catch (e) {
+      console.warn('[Popout] Worker keep-alive fallback:', e);
+    }
+
     syncAndRender();
   </script>
 </body>
