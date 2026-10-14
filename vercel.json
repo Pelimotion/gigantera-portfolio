@@ -21,6 +21,14 @@
   ],
   "rewrites": [
     {
+      "source": "/bora",
+      "destination": "https://bora-app-iota.vercel.app/bora"
+    },
+    {
+      "source": "/bora/:path*",
+      "destination": "https://bora-app-iota.vercel.app/bora/:path*"
+    },
+    {
       "source": "/styles.css",
       "destination": "/penumbra/styles.css"
     },
@@ -65,7 +73,7 @@
       "destination": "/admin/index.html"
     },
     {
-      "source": "/((?!assets|works|cd|models|ar|admin|penumbra|favicon|logo|robots|sitemap).*\\..*)",
+      "source": "/((?!assets|works|cd|models|ar|admin|penumbra|bora|favicon|logo|robots|sitemap).*\\..*)",
       "destination": "/$1"
     },
     {
