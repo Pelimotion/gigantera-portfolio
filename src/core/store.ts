@@ -536,6 +536,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set({
       cinemaArtwork: art,
+      hoveredArtwork: null,
+      hoveredTarget: null,
+      gameControlPrompt: null,
       isCinemaInfoOpen: true,
       inspectionZoom: 1.0,
       isLoupeMode: false,
@@ -555,6 +558,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     const wasPlayingBefore = get().wasAudioPlayingBeforeVideo;
     set({
       cinemaArtwork: null,
+      hoveredArtwork: null,
+      hoveredTarget: null,
+      gameControlPrompt: null,
       isCinemaInfoOpen: true,
       inspectionZoom: 1.0,
       isLoupeMode: false,
@@ -580,6 +586,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       isHoldingCD: false,
       isCDPOVOpen: false,
+      hoveredArtwork: null,
+      hoveredTarget: null,
       hoveredTrackIndex: null,
       lastActionCloseTime: Date.now()
     });

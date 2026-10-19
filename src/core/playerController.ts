@@ -500,40 +500,40 @@ export class PlayerController {
       return;
     }
 
-    // Controle de mira contínuo (Desktop mesmo sem Pointer Lock ativo):
-    // Move a câmera livremente acompanhando o cursor do mouse sem exigir clique-e-arraste.
-    const target = e.target as HTMLElement | null;
-    const isInteractiveUI = !!target?.closest?.('header, nav, aside, button, a, [role="dialog"], input, select, textarea, .modal-backdrop');
-    if (isInteractiveUI) {
+    // Modo Desbloqueado (Cursor livre):
+    // Se o usuário estiver arrastando com botão esquerdo no canvas 3D (clique-e-arraste de transição):
+    if (this.isPointerDown) {
+      const target = e.target as HTMLElement | null;
+      const isInteractiveUI = !!target?.closest?.('header, nav, aside, button, a, [role="dialog"], input, select, textarea, .modal-backdrop');
+      if (isInteractiveUI) {
+        this.prevMouseX = e.clientX;
+        this.prevMouseY = e.clientY;
+        return;
+      }
+
+      let moveX = 0;
+      let moveY = 0;
+
+      if (this.prevMouseX !== -1 && this.prevMouseY !== -1) {
+        const dx = e.clientX - this.prevMouseX;
+        const dy = e.clientY - this.prevMouseY;
+        if (Math.abs(dx) < 150 && Math.abs(dy) < 150) {
+          moveX = dx;
+          moveY = dy;
+        }
+      }
+
       this.prevMouseX = e.clientX;
       this.prevMouseY = e.clientY;
-      return;
-    }
 
-    let moveX = 0;
-    let moveY = 0;
-
-    // Se o navegador fornece movementX/movementY válidos:
-    if (typeof e.movementX === 'number' && (e.movementX !== 0 || e.movementY !== 0) && Math.abs(e.movementX) < 120 && Math.abs(e.movementY) < 120) {
-      moveX = e.movementX;
-      moveY = e.movementY;
-    } else if (this.prevMouseX !== -1 && this.prevMouseY !== -1) {
-      // Delta por clientX/Y para navegadores onde movementX é 0 sem lock (Safari Mac)
-      const dx = e.clientX - this.prevMouseX;
-      const dy = e.clientY - this.prevMouseY;
-      if (Math.abs(dx) < 150 && Math.abs(dy) < 150) {
-        moveX = dx;
-        moveY = dy;
+      if (moveX !== 0 || moveY !== 0) {
+        this.yaw -= moveX * this.config.mouseSensitivity * 1.25;
+        this.pitch -= moveY * this.config.mouseSensitivity * 1.25;
+        this.pitch = Math.max(-0.72, Math.min(0.72, this.pitch));
       }
-    }
-
-    this.prevMouseX = e.clientX;
-    this.prevMouseY = e.clientY;
-
-    if (moveX !== 0 || moveY !== 0) {
-      this.yaw -= moveX * this.config.mouseSensitivity;
-      this.pitch -= moveY * this.config.mouseSensitivity;
-      this.pitch = Math.max(-0.72, Math.min(0.72, this.pitch));
+    } else {
+      this.prevMouseX = e.clientX;
+      this.prevMouseY = e.clientY;
     }
   };
 
