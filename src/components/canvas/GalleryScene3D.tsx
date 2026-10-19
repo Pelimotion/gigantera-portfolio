@@ -2423,11 +2423,6 @@ export const GalleryScene3D: React.FC = () => {
       const state = useAppStore.getState();
       if (state.cinemaArtwork || state.isHoldingCD || state.viewMode === 'archive') return;
 
-      if (playerController.isLocked) {
-        mouseCoord.set(0, 0);
-      }
-      
-      raycaster.setFromCamera(mouseCoord, camera);
       const candidates = [
         ...artworkItems.map((m) => m.glassMesh),
         ...artworkItems.map((m) => m.paperMesh),
@@ -2439,8 +2434,18 @@ export const GalleryScene3D: React.FC = () => {
         cdStand,
         deckMesh
       ];
-      const hits = raycaster.intersectObjects(candidates);
-      const validHits = hits.filter((h) => h.distance <= 6.5);
+
+      // 1. Testa retículo central (0, 0) com alcance amplo
+      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+      let hits = raycaster.intersectObjects(candidates);
+      let validHits = hits.filter((h) => ((h.object as any).isCDStation ? h.distance <= 4.0 : h.distance <= 12.0));
+
+      // 2. Se não acertou pelo centro e o cursor do mouse estiver livre, testa pelas coordenadas do cursor
+      if (validHits.length === 0 && !playerController.isLocked) {
+        raycaster.setFromCamera(mouseCoord, camera);
+        hits = raycaster.intersectObjects(candidates);
+        validHits = hits.filter((h) => ((h.object as any).isCDStation ? h.distance <= 4.0 : h.distance <= 12.0));
+      }
 
       if (validHits.length > 0) {
         const hitObj = validHits[0].object as any;
@@ -2468,10 +2473,6 @@ export const GalleryScene3D: React.FC = () => {
       if ((e.target as HTMLElement).closest('button, aside, nav, .cd-viewmodel-hud-dock, .cinema-bottom-feather-bar, .cinema-top-inspection-hud, .still-prancheta-dock, .modal-backdrop, .controls-guide-card, .controls-guide-card-graphic, header, footer, [role="dialog"], .archive-brutalist-filters, .archive-portfolio-header, .archive-sound-drawer')) {
         return;
       }
-
-      try {
-        (document.activeElement as HTMLElement)?.blur?.();
-      } catch {}
 
       const state = useAppStore.getState();
 
@@ -2544,9 +2545,21 @@ export const GalleryScene3D: React.FC = () => {
         return;
       }
 
-      // Raycast dinâmico: se Pointer Lock estiver ativo usa retículo central (0,0); se livre, usa a posição real do mouse
-      const clickCoord = playerController.isLocked ? new THREE.Vector2(0, 0) : currentMouseCoord;
-      raycaster.setFromCamera(clickCoord, camera);
+      // 1. Prioridade Absoluta: Se a mira já detectou uma obra ou estação de CD
+      if (state.hoveredArtwork) {
+        soundEngine.playGlassPassSound();
+        openCinema(state.hoveredArtwork);
+        return;
+      }
+
+      if (state.hoveredTarget === 'cd') {
+        const isFirst = !useAppStore.getState().hasInspectedCDBefore;
+        useAppStore.getState().takeCD();
+        cdViewmodel.take(isFirst);
+        return;
+      }
+
+      // 2. Raycast em tempo de clique (testa centro da tela e coordenadas do cursor)
       const candidates = [
         ...artworkItems.map((m) => m.glassMesh),
         ...artworkItems.map((m) => m.paperMesh),
@@ -2555,8 +2568,18 @@ export const GalleryScene3D: React.FC = () => {
         cdPaperMesh,
         cdBackMesh
       ];
-      const hits = raycaster.intersectObjects(candidates);
-      const validHits = hits.filter((h) => ((h.object as any).isCDStation ? h.distance <= 3.5 : h.distance <= 12.0));
+
+      // Testa primeiro centro da mira (0, 0)
+      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+      let hits = raycaster.intersectObjects(candidates);
+      let validHits = hits.filter((h) => ((h.object as any).isCDStation ? h.distance <= 4.0 : h.distance <= 12.0));
+
+      // Se não acertou pelo centro, testa onde o cursor clicou
+      if (validHits.length === 0) {
+        raycaster.setFromCamera(currentMouseCoord, camera);
+        hits = raycaster.intersectObjects(candidates);
+        validHits = hits.filter((h) => ((h.object as any).isCDStation ? h.distance <= 4.0 : h.distance <= 12.0));
+      }
 
       if (validHits.length > 0) {
         const hitObj = validHits[0].object as any;
@@ -2564,7 +2587,7 @@ export const GalleryScene3D: React.FC = () => {
           soundEngine.playGlassPassSound();
           openCinema(hitObj.artworkData as Artwork);
           return;
-        } else if (hitObj.isCDStation && validHits[0].distance <= 3.5) {
+        } else if (hitObj.isCDStation && validHits[0].distance <= 4.0) {
           const isFirst = !useAppStore.getState().hasInspectedCDBefore;
           useAppStore.getState().takeCD();
           cdViewmodel.take(isFirst);
@@ -2572,8 +2595,15 @@ export const GalleryScene3D: React.FC = () => {
         }
       }
 
-      // Se clicou no espaço vazio, reativa o Pointer Lock para mira livre (somente desktop)
-      if (!playerController.isLocked && !useAppStore.getState().isMobile) {
+      // 3. Fallback de Proximidade Imediata
+      if (state.proximityArtwork) {
+        soundEngine.playGlassPassSound();
+        openCinema(state.proximityArtwork);
+        return;
+      }
+
+      // 4. Se clicou no espaço vazio da galeria, solicita pointer lock para controle livre 360°
+      if (!playerController.isLocked && !state.isMobile) {
         playerController.requestLock();
       }
     };

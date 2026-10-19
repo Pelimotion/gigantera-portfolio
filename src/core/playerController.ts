@@ -232,15 +232,9 @@ export class PlayerController {
     if (this.onPointerLockChange) {
       this.onPointerLockChange(this.isLocked);
     }
-    if (!this.isLocked) {
-      this.isPointerDown = false;
-      this.hasClickedCanvas = false;
-    } else {
-      // Pointer Lock recém concedido: reseta deltas para evitar salto na câmera
-      // O próximo mousemove usará e.movementX/Y limpos em vez de delta com prevMouseX
-      this.prevMouseX = -1;
-      this.prevMouseY = -1;
-    }
+    this.isPointerDown = false;
+    this.prevMouseX = -1;
+    this.prevMouseY = -1;
   };
 
   public requestLock(): void {
@@ -506,44 +500,30 @@ export class PlayerController {
       return;
     }
 
-    // Controle de mira contínuo (Desktop sem Pointer Lock):
-    // Após o primeiro clique intencional no canvas, o mouse controla a mira suavemente
-    // sem precisar manter o botão pressionado (single-click look).
+    // Controle de mira contínuo (Desktop mesmo sem Pointer Lock ativo):
+    // Move a câmera livremente acompanhando o cursor do mouse sem exigir clique-e-arraste.
     const target = e.target as HTMLElement | null;
     const isInteractiveUI = !!target?.closest?.('header, nav, aside, button, a, [role="dialog"], input, select, textarea, .modal-backdrop');
     if (isInteractiveUI) {
-      // Ao entrar em UI, preserva prevMouse para não causar salto ao retornar ao canvas
-      return;
-    }
-
-    // Primeiro movimento após clique: inicializa sem delta (evita salto de câmera)
-    if (this.prevMouseX === -1 || this.prevMouseY === -1) {
       this.prevMouseX = e.clientX;
       this.prevMouseY = e.clientY;
       return;
     }
 
-    // Single-click look: rastreia delta de posição do mouse continuamente
-    // (funciona mesmo sem botão pressionado, desde que hasClickedCanvas seja true)
     let moveX = 0;
     let moveY = 0;
 
+    // Se o navegador fornece movementX/movementY válidos:
     if (typeof e.movementX === 'number' && (e.movementX !== 0 || e.movementY !== 0) && Math.abs(e.movementX) < 120 && Math.abs(e.movementY) < 120) {
       moveX = e.movementX;
       moveY = e.movementY;
-    } else {
+    } else if (this.prevMouseX !== -1 && this.prevMouseY !== -1) {
+      // Delta por clientX/Y para navegadores onde movementX é 0 sem lock (Safari Mac)
       const dx = e.clientX - this.prevMouseX;
       const dy = e.clientY - this.prevMouseY;
-      if (Math.abs(dx) < 120 && Math.abs(dy) < 120) {
-        // Single-click: aplica delta mesmo sem botão pressionado, se já clicou no canvas
-        if (this.hasClickedCanvas) {
-          moveX = dx;
-          moveY = dy;
-        } else if (this.isPointerDown) {
-          // Fallback: modo arraste clássico enquanto o botão está pressionado (antes do primeiro clique)
-          moveX = dx;
-          moveY = dy;
-        }
+      if (Math.abs(dx) < 150 && Math.abs(dy) < 150) {
+        moveX = dx;
+        moveY = dy;
       }
     }
 

@@ -52,6 +52,13 @@ export const IntroSequence: React.FC = () => {
 
   const handleEnter3D = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    try {
+      const canvas = document.querySelector('#gallery-3d-viewport canvas') as HTMLElement;
+      if (canvas && typeof canvas.requestPointerLock === 'function' && !useAppStore.getState().isMobile) {
+        const p = canvas.requestPointerLock() as any;
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      }
+    } catch {}
     window.dispatchEvent(new CustomEvent('gigantera:request-lock'));
     dismiss(450);
   };
