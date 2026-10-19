@@ -362,25 +362,12 @@ export class PlayerController {
           this.onResetStillZoom();
         }
         break;
-      case 'KeyI':
-        if (this.isCinemaActive) {
-          e.preventDefault();
-          useAppStore.getState().toggleCinemaInfo();
-        }
-        break;
       case 'KeyM':
         if (this.isCinemaActive && this.onToggleVideoAudio) {
           this.onToggleVideoAudio();
         }
         break;
       default:
-        // Handle e.key for characters that might not map to the expected e.code on some layouts
-        if (e.key.toLowerCase() === 'i') {
-          if (this.isCinemaActive) {
-            e.preventDefault();
-            useAppStore.getState().toggleCinemaInfo();
-          }
-        }
         break;
     }
     

@@ -20,6 +20,17 @@ export const CDJewelCasePOV: React.FC = () => {
   const resetDJFilter = useAppStore((s) => s.resetDJFilter);
   const currentAudioTrack = useAppStore((s) => s.currentAudioTrack);
   const isAudioPlaying = useAppStore((s) => s.isAudioPlaying);
+  const [showTracklist, setShowTracklist] = React.useState<boolean>(false);
+
+  const isTracklistVisible = cdFlipped || showTracklist;
+
+  const handleSelectTrack = (track: typeof AUTHORIAL_TRACKS_CATALOG[0]) => {
+    soundEngine.unlockAudio();
+    soundEngine.playDiscreteClickSound();
+    useAppStore.getState().setCurrentAudioTrack(track);
+    soundEngine.playTrackPreview(track);
+    useAppStore.getState().setIsAudioPlaying(true);
+  };
 
   const handleStow = () => {
     try {
@@ -136,15 +147,77 @@ export const CDJewelCasePOV: React.FC = () => {
       <section className="cd-jewel-pane" aria-label="Estojo de CD e Sistema de Faixas">
         <div className="cd-jewel-top-info font-mono">
           <div className="cd-jewel-status-capsule">
-            <span className="cd-view-badge">
-              {cdFlipped ? 'CONTRACAPA · 17 FAIXAS' : 'CAPA FRONTAL DO ÁLBUM'}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 12 }}>
+              <span className="cd-view-badge">
+                {cdFlipped ? 'CONTRACAPA · 17 FAIXAS' : 'CAPA FRONTAL DO ÁLBUM'}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTracklist(!showTracklist);
+                  soundEngine.playDiscreteClickSound();
+                }}
+                style={{
+                  background: isTracklistVisible ? 'rgba(77, 238, 234, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+                  border: `1px solid ${isTracklistVisible ? 'rgba(77, 238, 234, 0.4)' : 'rgba(255, 255, 255, 0.12)'}`,
+                  color: isTracklistVisible ? '#4deeea' : isDark ? '#cbd5e1' : '#475569',
+                  borderRadius: 6,
+                  padding: '2px 8px',
+                  fontSize: 9,
+                  cursor: 'pointer',
+                  fontWeight: 700
+                }}
+                title="Abrir/fechar lista de faixas para seleção rápida"
+              >
+                {isTracklistVisible ? 'OCULTAR FAIXAS ▴' : 'FAIXAS (17) ▾'}
+              </button>
+            </div>
             <span className="cd-action-subhint">
               {cdFlipped
                 ? 'CLIQUE NA FAIXA P/ TOCAR · CLIQUE NO CD OU [F] P/ VER CAPA'
                 : 'CLIQUE NO CD OU [F] P/ VER CONTRACAPA E FAIXAS'}
             </span>
           </div>
+
+          {/* GAVETA DE FAIXAS SELECIONÁVEIS */}
+          {isTracklistVisible && (
+            <div
+              className="cd-tracklist-drawer font-mono"
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <div className="cd-tracklist-header">
+                <span>ÁLBUM GIGANTERA (2024)</span>
+                <span>17 FAIXAS AUTORAIS</span>
+              </div>
+              <div className="cd-tracklist-scroll">
+                {AUTHORIAL_TRACKS_CATALOG.map((track) => {
+                  const isActive = track.id === currentAudioTrack.id;
+                  return (
+                    <button
+                      key={track.id}
+                      type="button"
+                      onClick={() => handleSelectTrack(track)}
+                      className={`cd-track-pill-item ${isActive ? 'is-active' : ''}`}
+                      title={`Tocar ${track.trackNumber}. ${track.title} (${track.genre})`}
+                    >
+                      <div className="cd-track-pill-left">
+                        <span className="cd-track-num">{track.trackNumber}</span>
+                        <span className="cd-track-name">{track.title}</span>
+                      </div>
+                      <div className="cd-track-pill-right">
+                        <span className="cd-track-duration">{track.duration}</span>
+                        {isActive && isAudioPlaying && (
+                          <span className="cd-track-playing-pulse" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

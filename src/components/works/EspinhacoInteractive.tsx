@@ -117,12 +117,24 @@ const particleVertexShader = `
     pos.x += spineWaveX;
     pos.z += spineWaveZ;
 
-    // Deformação da Coluna por Teclado Orgânico (Flexão Anteroposterior & Torção Axial)
-    float spineDist = clamp((pos.y + 1.1) / 2.2, 0.0, 1.0);
-    float flexX = uKeyFlex.x * spineDist * spineDist * 0.55;
-    pos.x += flexX;
+    // Cinemática de Natação de Peixe e Deformação Centralizada (Pivot Baricêntrico Y = 0)
+    float normY = clamp(pos.y / 1.1, -1.0, 1.0);
+    float caudalFactor = 0.25 + 0.75 * abs(normY);
+
+    // Onda contínua de natação orgânica
+    float swimWave = sin(uTime * 2.5 + pos.y * 3.2);
+    pos.x += swimWave * 0.045 * caudalFactor;
+
+    // Flexão lateral e curvatura de nado por teclado A/D (uKeyFlex.y)
+    float turnCurve = uKeyFlex.y * (1.0 - normY * normY * 0.45) * 0.75;
+    pos.x += turnCurve;
     
-    float torsionAngle = uKeyFlex.y * spineDist * 0.65;
+    // Flexão anteroposterior por teclado W/S (uKeyFlex.x)
+    float pitchCurve = uKeyFlex.x * (1.0 - normY * normY * 0.45) * 0.75;
+    pos.z += pitchCurve;
+    
+    // Torção axial orgânica acompanhando o nado
+    float torsionAngle = (uKeyFlex.y * 0.85 + swimWave * 0.12) * normY;
     float cosT = cos(torsionAngle);
     float sinT = sin(torsionAngle);
     float tx = pos.x * cosT - pos.z * sinT;
@@ -130,9 +142,9 @@ const particleVertexShader = `
     pos.x = tx;
     pos.z = tz;
 
-    // Dispersão quântica transitória em picos sonoros ou cliques
+    // Dispersão quântica transitória em picos sonoros ou pulso de ESPAÇO
     if (uTransient > 0.02) {
-      pos += (aRandom - 0.5) * uTransient * 0.45;
+      pos += (aRandom - 0.5) * uTransient * 1.25;
     }
 
     // Levíssima flutuação hidrostática orgânica
@@ -264,15 +276,15 @@ export const EspinhacoInteractive: React.FC = () => {
     renderer.setSize(w, h);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.55;
     rendererRef.current = renderer;
 
     // Scene
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    // Fog sutil volumétrico de profundidade
-    scene.fog = new THREE.FogExp2(isDark ? 0x06090c : 0xd8dad6, 0.18);
+    // Fog leve e atmosférico de galeria (densidade balanceada para visibilidade cristalina)
+    scene.fog = new THREE.FogExp2(isDark ? 0x06090c : 0xd8dad6, 0.06);
 
     // Camera
     const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 50);
@@ -284,22 +296,26 @@ export const EspinhacoInteractive: React.FC = () => {
     scene.add(sculptureGroup);
     sculptureGroupRef.current = sculptureGroup;
 
-    // Iluminação de Estúdio / Galeria
-    const ambientLight = new THREE.AmbientLight(isDark ? 0x223344 : 0x778899, 1.2);
+    // Iluminação de Estúdio / Galeria com luzes de preenchimento bilaterais
+    const ambientLight = new THREE.AmbientLight(isDark ? 0x445566 : 0x99aabb, 1.8);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 3.2);
     keyLight.position.set(3, 5, 4);
     scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(activeBiome.primary, 3.2);
+    const rimLight = new THREE.DirectionalLight(activeBiome.primary, 3.8);
     rimLight.position.set(-3.5, 2.5, -3.5);
     scene.add(rimLight);
     rimLightRef.current = rimLight;
 
-    const fillLight = new THREE.PointLight(0x60a5fa, 1.4, 8);
-    fillLight.position.set(0, -2.5, 2.5);
-    scene.add(fillLight);
+    const fillLight1 = new THREE.PointLight(0x70b5ff, 2.2, 14);
+    fillLight1.position.set(3, -1, 3);
+    scene.add(fillLight1);
+
+    const fillLight2 = new THREE.PointLight(0xa0c5e8, 1.8, 14);
+    fillLight2.position.set(-3, 0, 2);
+    scene.add(fillLight2);
 
     // Poeira subaquática cósmica (350 motes ao redor da escultura)
     const dustCount = 350;
@@ -446,11 +462,14 @@ export const EspinhacoInteractive: React.FC = () => {
               shader.vertexShader = shader.vertexShader.replace(
                 '#include <begin_vertex>',
                 `#include <begin_vertex>
-                float spineDist = clamp((position.y + 1.1) / 2.2, 0.0, 1.0);
-                float flexX = uKeyFlex.x * spineDist * spineDist * 1.4; // Exaggerated flex
-                transformed.x += flexX;
+                float normY = clamp(position.y / 1.1, -1.0, 1.0);
+                float turnCurve = uKeyFlex.y * (1.0 - normY * normY * 0.45) * 0.75;
+                transformed.x += turnCurve;
                 
-                float torsionAngle = uKeyFlex.y * spineDist * 1.8; // Exaggerated torsion
+                float pitchCurve = uKeyFlex.x * (1.0 - normY * normY * 0.45) * 0.75;
+                transformed.z += pitchCurve;
+                
+                float torsionAngle = (uKeyFlex.y * 0.85) * normY;
                 float cosT = cos(torsionAngle);
                 float sinT = sin(torsionAngle);
                 float tx = transformed.x * cosT - transformed.z * sinT;
@@ -482,12 +501,15 @@ export const EspinhacoInteractive: React.FC = () => {
                   vPosition = position;
                   vec3 pos = position;
                   
-                  // WASD Torção
-                  float spineDist = clamp((pos.y + 1.1) / 2.2, 0.0, 1.0);
-                  float flexX = uKeyFlex.x * spineDist * spineDist * 1.4;
-                  pos.x += flexX;
+                  // WASD Torção Centralizada
+                  float normY = clamp(pos.y / 1.1, -1.0, 1.0);
+                  float turnCurve = uKeyFlex.y * (1.0 - normY * normY * 0.45) * 0.75;
+                  pos.x += turnCurve;
                   
-                  float torsionAngle = uKeyFlex.y * spineDist * 1.8;
+                  float pitchCurve = uKeyFlex.x * (1.0 - normY * normY * 0.45) * 0.75;
+                  pos.z += pitchCurve;
+                  
+                  float torsionAngle = (uKeyFlex.y * 0.85) * normY;
                   float cosT = cos(torsionAngle);
                   float sinT = sin(torsionAngle);
                   float tx = pos.x * cosT - pos.z * sinT;
@@ -593,11 +615,11 @@ export const EspinhacoInteractive: React.FC = () => {
         transientRef.current *= 0.92;
       }
 
-      // Amortecimento suave das forças cinéticas do teclado
-      keyFlexRef.current.flexX += (keyFlexRef.current.targetFlexX - keyFlexRef.current.flexX) * 0.12;
-      keyFlexRef.current.flexY += (keyFlexRef.current.targetFlexY - keyFlexRef.current.flexY) * 0.12;
-      keyFlexRef.current.targetFlexX *= 0.92;
-      keyFlexRef.current.targetFlexY *= 0.92;
+      // Amortecimento suave das forças cinéticas do teclado (sustentação orgânica do nado)
+      keyFlexRef.current.flexX += (keyFlexRef.current.targetFlexX - keyFlexRef.current.flexX) * 0.16;
+      keyFlexRef.current.flexY += (keyFlexRef.current.targetFlexY - keyFlexRef.current.flexY) * 0.16;
+      keyFlexRef.current.targetFlexX *= 0.965;
+      keyFlexRef.current.targetFlexY *= 0.965;
 
       // 2. ATUALIZAÇÃO DOS UNIFORMS DE SHADER
       if (particleMaterialRef.current) {
@@ -641,19 +663,19 @@ export const EspinhacoInteractive: React.FC = () => {
         targetRotRef.current.y += 0.004;
       }
 
-      // Inércia amortecida suave
-      targetRotRef.current.y += rotVelocityRef.current.y;
+      // Inércia amortecida suave + steering de nado com A e D
+      targetRotRef.current.y += rotVelocityRef.current.y + keyFlexRef.current.flexY * 0.012;
       targetRotRef.current.x += rotVelocityRef.current.x;
       rotVelocityRef.current.x *= 0.90;
       rotVelocityRef.current.y *= 0.90;
 
       // Grupo da escultura: responde à órbita + torção vertebral do teclado
       group.rotation.y += (targetRotRef.current.y - group.rotation.y) * 0.08;
-      group.rotation.x += (targetRotRef.current.x + keyFlexRef.current.flexY * 0.25 - group.rotation.x) * 0.08;
-      group.rotation.z += (keyFlexRef.current.flexX * 0.25 - group.rotation.z) * 0.08;
+      group.rotation.x += (targetRotRef.current.x - group.rotation.x) * 0.08;
+      group.rotation.z += (-keyFlexRef.current.flexY * 0.12 - group.rotation.z) * 0.08;
 
-      // Respiração volumétrica sutil com os graves
-      const pulseScale = 1.0 + Math.sin(t * 1.5) * 0.012 + bass * 0.035;
+      // Respiração volumétrica sutil com os graves + pulso de choque do ESPAÇO
+      const pulseScale = (1.0 + Math.sin(t * 1.5) * 0.012 + bass * 0.035) * (1.0 + transientRef.current * 0.03);
       group.scale.set(pulseScale, pulseScale, pulseScale);
 
       // Câmera & Zoom (Offset lateral compensa o menu HUD na esquerda)
@@ -901,16 +923,16 @@ export const EspinhacoInteractive: React.FC = () => {
       } else {
         // HÍBRIDO: WASD torce a escultura, Mouse (via handler padrão) orbita. 
         if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
-          keyFlexRef.current.targetFlexX = Math.max(-3.5, keyFlexRef.current.targetFlexX - 0.85);
+          keyFlexRef.current.targetFlexX = Math.max(-3.8, keyFlexRef.current.targetFlexX - 1.6);
           lastInteractionTimeRef.current = Date.now();
         } else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
-          keyFlexRef.current.targetFlexX = Math.min(3.5, keyFlexRef.current.targetFlexX + 0.85);
+          keyFlexRef.current.targetFlexX = Math.min(3.8, keyFlexRef.current.targetFlexX + 1.6);
           lastInteractionTimeRef.current = Date.now();
         } else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
-          keyFlexRef.current.targetFlexY = Math.max(-3.5, keyFlexRef.current.targetFlexY - 0.85);
+          keyFlexRef.current.targetFlexY = Math.max(-3.8, keyFlexRef.current.targetFlexY - 1.6);
           lastInteractionTimeRef.current = Date.now();
         } else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
-          keyFlexRef.current.targetFlexY = Math.min(3.5, keyFlexRef.current.targetFlexY + 0.85);
+          keyFlexRef.current.targetFlexY = Math.min(3.8, keyFlexRef.current.targetFlexY + 1.6);
           lastInteractionTimeRef.current = Date.now();
         }
       }
@@ -1166,38 +1188,39 @@ export const EspinhacoInteractive: React.FC = () => {
             
             <div style={{ opacity: 0.35, margin: '6px 0' }}>────────────────────────────</div>
 
-            {/* Modos de Visão */}
-            <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-              {(['pbr', 'particles', 'wireframe'] as const).map((mode, i) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => handleSetMode(mode)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    background: renderMode === mode ? accentColor : 'transparent',
-                    color: renderMode === mode ? (isDark ? '#080c0e' : '#ffffff') : fgColor,
-                    border: `1px solid ${renderMode === mode ? accentColor : isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                    padding: '2px 5px',
-                    fontSize: 8,
-                    fontFamily: 'inherit',
-                    borderRadius: 3,
-                    cursor: 'pointer'
-                  }}
-                >
-                  <kbd className="keycap keycap-xs">
-                    {i + 1}
-                  </kbd>
-                  {mode === 'pbr' ? 'MATÉRIA' : mode === 'particles' ? 'PONTOS' : 'RAIO-X'}
-                </button>
-              ))}
+            {/* Modos de Visão (1/2/3) */}
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+              <span className="keycap-cluster" style={{ display: 'inline-flex', gap: 2 }}>
+                <kbd className="keycap keycap-xs">1</kbd>
+                <kbd className="keycap keycap-xs">2</kbd>
+                <kbd className="keycap keycap-xs">3</kbd>
+              </span>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {(['pbr', 'particles', 'wireframe'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => handleSetMode(mode)}
+                    style={{
+                      background: renderMode === mode ? accentColor : 'transparent',
+                      color: renderMode === mode ? (isDark ? '#080c0e' : '#ffffff') : fgColor,
+                      border: `1px solid ${renderMode === mode ? accentColor : isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                      padding: '2px 5px',
+                      fontSize: 8,
+                      fontFamily: 'inherit',
+                      borderRadius: 3,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {mode === 'pbr' ? 'MATÉRIA' : mode === 'particles' ? 'PONTOS' : 'RAIO-X'}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Biomas */}
+            {/* Biomas (B) */}
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 8 }}>
-              <kbd className="keycap keycap-xs" title="Mudar Estilo">B</kbd>
+              <kbd className="keycap keycap-xs" title="Mudar Estilo (Tecla B)">B</kbd>
               <div style={{ display: 'flex', gap: 4 }}>
                 {BIOMES.map((b, idx) => (
                   <button

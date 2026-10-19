@@ -17,7 +17,7 @@ export const ArtistBioModal: React.FC = () => {
   if (!isBioOpen) return null;
 
   const handleCopyEmail = () => {
-    navigator.clipboard.writeText('pelimotion@gmail.com');
+    navigator.clipboard.writeText('felipe@pelimotion.art');
     setCopiedEmail(true);
     setTimeout(() => setCopiedEmail(false), 2400);
   };
@@ -50,7 +50,7 @@ export const ArtistBioModal: React.FC = () => {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '2vh' }}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.2em', color: 'var(--accent-gold)' }}>
-            [MANIFESTO & CONTACT]
+            [MANIFESTO & CONTATO]
           </span>
           <button
             onClick={() => setBioOpen(false)}
@@ -69,7 +69,7 @@ export const ArtistBioModal: React.FC = () => {
             onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
             onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.6')}
           >
-            [✕ CLOSE / ESC]
+            [✕ FECHAR / ESC]
           </button>
         </div>
 
@@ -82,23 +82,23 @@ export const ArtistBioModal: React.FC = () => {
               Felipe<br/>Conceição
             </h2>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.15em', color: 'var(--accent-gold)', textTransform: 'uppercase' }}>
-              Gigantera · Digital Artist, Computational Sculpture & Sound
+              Gigantera · Artista Digital, Escultura Computacional & Som
             </div>
 
             <p style={{ fontSize: '1rem', lineHeight: 1.8, color: 'rgba(255,255,255,0.7)', fontWeight: 300, maxWidth: '600px' }}>
-              <strong style={{ color: '#fff', fontWeight: 500 }}>Gigantera</strong> is the digital pavilion of Felipe Conceição. A three-dimensional brutalist space where still artworks, kinetic video, and original sound float between glass vitrines. You do not browse. You traverse.
+              <strong style={{ color: '#fff', fontWeight: 500 }}>Gigantera</strong> é o pavilhão digital de Felipe Conceição. Um espaço tridimensional brutalista onde esculturas estáticas, cinética em vídeo e áudio autoral flutuam entre vitrines de vidro. Você não navega. Você atravessa.
             </p>
 
             <p style={{ fontSize: '1rem', lineHeight: 1.8, color: 'rgba(255,255,255,0.7)', fontWeight: 300, maxWidth: '600px' }}>
-              Felipe Conceição acts as <strong style={{ color: '#fff', fontWeight: 500 }}>Gigantera</strong>, articulating code, generative media, and projection with the physicality of silver, steel, sand, and fishing nets. His research creates friction between the polished finish of the image industry and the erasure of his Caiçara territorial heritage, investigating the loss of organic time in the acceleration of our economic model.
+              Felipe Conceição atua como <strong style={{ color: '#fff', fontWeight: 500 }}>Gigantera</strong>, articulando código, mídia generativa e projeção com a fisicalidade de prata, aço, areia e redes de pesca. Sua pesquisa cria atrito entre o acabamento polido da indústria de imagem e o apagamento de sua herança territorial caiçara, investigando a perda do tempo orgânico na aceleração do modelo econômico.
             </p>
 
             {/* Pillars */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5vh', marginTop: '2vh' }}>
               {[
-                { n: '01', l: 'STILL', d: 'Digital sculpture and mineral photogrammetry' },
-                { n: '02', l: 'VIDEO', d: 'Cinematic and stochastic particle simulation' },
-                { n: '03', l: 'SOUND', d: 'Electronic music synthesis and acoustic dispersion' }
+                { n: '01', l: 'STILL', d: 'Escultura digital e fotogrametria mineral' },
+                { n: '02', l: 'VÍDEO', d: 'Cinética e simulação estocástica de partículas' },
+                { n: '03', l: 'SOM', d: 'Síntese de música eletrônica e dispersão acústica' }
               ].map((p, i) => (
                 <div key={i} style={{ display: 'flex', gap: '2vw', alignItems: 'baseline', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1vh' }}>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--accent-gold)', minWidth: '40px' }}>{p.n} // {p.l}</span>
@@ -112,9 +112,9 @@ export const ArtistBioModal: React.FC = () => {
           <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '4vh', justifyContent: 'center' }}>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2vh' }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--accent-coral)', letterSpacing: '0.1em' }}>[DIRECT TRANSMISSION]</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--accent-coral)', letterSpacing: '0.1em' }}>[TRANSMISSÃO DIRETA]</span>
               <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'rgba(255,255,255,0.6)' }}>
-                Available for curatorial commissions, art direction, immersive installations, and musical collaborations.
+                Disponível para comissões curatoriais, direção de arte, instalações imersivas e colaborações sonoras.
               </p>
               
               <div 
@@ -127,9 +127,9 @@ export const ArtistBioModal: React.FC = () => {
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
               >
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', letterSpacing: '0.05em' }}>pelimotion@gmail.com</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', letterSpacing: '0.05em' }}>felipe@pelimotion.art</span>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--accent-gold)' }}>
-                  {copiedEmail ? '✓ COPIED!' : '[COPY]'}
+                  {copiedEmail ? '✓ COPIADO!' : '[COPIAR]'}
                 </span>
               </div>
             </div>
@@ -138,8 +138,8 @@ export const ArtistBioModal: React.FC = () => {
               {[
                 { l: 'WHATSAPP', url: 'https://wa.me/5547999999999' },
                 { l: 'INSTAGRAM', url: 'https://instagram.com/pelimotion' },
-                { l: 'PELIMOTION STUDIO', url: 'https://www.pelimotion.art' },
-                { l: 'VIMEO ARCHIVE', url: 'https://vimeo.com' }
+                { l: 'ESTÚDIO PELIMOTION', url: 'https://www.pelimotion.art' },
+                { l: 'ACERVO VIMEO', url: 'https://vimeo.com' }
               ].map((link, i) => (
                 <a
                   key={i}
@@ -162,12 +162,12 @@ export const ArtistBioModal: React.FC = () => {
             </div>
 
             <div style={{ marginTop: '2vh', padding: '2vh 1.5vw', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '1vh' }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>[ATELIER & PIPELINE]</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>[ATELIÊ & PIPELINE]</span>
               <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', letterSpacing: '0.05em' }}>
-                OPERATIONS BASED AT <a href="https://share.google/WR6ZovOEDJxrJ4SCp" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-gold)', textDecoration: 'none' }}>TOCA.HUB</a>
+                OPERAÇÕES SEDIADAS EM <a href="https://share.google/WR6ZovOEDJxrJ4SCp" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-gold)', textDecoration: 'none' }}>TOCA.HUB</a>
               </span>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.05em', marginTop: '1vh' }}>
-                RENDERED WITH THREE.JS & WEB AUDIO API
+                RENDERIZADO COM THREE.JS & WEB AUDIO API
               </span>
             </div>
 

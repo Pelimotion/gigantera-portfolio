@@ -85,14 +85,21 @@ class SoundEngine {
     }
   }
 
-  public async playTrackPreview(track: AudioTrackInfo): Promise<void> {
+  public async unlockAudio(): Promise<void> {
     if (!this.isInitialized) {
       this.init();
     }
-
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      await this.audioCtx.resume();
+      try {
+        await this.audioCtx.resume();
+      } catch (e) {
+        console.warn('Falha ao desuspender AudioContext:', e);
+      }
     }
+  }
+
+  public async playTrackPreview(track: AudioTrackInfo): Promise<void> {
+    await this.unlockAudio();
 
     if (!this.audioElement) return;
 
@@ -108,7 +115,9 @@ class SoundEngine {
     // Toca o preview leve imediatamente
     this.audioElement.src = track.previewSrc;
     this.audioElement.loop = true;
-    this.audioElement.currentTime = 0;
+    try {
+      this.audioElement.currentTime = 0;
+    } catch {}
 
     try {
       await this.audioElement.play();
@@ -119,9 +128,11 @@ class SoundEngine {
     // Se o ouvinte permanecer ouvindo a mesma faixa por 4 segundos, faz upgrade transparente para a versão full
     this.upgradeTimer = setTimeout(async () => {
       if (this.currentTrackId === track.id && this.audioElement) {
-        const curTime = this.audioElement.currentTime;
+        const curTime = this.audioElement.currentTime || 0;
         this.audioElement.src = track.fullSrc;
-        this.audioElement.currentTime = curTime % 10;
+        try {
+          this.audioElement.currentTime = curTime % 10;
+        } catch {}
         this.isFullStreaming = true;
         try {
           await this.audioElement.play();
@@ -418,6 +429,30 @@ class SoundEngine {
 
     osc.start(t);
     osc.stop(t + 0.05);
+  }
+
+  // SFX Procedural: Click tátil, preciso e minimalista (inspirado no trackpad de precisão)
+  public playDiscreteClickSound(): void {
+    if (!this.isInitialized) this.init();
+    if (!this.audioCtx) return;
+    if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+
+    const t = this.audioCtx.currentTime;
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1400, t);
+    osc.frequency.exponentialRampToValueAtTime(320, t + 0.024);
+
+    gain.gain.setValueAtTime(0.09, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.024);
+
+    osc.connect(gain);
+    gain.connect(this.gainNode || this.audioCtx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.028);
   }
 
   // SFX Procedural: Sussurro harmônico e etéreo ao transpassar o vidro da vitrine

@@ -119,6 +119,146 @@ function createWallTexture(isLight: boolean): THREE.CanvasTexture {
 }
 
 /**
+ * Gerador procedural de Normal Map para piso marmorite/microcimento:
+ * Converte ranhuras das juntas de dilatação e micro-relevo mineral em vetores normais tangentes (RGB).
+ */
+function createFloorNormalTexture(): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  const height = new Float32Array(size * size);
+  for (let i = 0; i < height.length; i++) {
+    height[i] = 128 + (Math.random() - 0.5) * 16;
+  }
+
+  // Juntas de dilatação em cruz e bordas
+  const drawJoint = (x0: number, y0: number, x1: number, y1: number) => {
+    if (x0 === x1) {
+      const x = Math.floor(x0);
+      for (let y = 0; y < size; y++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const px = Math.min(size - 1, Math.max(0, x + dx));
+          height[y * size + px] -= (2 - Math.abs(dx)) * 18;
+        }
+      }
+    } else {
+      const y = Math.floor(y0);
+      for (let x = 0; x < size; x++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const py = Math.min(size - 1, Math.max(0, y + dy));
+          height[py * size + x] -= (2 - Math.abs(dy)) * 18;
+        }
+      }
+    }
+  };
+
+  drawJoint(0, 0, 0, size);
+  drawJoint(size - 1, 0, size - 1, size);
+  drawJoint(0, 0, size, 0);
+  drawJoint(0, size - 1, size, size - 1);
+  drawJoint(size / 2, 0, size / 2, size);
+  drawJoint(0, size / 2, size, size / 2);
+
+  const imgData = ctx.createImageData(size, size);
+  const data = imgData.data;
+  const strength = 1.8;
+
+  for (let y = 0; y < size; y++) {
+    const yPrev = (y - 1 + size) % size;
+    const yNext = (y + 1) % size;
+    for (let x = 0; x < size; x++) {
+      const xPrev = (x - 1 + size) % size;
+      const xNext = (x + 1) % size;
+
+      const dx = (height[y * size + xNext] - height[y * size + xPrev]) * strength;
+      const dy = (height[yNext * size + x] - height[yPrev * size + x]) * strength;
+
+      let nx = -dx;
+      let ny = -dy;
+      let nz = 128.0;
+      const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1.0;
+      nx /= len;
+      ny /= len;
+      nz /= len;
+
+      const idx = (y * size + x) * 4;
+      data[idx] = Math.floor((nx * 0.5 + 0.5) * 255);
+      data[idx + 1] = Math.floor((ny * 0.5 + 0.5) * 255);
+      data[idx + 2] = Math.floor((nz * 0.5 + 0.5) * 255);
+      data[idx + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(8, 44);
+  return tex;
+}
+
+/**
+ * Gerador procedural de Normal Map para paredes:
+ * Simula a rugosidade de rolo de lã e micro-ondulações de gesso arquitectural de museu.
+ */
+function createWallNormalTexture(): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  const height = new Float32Array(size * size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const rollerGrain = (Math.random() - 0.5) * 14;
+      const ripple = Math.sin(x * 0.12) * Math.cos(y * 0.08) * 4;
+      height[y * size + x] = 128 + rollerGrain + ripple;
+    }
+  }
+
+  const imgData = ctx.createImageData(size, size);
+  const data = imgData.data;
+  const strength = 1.4;
+
+  for (let y = 0; y < size; y++) {
+    const yPrev = (y - 1 + size) % size;
+    const yNext = (y + 1) % size;
+    for (let x = 0; x < size; x++) {
+      const xPrev = (x - 1 + size) % size;
+      const xNext = (x + 1) % size;
+
+      const dx = (height[y * size + xNext] - height[y * size + xPrev]) * strength;
+      const dy = (height[yNext * size + x] - height[yPrev * size + x]) * strength;
+
+      let nx = -dx;
+      let ny = -dy;
+      let nz = 140.0;
+      const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1.0;
+      nx /= len;
+      ny /= len;
+      nz /= len;
+
+      const idx = (y * size + x) * 4;
+      data[idx] = Math.floor((nx * 0.5 + 0.5) * 255);
+      data[idx + 1] = Math.floor((ny * 0.5 + 0.5) * 255);
+      data[idx + 2] = Math.floor((nz * 0.5 + 0.5) * 255);
+      data[idx + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 4);
+  return tex;
+}
+
+/**
  * Gerador procedural de textura para o piso do Santuário da Obra Interativa:
  * Ardósia/Basalto escuro mineral com degradê longitudinal suave (do tom da galeria para o grafite profundo),
  * agregados finos de quartzo, juntas de dilatação sutis e nunca 100% preto chapado.
@@ -356,7 +496,7 @@ function createPlaqueTexture(art: Artwork, index: number, isLight: boolean): THR
 
   ctx.font = 'bold 20px "Space Mono", monospace';
   ctx.fillStyle = isLight ? '#b88d34' : '#e4c379';
-  const ctaText = art.medium === 'interactive' ? '[E] VIVENCIAR OBRA' : '[E] INSPECIONAR';
+  const ctaText = art.medium === 'interactive' ? '[E] ENTRAR' : '[E] INSPECIONAR';
   ctx.fillText(ctaText, 52, 240);
 
   ctx.textAlign = 'right';
@@ -786,13 +926,17 @@ export const GalleryScene3D: React.FC = () => {
 
     const floorLightTex = createFloorTexture(true);
     const floorDarkTex = createFloorTexture(false);
+    const floorNormalTex = createFloorNormalTexture();
     const wallLightTex = createWallTexture(true);
     const wallDarkTex = createWallTexture(false);
+    const wallNormalTex = createWallNormalTexture();
 
     const floorGeo = new THREE.PlaneGeometry(layout.roomWidth + 6, hallLen + 12, 1, 1);
     floorGeo.rotateX(-Math.PI / 2);
     const floorMat = new THREE.MeshStandardMaterial({
       map: isLight ? floorLightTex : floorDarkTex,
+      normalMap: floorNormalTex,
+      normalScale: new THREE.Vector2(0.4, 0.4),
       roughness: isLight ? 0.38 : 0.45,
       metalness: isLight ? 0.08 : 0.12
     });
@@ -820,6 +964,8 @@ export const GalleryScene3D: React.FC = () => {
     const wallGeo = new THREE.PlaneGeometry(hallLen + 12, 24);
     const wallMat = new THREE.MeshStandardMaterial({
       map: isLight ? wallLightTex : wallDarkTex,
+      normalMap: wallNormalTex,
+      normalScale: new THREE.Vector2(0.28, 0.28),
       roughness: 0.88,
       metalness: 0.02
     });
@@ -2317,6 +2463,8 @@ export const GalleryScene3D: React.FC = () => {
     };
 
     const onClick = (e: MouseEvent) => {
+      soundEngine.unlockAudio();
+
       if ((e.target as HTMLElement).closest('button, aside, nav, .cd-viewmodel-hud-dock, .cinema-bottom-feather-bar, .cinema-top-inspection-hud, .still-prancheta-dock, .modal-backdrop, .controls-guide-card, .controls-guide-card-graphic, header, footer, [role="dialog"], .archive-brutalist-filters, .archive-portfolio-header, .archive-sound-drawer')) {
         return;
       }
@@ -2327,9 +2475,15 @@ export const GalleryScene3D: React.FC = () => {
 
       const state = useAppStore.getState();
 
+      const rect = container.getBoundingClientRect();
+      const currentMouseCoord = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
+      );
+
       // MODO ACERVO 3D EM GRADE (TAB): Clique com o mouse livre abre a obra no Cinema sem Pointer Lock
       if (state.viewMode === 'archive' && !state.cinemaArtwork) {
-        raycaster.setFromCamera(mouseCoord, camera);
+        raycaster.setFromCamera(currentMouseCoord, camera);
         const gridCandidates = artworkItems
           .filter((item) => item.gridScale > 0.1)
           .flatMap((item) => [item.glassMesh, item.paperMesh, item.plaqueMesh]);
@@ -2340,7 +2494,7 @@ export const GalleryScene3D: React.FC = () => {
         if (validGridHits.length > 0) {
           const hitObj = validGridHits[0].object as any;
           if (hitObj.artworkData) {
-            soundEngine.playGlassPassSound();
+            soundEngine.playDiscreteClickSound();
             openCinema(hitObj.artworkData as Artwork);
             return;
           }
@@ -2360,7 +2514,7 @@ export const GalleryScene3D: React.FC = () => {
 
       // Se estiver segurando o CD na mão
       if (state.isHoldingCD) {
-        raycaster.setFromCamera(mouseCoord, camera);
+        raycaster.setFromCamera(currentMouseCoord, camera);
         if (state.cdFlipped && cdViewmodel.backInlayMesh) {
           const cdHits = raycaster.intersectObject(cdViewmodel.backInlayMesh);
           if (cdHits.length > 0 && cdHits[0].uv) {
@@ -2371,18 +2525,27 @@ export const GalleryScene3D: React.FC = () => {
             }
           }
         }
-        // Se clicou no estojo de CD (capa, borda ou acrílico), alterna entre capa e contracapa
+        // Se clicou no estojo de CD (capa ou acrílico)
         const caseHits = raycaster.intersectObjects(cdViewmodel.caseGroup.children, true);
         if (caseHits.length > 0) {
-          state.flipCD();
-          cdViewmodel.flip();
+          if (!state.cdFlipped) {
+            state.flipCD();
+            cdViewmodel.flip();
+          } else {
+            // Na contracapa, só vira se o clique for explicitamente na moldura externa
+            const hitFrame = caseHits.some((h) => h.object !== cdViewmodel.backInlayMesh);
+            if (hitFrame) {
+              state.flipCD();
+              cdViewmodel.flip();
+            }
+          }
           return;
         }
         return;
       }
 
       // Raycast dinâmico: se Pointer Lock estiver ativo usa retículo central (0,0); se livre, usa a posição real do mouse
-      const clickCoord = playerController.isLocked ? new THREE.Vector2(0, 0) : mouseCoord;
+      const clickCoord = playerController.isLocked ? new THREE.Vector2(0, 0) : currentMouseCoord;
       raycaster.setFromCamera(clickCoord, camera);
       const candidates = [
         ...artworkItems.map((m) => m.glassMesh),
@@ -2459,9 +2622,20 @@ export const GalleryScene3D: React.FC = () => {
         }
       } else if (e.key === 'i' || e.key === 'I') {
         if (state.cinemaArtwork) {
+          if (state.cinemaArtwork.medium === 'interactive') {
+            // Permite que o componente interativo Espinhaço gerencie seus atalhos e fichas
+            return;
+          }
           e.preventDefault();
           e.stopPropagation();
           state.toggleCinemaInfo();
+          soundEngine.playTactileHoverTick();
+        } else if (!state.isHoldingCD && state.hoveredArtwork) {
+          // Na galeria aberta: mirar numa obra e apertar I abre a obra no cinema já com a ficha expandida!
+          e.preventDefault();
+          e.stopPropagation();
+          soundEngine.playDiscreteClickSound();
+          openCinema(state.hoveredArtwork);
         }
       } else if (e.key === 'q' || e.key === 'Q' || e.key === 'Escape' || e.key === 'e' || e.key === 'E') {
         if (state.cinemaArtwork || state.isHoldingCD) {
@@ -2559,15 +2733,21 @@ export const GalleryScene3D: React.FC = () => {
         (floorReflector.material as any).opacity = isLight ? 0.22 : 0.28;
         renderer.shadowMap.type = THREE.PCFShadowMap;
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
+        floorMat.normalScale.set(0.42, 0.42);
+        wallMat.normalScale.set(0.28, 0.28);
       } else if (q === 'med') {
         floorReflector.visible = true;
         (floorReflector.material as any).opacity = isLight ? 0.12 : 0.16;
         renderer.shadowMap.type = THREE.PCFShadowMap;
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+        floorMat.normalScale.set(0.22, 0.22);
+        wallMat.normalScale.set(0.15, 0.15);
       } else {
         floorReflector.visible = false;
         renderer.shadowMap.type = THREE.BasicShadowMap;
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+        floorMat.normalScale.set(0.0, 0.0);
+        wallMat.normalScale.set(0.0, 0.0);
       }
       renderer.shadowMap.needsUpdate = true;
     };
@@ -3562,8 +3742,10 @@ export const GalleryScene3D: React.FC = () => {
 
       floorLightTex.dispose();
       floorDarkTex.dispose();
+      floorNormalTex.dispose();
       wallLightTex.dispose();
       wallDarkTex.dispose();
+      wallNormalTex.dispose();
       renderer.dispose();
       floorGeo.dispose();
       floorMat.dispose();
@@ -3624,7 +3806,7 @@ export const GalleryScene3D: React.FC = () => {
                   <span className="mouse-icon mouse-left-click" />
                 </span>
                 <span className="keycap-label">
-                  {gameControlPrompt.includes('ESPINHAÇO') ? 'VIVENCIAR' : 'INSPECIONAR'} {gameControlPrompt.replace('art:', '')}
+                  {gameControlPrompt.includes('ESPINHAÇO') ? 'ENTRAR' : 'INSPECIONAR'} {gameControlPrompt.replace('art:', '')}
                 </span>
               </>
             ) : (

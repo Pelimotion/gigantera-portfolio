@@ -237,9 +237,9 @@ export const CinemaView: React.FC = () => {
           toggleVideoMute();
         }
       } else if (e.key === ' ' || e.code === 'Space') {
-        e.preventDefault();
-        e.stopPropagation();
         if (!isInteractive && cinemaArtwork.medium === 'video') {
+          e.preventDefault();
+          e.stopPropagation();
           toggleVideoPlay();
         }
       } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {

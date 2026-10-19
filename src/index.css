@@ -3134,7 +3134,6 @@ a {
   position: fixed;
   inset: 0;
   z-index: 50;
-  display: flex;
   width: 100vw;
   height: 100vh;
   pointer-events: none;
@@ -3152,43 +3151,58 @@ a {
   }
 }
 
-/* Painel Esquerdo: Visualizador Interativo Bounded */
+/* Camada Atmosférica do Visualizador de Áudio (Backdrop Halo de Partículas) */
 .cd-visualizer-pane {
-  position: relative;
-  width: 48%;
+  position: absolute;
+  inset: 0;
+  width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 36px 40px 100px 44px;
-  box-sizing: border-box;
-  pointer-events: auto;
-  background: linear-gradient(
-    90deg,
-    rgba(7, 9, 10, 0.75) 0%,
-    rgba(7, 9, 10, 0.55) 70%,
-    rgba(7, 9, 10, 0) 100%
-  );
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+  z-index: 1;
+  background: transparent;
+  border: none;
 }
 
 [data-theme='light'] .cd-visualizer-pane {
-  background: linear-gradient(
-    90deg,
-    rgba(245, 247, 248, 0.8) 0%,
-    rgba(245, 247, 248, 0.6) 70%,
-    rgba(245, 247, 248, 0) 100%
-  );
-  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  background: transparent;
+  border: none;
+}
+
+.cd-visualizer-canvas-wrap {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.75;
+  mask-image: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.95) 28%, rgba(0, 0, 0, 0.35) 65%, transparent 88%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.95) 28%, rgba(0, 0, 0, 0.35) 65%, transparent 88%);
 }
 
 .cd-visualizer-header {
-  position: relative;
+  position: absolute;
+  top: 36px;
+  left: 44px;
   z-index: 10;
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   gap: 6px;
   max-width: 420px;
+  background: rgba(12, 16, 15, 0.72);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  padding: 16px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme='light'] .cd-visualizer-header {
+  background: rgba(245, 247, 248, 0.88);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
 }
 
 .cd-visualizer-meta-pill {
@@ -3226,7 +3240,7 @@ a {
 
 .cd-current-title {
   font-family: var(--font-display, inherit);
-  font-size: clamp(22px, 2.4vw, 34px);
+  font-size: clamp(20px, 2vw, 28px);
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.15;
@@ -3237,7 +3251,7 @@ a {
 
 .cd-current-sub {
   font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-size: 10.5px;
   letter-spacing: 0.06em;
   color: var(--text-secondary, #94a3b8);
   margin: 0;
@@ -3248,8 +3262,8 @@ a {
   display: flex;
   align-items: flex-end;
   gap: 4px;
-  height: 20px;
-  margin-top: 10px;
+  height: 18px;
+  margin-top: 8px;
 }
 
 .cd-fft-bar {
@@ -3279,22 +3293,16 @@ a {
     height: 8px;
   }
   100% {
-    height: 20px;
+    height: 18px;
   }
 }
 
-/* Canvas Wrap bounded no lado esquerdo */
-.cd-visualizer-canvas-wrap {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: auto;
-  overflow: hidden;
-}
-
 .cd-visualizer-footer {
-  position: relative;
+  position: absolute;
+  bottom: 80px;
+  left: 44px;
   z-index: 10;
+  pointer-events: none;
 }
 
 .cd-visualizer-hint {
@@ -3304,26 +3312,26 @@ a {
   opacity: 0.8;
 }
 
-/* Painel Direito: 3D CD Jewel Case */
+/* Painel Superior Direito: Status e Seletor de Faixas */
 .cd-jewel-pane {
-  position: relative;
-  flex: 1;
-  height: 100%;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-end;
-  padding: 36px 44px 100px 20px;
-  box-sizing: border-box;
-}
-
-.cd-jewel-top-info {
+  position: absolute;
+  top: 36px;
+  right: 44px;
+  z-index: 10;
   pointer-events: auto;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
+  gap: 10px;
+  max-width: 480px;
+}
+
+.cd-jewel-top-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
 }
 
 .cd-jewel-status-capsule {
@@ -3331,19 +3339,19 @@ a {
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
-  padding: 8px 14px;
-  background: rgba(12, 16, 15, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  padding: 10px 16px;
+  background: rgba(12, 16, 15, 0.72);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
 [data-theme='light'] .cd-jewel-status-capsule {
-  background: rgba(245, 247, 248, 0.75);
+  background: rgba(245, 247, 248, 0.88);
   border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 .cd-view-badge {
@@ -3361,6 +3369,161 @@ a {
   font-size: 9px;
   letter-spacing: 0.04em;
   color: var(--text-tertiary, #94a3b8);
+}
+
+/* Gaveta / Strip Rápido de 17 Faixas */
+.cd-tracklist-drawer {
+  width: 380px;
+  max-height: 380px;
+  background: rgba(12, 16, 15, 0.85);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: cdDrawerSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-theme='light'] .cd-tracklist-drawer {
+  background: rgba(245, 247, 248, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.12);
+}
+
+@keyframes cdDrawerSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cd-tracklist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 6px 8px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent-gold, #e4c379);
+}
+
+[data-theme='light'] .cd-tracklist-header {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+  color: var(--accent-gold, #b88d34);
+}
+
+.cd-tracklist-scroll {
+  overflow-y: auto;
+  max-height: 310px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 4px;
+}
+
+.cd-tracklist-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.cd-tracklist-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.cd-track-pill-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary, #94a3b8);
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.cd-track-pill-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-primary, #ffffff);
+}
+
+[data-theme='light'] .cd-track-pill-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #111;
+}
+
+.cd-track-pill-item.is-active {
+  background: rgba(77, 238, 234, 0.12);
+  border-color: rgba(77, 238, 234, 0.35);
+  color: var(--accent-cyan, #4deeea);
+  font-weight: 700;
+}
+
+[data-theme='light'] .cd-track-pill-item.is-active {
+  background: rgba(2, 132, 199, 0.1);
+  border-color: rgba(2, 132, 199, 0.3);
+  color: #0284c7;
+}
+
+.cd-track-pill-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd-track-num {
+  font-size: 9px;
+  opacity: 0.65;
+  font-weight: 700;
+}
+
+.cd-track-name {
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.cd-track-pill-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cd-track-duration {
+  font-size: 9.5px;
+  opacity: 0.7;
+}
+
+.cd-track-playing-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-cyan, #4deeea);
+  box-shadow: 0 0 8px var(--accent-cyan, #4deeea);
+  animation: cdPulseGlow 1.2s infinite alternate;
+}
+
+@keyframes cdPulseGlow {
+  0% { transform: scale(0.85); opacity: 0.6; }
+  100% { transform: scale(1.25); opacity: 1; }
 }
 
 /* Responsividade Mobile para CD Split Stage */

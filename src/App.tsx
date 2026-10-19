@@ -13,6 +13,9 @@ import { ArtistBioModal } from './components/modal/ArtistBioModal';
 import { ControlsGuideModal } from './components/modal/ControlsGuideModal';
 import { IntroSequence } from './components/ui/IntroSequence';
 
+import { soundEngine } from './core/soundEngine';
+import { startAnimatedFavicon } from './core/faviconManager';
+
 export const App: React.FC = () => {
   const theme = useAppStore((s) => s.theme);
   const viewMode = useAppStore((s) => s.viewMode);
@@ -21,6 +24,30 @@ export const App: React.FC = () => {
   useEffect(() => {
     applyThemeTokens(theme);
   }, [theme]);
+
+  // Favicon animado brutalista G-I-G-A
+  useEffect(() => {
+    const stopFavicon = startAnimatedFavicon();
+    return () => stopFavicon();
+  }, []);
+
+  // Desbloqueia o AudioContext do navegador no primeiro gesto global do usuário
+  useEffect(() => {
+    const unlock = () => {
+      soundEngine.unlockAudio();
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('touchstart', unlock);
+    };
+    window.addEventListener('pointerdown', unlock, { passive: true });
+    window.addEventListener('keydown', unlock, { passive: true });
+    window.addEventListener('touchstart', unlock, { passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('touchstart', unlock);
+    };
+  }, []);
 
   return (
     <main className="gallery-main-app" data-theme={theme} data-mode={viewMode} data-cinema={cinemaArtwork ? 'true' : 'false'}>

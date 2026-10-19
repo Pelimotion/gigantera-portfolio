@@ -157,7 +157,7 @@ export class CDViewmodel3D {
     const backInlayGeo = new THREE.PlaneGeometry(caseWidth * 0.93, caseHeight * 0.94);
     const backInlayMat = new THREE.MeshBasicMaterial({
       map: this.backCoverTexture,
-      side: THREE.FrontSide
+      side: THREE.DoubleSide
     });
     this.backInlayMesh = new THREE.Mesh(backInlayGeo, backInlayMat);
     this.backInlayMesh.position.set(0.005, 0, -0.012);
@@ -461,17 +461,15 @@ export class CDViewmodel3D {
   public getTrackIndexAtUV(uv: THREE.Vector2): number | null {
     const canvasY = (1.0 - uv.y) * 1024;
     const canvasX = uv.x * 1024;
-    const screenX = 84;
-    const screenW = 1024 - 168;
-    const screenY = 92;
-    const startY = screenY + 138;
+    const startY = 92 + 138;
     const lineHeight = 62;
     const visibleCount = 8;
     const totalTracks = this.tracks.length;
 
-    if (canvasX >= screenX + 16 && canvasX <= screenX + screenW - 16) {
-      if (canvasY >= startY - 42 && canvasY <= startY + visibleCount * lineHeight) {
-        const row = Math.floor((canvasY - (startY - 42)) / lineHeight);
+    // Detecção tolerante em toda a largura do estojo para cliques confiáveis
+    if (canvasX >= 40 && canvasX <= 984) {
+      if (canvasY >= startY - 48 && canvasY <= startY + visibleCount * lineHeight + 8) {
+        const row = Math.floor((canvasY - (startY - 48)) / lineHeight);
         if (row >= 0 && row < visibleCount) {
           const idx = Math.floor(this.scrollOffset) + row;
           if (idx < totalTracks) return idx;
@@ -487,6 +485,7 @@ export class CDViewmodel3D {
   public selectTrackByIndex(index: number): void {
     if (index >= 0 && index < this.tracks.length) {
       this.activeTrackIndex = index;
+      soundEngine.unlockAudio();
       this.playActiveTrack();
     }
   }
@@ -516,8 +515,8 @@ export class CDViewmodel3D {
       this.targetFlipAngle = 0;
     } else {
       this.isFirstTakeInspecting = false;
-      this.targetY = isMob ? -0.01 : -0.04;
-      this.targetZ = isMob ? -0.54 : -0.46;
+      this.targetY = isMob ? -0.01 : -0.03;
+      this.targetZ = isMob ? -0.58 : -0.56;
       this.targetFlipAngle = 0; // Inicia mostrando a arte da capa frontal (GIGA 'N' TERA)
     }
   }
@@ -679,7 +678,7 @@ export class CDViewmodel3D {
     const breathingX = Math.cos(time * 0.9) * 0.001;
 
     const isMob = useAppStore.getState().isMobile || (typeof window !== 'undefined' && window.innerWidth < 768);
-    const baseTargetX = isMob ? 0.0 : 0.18;
+    const baseTargetX = 0.0;
 
     this.rootGroup.position.x = baseTargetX + breathingX;
     this.rootGroup.position.y = this.currentY + breathingY;
