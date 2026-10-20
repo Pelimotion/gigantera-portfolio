@@ -1,17 +1,18 @@
 # GIGANTERA — Pavilhão Imersivo Digital & Acervo 3D
 
-> **Domínio de Produção:** [https://gigantera.xyz](https://gigantera.xyz)  
-> **Repositório Oficial:** [https://github.com/Pelimotion/gigantera-portfolio](https://github.com/Pelimotion/gigantera-portfolio)  
+> **Domínio de Produção Oficial:** [https://gigantera.xyz](https://gigantera.xyz)  
+> **Repositório GitHub:** [https://github.com/Pelimotion/gigantera-portfolio](https://github.com/Pelimotion/gigantera-portfolio)  
 > **Artista / Autor:** Felipe Conceição ([Pelimotion](https://pelimotion.art))  
-> **Tecnologias:** React 19, TypeScript, Three.js / WebGL, Tone.js / Web Audio API, GSAP, Vite, Tailwind/Vanilla CSS, Bunny.net Edge CDN.
+> **Contato Curatorial & Imprensa:** [felipe@pelimotion.art](mailto:felipe@pelimotion.art)  
+> **Tecnologias:** React 19, TypeScript 5.8, Three.js / WebGL, Tone.js / Web Audio API, Zustand 5, GSAP, Vite 8, Bunny.net Edge CDN.
 
 ---
 
 ## 🏛️ Sobre o Projeto
 
-**GIGANTERA** é um pavilhão arquitetural imersivo e curatorial concebido em 3D em tempo real. O visitante flutua livremente através de uma galeria brutalista com vitrines suspensas de vidro contendo videoarte, impressos fotográficos virtuais em papel mate giclée de alta densidade, uma sala de som autoral de 17 faixas e a monumental escultura biomecânica **Espinhaço** (nuvem interativa de 50.000 partículas procedurais com altura vertical de mais de 8 metros).
+**GIGANTERA** é um pavilhão arquitetural brutalista e acervo curatorial concebido inteiramente em computação gráfica 3D em tempo real para web. O visitante caminha livremente através de uma galeria com vitrines suspensas de vidro contendo videoartes, fotografias e renders virtuais impressos em papel mate giclée de alta densidade, uma sala de audição com álbum físico de 17 faixas autorais e a monumental escultura biomecânica **Espinhaço** — uma nuvem viva de 50.000 partículas procedurais que nada organicamente no santuário de basalto escuro.
 
-O projeto é acessível em desktop, tablet e smartphones, contando ainda com uma experiência dedicada de **Realidade Aumentada (WebAR)** em `/ar` e um centro curatorial de mídia e imprensa em `/admin`.
+A experiência foi construída com foco em rigor curatorial, solidez técnica, fidelidade física de iluminação e materiais (PBR), sem concessões a jargões fáceis ou efeitos superficiais.
 
 ---
 
@@ -19,63 +20,77 @@ O projeto é acessível em desktop, tablet e smartphones, contando ainda com uma
 
 | Rota | Descrição | Tecnologia |
 | :--- | :--- | :--- |
-| `/` | **Pavilhão 3D Imersivo & Acervo** (Galeria, Vitrines, Álbum 17 faixas, Espinhaço 3D) | React 19 + Three.js + Web Audio API |
-| `/ar` | **Espinhaço AR** — Realidade Aumentada óptica e sonora com câmera do celular | Three.js + WebRTC Camera + Gyro |
-| `/admin` | **Media Kit & Curador de Acervo** — Centro de download e exportação de releases | Vanilla JS + Bunny CDN Edge Sync |
-| `/penumbra` | **Penumbra System VJ Cockpit** — Motor de performance audiovisual integrado | Edge CDN Proxy / WebGL Engine |
+| **`/`** | **Pavilhão 3D Imersivo & Acervo Geral** (Galeria, Vitrines, Álbum 17 faixas, Espinhaço 3D) | React 19 + Three.js + Web Audio API + Zustand |
+| **`/ar`** | **Espinhaço WebAR** — Realidade Aumentada com câmera óptica do celular e giroscópio | Three.js + WebRTC Camera + DeviceOrientation |
+| **`/admin`** | **Media Kit & Curador de Acervo** — Centro de download de masters e exportação de releases | Vanilla JS + Bunny CDN Edge Storage Sync |
+| **`/penumbra`** | **Penumbra System VJ Cockpit** — Motor de performance audiovisual integrado | Edge CDN Proxy / WebGL Engine |
 
 ---
 
-## 🎮 Controles & Navegação do Pavilhão
+## 🎮 Guia Unificado de Controles & Atalhos
 
 | Ação | Desktop | Mobile / Touch |
 | :--- | :--- | :--- |
-| **Locomoção** | `W`, `A`, `S`, `D` ou Setas | Stepper Glide / D-pad tátil |
-| **Acelerar / Correr** | `Shift` | Toque contínuo |
-| **Olhar / Orientar Visão** | Arraste com Mouse / Pointer Lock | Swipe na tela ou Giroscópio |
-| **Interagir / Inspecionar** | `E` ou `Enter` | Toque direto na obra / vitrine |
-| **Setores Rápidos** | `1`, `2`, `3`, `4` (Som → Vídeos → Stills → Santuário) | Seletor na barra inferior |
-| **Ver Acervo Completo** | `TAB` (Matriz Frontal 4x2 com raycasting) | Botão Acervo no HUD |
-| **Estojo do CD (17 Faixas)**| `F` ou clique para virar; `↑`/`↓` para trocar faixa | Toque na capa / lista |
-| **Filtro DJ (DSP)** | `[` / `]` ou `O` / `P` (Low-pass & High-pass) | Knob tátil no HUD |
-| **Fidelidade Gráfica** | `G` (Leve / Médio / Alto) | Seletor no menu |
-| **Sobre & Contato** | `C` | Botão no menu superior |
-| **Mudo Global** | `M` | Botão de áudio no header |
+| **Locomoção** | `W`, `A`, `S`, `D` ou Setas | Joystick Virtual Analógico (canto inferior esquerdo) |
+| **Acelerar / Correr** | `Shift` | Toque analógico estendido |
+| **Olhar / Orientar Câmera** | Mouse Look com Pointer Lock 360° | Arraste tátil na metade direita da tela ou Giroscópio |
+| **Interagir / Inspecionar** | `E` ou Clique Direto na Obra | Toque direto na vitrine / obra |
+| **Travar / Destravar Mira** | Clique no chão trava; `ESC` destrava | Toque contínuo na cena |
+| **Álbum CD (17 Faixas)** | `F` ou Clique para virar; `↑`/`↓` para trocar faixa | Toque na capa / contracapa |
+| **Filtro DJ DSP** | `[` / `]` ou `O` / `P` (Passa-Baixa & Passa-Alta); `0` reseta | Knob analógico tátil no HUD |
+| **Setores Rápidos** | `1` (Áudio) · `2` (Vídeos) · `3` (Stills) · `4` (Santuário) | Seletor de setores na barra inferior |
+| **Ver Acervo Completo** | `TAB` (Matriz Frontal com Raycasting) | Botão Acervo no menu |
+| **Alternar Fidelidade** | `G` (Leve / Médio / Alto) | Seletor gráfico no menu |
+| **Sobre o Artista & Bio**| `C` | Botão no header superior |
+| **Mudo Global** | `M` | Botão de volume no header |
 
 ---
 
-## ☁️ Arquitetura de CDN & Edge Storage (Bunny.net)
+## 📚 Documentação Técnica Aprofundada (`docs/`)
 
-- **Pull Zone Oficial:** `https://gigantera-penumbra.b-cdn.net`
-- **Região de Baixa Latência:** São Paulo (`br.storage.bunnycdn.com`)
-- **Streaming de Mídia:** Suporte a HTTP 206 (Byte-Range Requests) para início instantâneo de streaming de áudio e vídeo em alta definição sem bloqueio de carregamento.
-- **Modelos Locais de Resposta Instantânea:**
-  - `public/models/espinhaco.glb` (Malha PBR 12MB)
-  - `public/models/espinhaco_points.bin` (586KB nuvem com 50.000 coordenadas)
+Para manutenção contínua, modificações e expansão de recursos, consulte os manuais modulares dedicados:
+
+- 🏛️ **[Arquitetura de Software & Engine 3D](docs/ARCHITECTURE.md)**: Diagrama de camadas, ciclo de vida da cena, coordenadas de mundo e store Zustand.
+- 🎯 **[Controles, Câmera FPS & Raycasting](docs/CONTROLS_AND_INTERACTION.md)**: Máquina de estados do Pointer Lock, física de rotação e raycast determinístico.
+- 🎛️ **[Sistema de Áudio, DSP & CD 3D](docs/AUDIO_SYSTEM.md)**: Web Audio API, catálogo de 17 faixas, filtro DJ biquad e visualizadores FFT.
+- 🖼️ **[Expografia, Catálogo & Escultura Espinhaço](docs/EXPOGRAPHY_AND_CATALOG.md)**: Adição de novas obras, proceduralismo de baías, texturas minerais e nado orgânico.
+- 🚀 **[Operações, Infraestrutura & Deploy](docs/OPERATIONS_AND_DEPLOYMENT.md)**: Vercel Edge, Bunny CDN, HTTP 206 Byte-Range e pipeline de build.
+- 🔮 **[Roteiro de Melhorias Futuras (Roadmap)](docs/FUTURE_IMPROVEMENTS.md)**: LOD para vitrines distantes, áudio espacial 3D com HRTF e WebXR.
 
 ---
 
-## 🛠️ Comandos de Operação
+## 🛠️ Comandos Rápidos de Operação
 
 ```bash
-# Instalação de dependências
+# Instalação limpa de dependências
 npm install
 
-# Servidor de desenvolvimento
+# Servidor de desenvolvimento com HMR
 npm run dev
 
 # Checagem rigorosa de tipos TypeScript (0 erros garantidos)
 npx tsc --noEmit
 
-# Compilação de produção
+# Compilação para produção
 npm run build
 
-# Pré-visualização do bundle compilado
-npm run preview
+# Deploy imediato em produção via Vercel CLI
+npx vercel --prod --yes
 ```
 
 ---
 
-## 🚀 Deploy Contínuo (Vercel & GitHub)
+## ☁️ Infraestrutura de CDN & Edge Storage (Bunny.net)
 
-- **Deploy Automático:** Qualquer push para a branch `main` do repositório `Pelimotion/gigantera-portfolio` dispara o build e deploy instantâneo na Vercel associado ao domínio `gigantera.xyz`.
+- **Pull Zone Oficial:** `https://gigantera-penumbra.b-cdn.net`
+- **Região de Baixa Latência:** São Paulo (`br.storage.bunnycdn.com`)
+- **Streaming de Mídia:** Suporte a HTTP 206 (Byte-Range Requests) para início instantâneo de streaming de áudio e vídeo em 4K sem travamentos de buffer.
+- **Modelos Locais de Resposta Instantânea:**
+  - `public/models/espinhaco_points.bin` (586 KB — 50.000 coordenadas de partículas)
+  - `public/models/espinhaco.glb` (12 MB — malha PBR de referência)
+
+---
+
+## 🚀 Deploy Contínuo (CI/CD)
+
+- Qualquer push para a branch `main` do repositório `Pelimotion/gigantera-portfolio` dispara o build e deploy instantâneo na **Vercel** com propagação global no domínio **[gigantera.xyz](https://gigantera.xyz)**.

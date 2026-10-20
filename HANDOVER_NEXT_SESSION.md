@@ -1,123 +1,95 @@
-# BRIEFING ESTRATÉGICO DE TRANSIÇÃO — GIGANTERA (EXPOGRAFIA MINIMALISTA, SANTUÁRIO TÁTIL & CD SOUND CHAMBER)
-> **Documento mestre de handoff para continuidade autônoma imediata e manutenção contínua.**
-> **Data:** 2026-09-20 | **Branch:** `main` | **Status do Build:** 100% Validado (0 erros TypeScript, build ultra-rápido ~450ms, 0 erros de console, Vercel Ready)
+# BRIEFING ESTRATÉGICO DE TRANSIÇÃO — GIGANTERA (DOCUMENTO MESTRE DE CONTINUIDADE)
+
+> **Documento mestre de handoff para continuidade autônoma imediata e manutenção contínua.**  
+> **Data de Atualização:** 2026-10-20 | **Branch:** `main` | **Status do Build:** 100% Validado (0 erros TypeScript, build ~1.3s, 0 erros de console, Vercel Production Ready)  
+> **Domínio Oficial:** [https://gigantera.xyz](https://gigantera.xyz)  
+> **Repositório GitHub:** [https://github.com/Pelimotion/gigantera-portfolio](https://github.com/Pelimotion/gigantera-portfolio)  
+> **Diretório Local de Trabalho:** `/Volumes/PLM_SSD_01/Dev/Gigantera Portfolio`
 
 ---
 
-## 🎯 RESUMO EXECUTIVO: ARQUITETURA, EXPOGRAFIA & REVOLUÇÃO DO CD SOUND CHAMBER
+## 🎯 RESUMO EXECUTIVO: EVOLUÇÕES CONSOLIDADAS & ESTADO ATUAL
 
-Nesta sessão foi realizada uma profunda reestruturação cenográfica e técnica no **Pavilhão Digital Gigantera**, elevando o nível de imersão artística e sanando atritos críticos de interação:
-
-### 1. Cenografia do Santuário da Obra Interativa (`Espinhaço`, Z ≈ -76.5m)
-- **Degradê Arquitetural Mineral Táctil Procedural**:
-  - `createSanctuaryFloorTexture(isLight)`: Transição de piso suave do tom claro/original do microcimento da galeria na entrada ($Z = -52\text{m}$) até a ardósia/basalto mineral escuro no fundo ($Z = -94\text{m}$). O piso escuro possui textura tátil rica com microcristais de quartzo, fissuras e veios de pedra e juntas de dilatação sutis, nunca sendo preto puro chapado.
-  - `createSanctuaryWallTexture(isLight)`: Ambas as paredes laterais (esquerda e direita) foram orientadas via UVs para acompanhar o degradê do piso, iniciando no tom claro da galeria em $Z = -52\text{m}$ e aprofundando em gesso acústico mineral escuro até o fundo $Z = -94\text{m}$.
-- **Remoção de Obstáculos & Purismo Espacial**:
-  - O banco monolítico que aparecia no chão da zona do santuário foi filtrado (`bz > -50m` em `modularGallery.ts` e `GalleryScene3D.tsx`), deixando o chão do santuário totalmente desimpedido e monumental.
-- **Placa de Identificação no Umbral de Transição ($Z \approx -52.2\text{m}$)**:
-  - Ao invés de ficar debaixo da escultura a $Z = -76.5\text{m}$, a plaquinha física 3D do Espinhaço foi posicionada exatamente na linha de transição entre o piso claro e o piso escuro ($Z = -52.2\text{m}$, voltada de frente para o visitante). Ao chegar ao umbral, o visitante lê a ficha técnica e contempla a escultura colossal erguendo-se ao fundo.
-
-### 2. Escala Monumental 3x da Obra Interativa no Pavilhão & Turntable Contínuo
-- **Escala 3x de Destaque Absoluto**:
-  - A nuvem viva de 50.000 partículas (`espinhaco_points.bin`) foi ampliada de `1.9` para `5.7` (3x a escala anterior), gerando uma colossal coluna vertebral escultural de aproximadamente 8,2 metros de altura vertical que se estende do piso até próximo às vigas de teto.
-  - Diâmetro das partículas ajustado para `0.038 - 0.044` para preservar a densidade volumétrica e o brilho aditivo.
-  - Luzes pontuais internas e de preenchimento ampliadas para 16m–18m de alcance, e volume de colisão de clique/hover ampliado para raio 2.8m e altura 8.8m.
-  - Rotação contínua turntable 360° fluida (`rotation.y += delta * 0.45`), levitação senoidal viva e ondulação áudio-reativa mantidas com 60 FPS garantidos.
-
-### 3. Reenquadramento Óptico em `EspinhacoInteractive.tsx` (Compensação do Menu)
-- **Centralização Óptica Precisa**:
-  - Quando o menu lateral esquerdo de controles está ativo (`tutorialState === 'minimized'`, ocupando ~360px), a câmera agora aplica `targetCamX = -0.72` em desktop.
-  - Esse deslocamento para a esquerda da câmera translada o modelo 3D para a direita, posicionando-o exatamente no centro geométrico do espaço livre restante da tela (entre a borda do menu e a margem direita da janela). Ao recolher o menu (`[H]`), a câmera interpola suavemente de volta para o centro global (`targetCamX = 0.0`).
-
-### 3. Tela de Interação com o CD: Eliminação do Flash e Reestruturação Split-Screen
-- **Resolução de Conflitos e Flash Rápido**:
-  - Removido o listener global `window.addEventListener('click', onWheelOrClick, { capture: true })` em `CDJewelCasePOV.tsx`, que interceptava cliques e forçava inversão de capa.
-  - Centralizados os atalhos de navegação de faixas e giro de capa no `playerController.ts`, eliminando a dupla execução que gerava o efeito estroboscópico/flash ao pressionar `F`.
-  - Corrigido o raycasting do CD em `GalleryScene3D.tsx`: clicar no estojo alterna entre capa e contracapa; clicar em faixas toca a música; cliques fora não guardam mais o CD de surpresa.
-- **Layout Split-Screen Bounded**:
-  - **Lado Esquerdo (`.cd-visualizer-pane`, 48%)**: Visualizador de ondas sonoras `CDVisualizerField` contido estritamente na metade esquerda com fade lateral suave. Header editorial com metadados da faixa e **Live FFT Bars** áudio-reativas animadas em tempo real.
-  - **Lado Direito (`.cd-jewel-pane`, 52%)**: CD Jewel Case 3D posicionado opticamente à direita (`x = +0.18`), permitindo visualizar a arte de capa e escolher as 17 faixas na contracapa com total clareza e sem sobreposições.
-  - **Mobile**: Transição fluida para empilhamento vertical responsivo (38% visualizador / 62% CD 3D).
-
-### 4. Mão POV Holográfica em Wireframe Arredondado (Pele 100% Invisível)
-- **Estrutura Cibernética**: Malha de pele humana totalmente invisível (`visible = false`).
-- **Esqueleto Tubular de Alta Densidade**: Cilindros anatômicos com 16 a 20 segmentos radiais (suaves, não lowpoly) contornando cada falange, palma, pulso e antebraço.
-- **Juntas Nodais Luminescentes**: Esferas ciano/neon (`#4deeea` / `#00ffff`) posicionadas nas articulações dos dedos e punho, criando um exoesqueleto holográfico fluido que sustenta o estojo de acrílico.
-
-### 5. Desduplicação de Menus e Narrativa Visual Minimalista
-- Eliminados o popup de mini-tutorial flutuante que poluía o canto da tela e a faixa de aviso estéreo redundante.
-- **Dock Inferior Único e Consolidado (`.cd-viewmodel-hud-dock`)**:
-  - Botão estético de virar: `[F] VER CAPA / VER CONTRACAPA`
-  - Guia de navegação de faixas: `[↑ / ↓] NAVEGAR`
-  - Knob DJ Tátil (Low-cut / High-cut) integrado
-  - Seletor de qualidade gráfica: `LEVE | MÉD | ALTO [G]`
-  - Botão de saída: `[ESC / E] GUARDAR` (com indicador sutil de que a música continua tocando no salão)
+### 1. Resolução Definitiva dos Conflitos de Mira e Interação Raycast
+- **Eliminação de Gatilhos Fantasmas por Proximidade**:
+  - Removido 100% do fallback que forçava abertura de obras via `state.proximityArtwork` no `onClick` e na tecla `[E]`.
+  - Clicar em qualquer espaço vazio do pavilhão (chão, teto, paredes ou ar) **nunca mais abre obras por engano**.
+- **Validação Física Estrita no Ponto de Clique**:
+  - O clique do mouse e a tecla `[E]` agora exigem colisão física real via raycast contra os meshes (`glassMesh`, `paperMesh`, `plaqueMesh` ou `cdCaseMesh`).
+  - Limites de alcance calibrados com rigor: obras do corredor até `7.0m`, escultura do santuário até `10.0m`, e pedestal do CD até `3.5m`.
+- **Comportamento Fluido de Câmera & Pointer Lock**:
+  - **Com Pointer Lock ativo**: O mouse usa `movementX/movementY` diretamente, girando livremente em 360° sem esbarrar nas bordas do monitor (segura a mira normalmente no padrão FPS).
+  - **Com cursor destravado**: O cursor navega livremente para interagir com menus superiores e rodapés; ao clicar no 3D, solicita pointer lock imediatamente; ao clicar e arrastar, rotaciona a câmera por delta suave.
+  - **Proteção Anti-clique Fantasma**: `lastActionCloseTime` com cooldown de 350ms ao fechar modais ou guardar o CD.
 
 ---
 
-## 🎮 MAPA ATUALIZADO DE CONTROLES & ATALHOS
-
-| Tecla / Gesto | Contexto | Ação Realizada |
-| :--- | :--- | :--- |
-| `W`, `A`, `S`, `D` / Setas | Galeria 3D | Caminhar pelo pavilhão |
-| `Shift` | Galeria 3D | Correr / Acelerar locomoção |
-| `Mouse Click` | Galeria 3D | Capturar mouse com Pointer Lock FPS |
-| `Esc` | Galeria 3D | Liberar ponteiro do mouse (câmera para imediatamente) |
-| `E` ou `Enter` | Galeria 3D | Interagir / Pegar CD ou Inspecionar obra |
-| `1`, `2`, `3`, `4` | Galeria 3D | Navegação rápida de Setores (Som → Vídeos → Stills → Espinhaço) |
-| `F` ou Clique no CD | Tela do CD | Alternar entre Capa Frontal e Contracapa (17 faixas) |
-| `↑` / `↓` | Tela do CD | Navegar sequencialmente pelas faixas do CD |
-| Clique na Faixa | Tela do CD | Reproduzir faixa selecionada com áudio espacial |
-| `[` e `]` ou `O` e `P` | Global / CD | Modular Filtro DJ (Passa-Baixa / Passa-Alta) |
-| `0` | Global / CD | Resetar Filtro DJ para neutro |
-| `G` | Global / CD | Alternar fidelidade gráfica (Leve / Médio / Alto) |
-| `ESC`, `E` ou `Q` | Tela do CD | Guardar CD e retornar à galeria (o som continua tocando) |
-| `C` | Global | Abrir painel Fullscreen de Sobre & Contato |
-| `M` | Global | Mudo global (silenciar / desilenciar áudios) |
-| `TAB` | Galeria 3D | Acervo frontal 4x2 |
+### 2. Biomecânica de Nado da Escultura Interativa "Espinhaço"
+- **Pivot Centralizado & Flexão Orgânica**:
+  - O ponto de ancoragem e distorção física foi centralizado no meio do corpo escultural.
+  - Ao pressionar `W`, `S`, `A`, `D` ou mover o analógico mobile, a escultura executa um **nado de peixe orgânico**, com ondas senoidais fluidas propagando da cabeça até a cauda e curvatura lateral elástica.
+- **Diretriz Curatorial & Editorial Estrita**:
+  - O trabalho artístico é sério, crítico e monumental. Termos apelativos como *"VIVENCIAR"* foram banidos. As fichas técnicas e descrições seguem tom sóbrio, direto e com poucas palavras.
 
 ---
 
-## 🕸️ KNOWLEDGE GRAPH (GRAPHIFY)
-
-O grafo de conhecimento do projeto em `graphify-out` foi atualizado:
-- **Estatísticas:** 1.514 nós, 4.432 arestas, 67 comunidades detectadas.
-- **Arquivos Gerados:** `graphify-out/graph.json`, `graphify-out/graph.html`, `graphify-out/GRAPH_REPORT.md`.
-- **Comando para Atualização Rápida:** `graphify update` (execução local incremental sem custo de tokens).
-
----
-
-## 🛠️ ESTADO TÉCNICO & DEPLOY
-
-- **Repositório Git:** `https://github.com/Pelimotion/portfolio.git` (`main`)
-- **Validação TypeScript:** `npx tsc --noEmit` aprovado com **0 erros**.
-- **Build de Produção:** `npm run build` executado em ~450ms.
-- **Deploy:** Vercel acionado automaticamente via push no GitHub branch `main`.
-- **Assets Sincronizados:** `./index.html`, `/assets/*`, `./ar/*`, `./models/*`.
+### 3. Sala de Audição, CD Jewel Case 3D & Filtro DJ
+- **17 Faixas Autorais**: Streaming em alta fidelidade com Bunny.net CDN via HTTP 206 (Byte-Range Requests).
+- **Estojo de CD Jewel Case 3D**:
+  - Geometria em acrílico PBR com difração de arco-íris no policarbonato do disco.
+  - Contracapa com teste de colisão UV procedural (`getTrackIndexAtUV`): tocar em qualquer uma das 17 faixas na arte da contracapa aciona a música diretamente.
+- **Filtro DJ DSP**: Passa-Baixa e Passa-Alta resonante com atalhos `[` / `]` ou `O` / `P`, e reset rápido com `0`.
 
 ---
 
-## ⚡ COMANDOS DE MANUTENÇÃO E OPERAÇÃO
+### 4. Cenografia do Santuário de Basalto Mineral ($Z \approx -76.5\text{m}$)
+- **Piso e Paredes em Degradê Procedural Mineral**:
+  - Transição contínua do microcimento claro da entrada até a ardósia/basalto escuro no fundo ($Z = -52\text{m}$ a $-94\text{m}$), com microcristais de quartzo e veios táteis.
+- **Placa de Identificação no Umbral ($Z \approx -52.2\text{m}$)**:
+  - Posicionada na linha de transição de piso, voltada para o visitante.
+- **Escala 3x Monumental**:
+  - 50.000 partículas procedurais (`espinhaco_points.bin`) erguendo-se a mais de 8 metros de altura vertical.
+
+---
+
+## 📚 SUÍTE MODULAR DE DOCUMENTAÇÃO TÉCNICA (`docs/`)
+
+Para manter a base de código limpa e facilitar melhorias futuras sem gargalos de contexto, foram criados guias técnicos dedicados:
+
+| Documento | Conteúdo Principal |
+| :--- | :--- |
+| **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** | Camadas React 19 + Three.js, coordenadas Z de mundo, ciclo de renderização dual scene e store Zustand. |
+| **[`docs/CONTROLS_AND_INTERACTION.md`](docs/CONTROLS_AND_INTERACTION.md)** | Máquina de estados do Pointer Lock, física de rotação FPS, joystick virtual mobile e pipeline de raycasting. |
+| **[`docs/AUDIO_SYSTEM.md`](docs/AUDIO_SYSTEM.md)** | Web Audio API, catálogo das 17 faixas, CD 3D Jewel Case, UV hit-testing e DSP do filtro DJ. |
+| **[`docs/EXPOGRAPHY_AND_CATALOG.md`](docs/EXPOGRAPHY_AND_CATALOG.md)** | Schema de obras, gerador procedural de baías, texturas minerais e nado do Espinhaço. |
+| **[`docs/OPERATIONS_AND_DEPLOYMENT.md`](docs/OPERATIONS_AND_DEPLOYMENT.md)** | Vercel Edge, rotas SPA, Bunny CDN, script de sincronização e variáveis de ambiente. |
+| **[`docs/FUTURE_IMPROVEMENTS.md`](docs/FUTURE_IMPROVEMENTS.md)** | Backlog técnico: LOD dinâmico em vitrines, áudio espacial 3D com HRTF, WebXR e BlurHash. |
+
+---
+
+## ⚡ COMANDOS DE OPERAÇÃO RÁPIDA
 
 ```bash
 # Entrar no diretório do projeto
-cd "/Volumes/PLM_SSD_01/Google Drive/Pelimotion/Pipeline SSD 01/Pelimotion/Site/gigantera"
+cd "/Volumes/PLM_SSD_01/Dev/Gigantera Portfolio"
 
-# Executar dev server local
+# Executar dev server local com HMR
 npm run dev
 
-# Checagem de tipagem TypeScript
+# Checagem obrigatória de tipagem TypeScript (deve retornar 0 erros)
 npx tsc --noEmit
 
-# Compilar e sincronizar build estático de produção
+# Compilação para produção
 npm run build
 
-# Atualizar base de conhecimento do Graphify
-graphify update
-
-# Commit e Deploy
-git add .
-git commit -m "feat(expografia): santuario tátil, cd split-screen e mao holografica"
-git push origin main
+# Deploy imediato em produção no Vercel
+npx vercel --prod --yes
 ```
 
+---
+
+## 🔐 REGRAS INEGOCIÁVEIS DE CONTINUIDADE
+
+1. **Nunca reintroduza gatilhos por `proximityArtwork` para abrir janelas**: Toda abertura de obra ou modal deve ser disparada por clique verificado ou `[E]` com alinhamento visual frontal.
+2. **Preserve a Sobriedade Editorial**: Mantenha títulos, fichas e textos com perfil crítico, técnico e direto (sem poesia kitsch ou apelos de marketing).
+3. **Valide Sempre o Build Antes de Commitar**: Todo commit na branch `main` deve passar por `npx tsc --noEmit` e `npm run build` com 0 erros.
