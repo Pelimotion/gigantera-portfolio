@@ -113,7 +113,7 @@ export function getMergedArtistInfo() {
 }
 
 export const DEFAULT_SITE_CONFIG = {
-  title: 'GIGANTERA | Pavilhão Digital',
+  title: 'GIGANTERA // Felipe Conceição',
   metaDescription: 'Um pavilhão imersivo. Você flutua entre vitrines suspensas com obras provocativas e uma sala de som autoral.',
   heroHeadline: 'GIGANTERA\nUm pavilhão. Não um portfólio.',
   subhead: 'Concreto, luz e som suspensos no espaço — entre e ande.',

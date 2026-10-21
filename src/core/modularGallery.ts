@@ -132,7 +132,8 @@ export function computeModularGalleryLayout(artworks: Artwork[]): ModularGallery
     const z = centerInteractiveZ;
     const rotY = 0.0; // Voltada para a entrada (+Z)
 
-    const computedCoords = { x, y: 0.45, z, rotY };
+    // Base grounded on floor (world floor is at y = -3.20m)
+    const computedCoords = { x, y: 0.0, z, rotY };
 
     // Ponto de visualização ótimo
     const spotX = x;

@@ -11,6 +11,7 @@ import { PlayerController } from '../../core/playerController';
 import { computeModularGalleryLayout, ViewingSpotInfo } from '../../core/modularGallery';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 /**
  * Gerador procedural de textura de piso: Microcimento / Marmorite Alabastro claro
@@ -714,6 +715,13 @@ export const GalleryScene3D: React.FC = () => {
     renderer.setClearColor(currentThemeTokens.canvasFog);
     renderer.domElement.style.touchAction = 'none';
     container.appendChild(renderer.domElement);
+
+    // Ambiente de reflexão PBR com estúdio calibrado (specular de alta fidelidade para metais e vidro)
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    const studioEnvScene = new RoomEnvironment();
+    const studioEnvTex = pmremGenerator.fromScene(studioEnvScene, 0.04).texture;
+    scene.environment = studioEnvTex;
 
     // 2. Sistema de Iluminação Suave tipo Raytracing: Sombras Aveludadas, Tons Quentes e Sem Brancos Estourados
     const hemiLight = new THREE.HemisphereLight(
@@ -1584,6 +1592,7 @@ export const GalleryScene3D: React.FC = () => {
       gridScale: number;
       idx: number;
       hitProxy?: THREE.Mesh;
+      currentLuminance?: number;
     }[] = [];
 
     interface EspinhacoTotemController {
@@ -1629,36 +1638,51 @@ export const GalleryScene3D: React.FC = () => {
       let glassMesh: THREE.Mesh;
       
       if (isEspinhaco) {
-        // Pedestal Arquitetônico em Basalto Cinzelado (Conforme referência visual criativo 04.png)
-        const plinthGeo = new THREE.BoxGeometry(2.6, 0.72, 2.6);
+        // Pedestal Arquitetônico em Basalto Cinzelado (Apoiado com precisão milimétrica no piso y = -3.20m)
+        // Bloco principal de basalto (altura 0.80m, de -3.20m a -2.40m)
+        const plinthGeo = new THREE.BoxGeometry(2.5, 0.80, 2.5);
         const plinthMat = new THREE.MeshStandardMaterial({
-          color: isLight ? 0x242826 : 0x121413,
-          roughness: 0.94,
-          metalness: 0.04
+          color: isLight ? 0x222624 : 0x111312,
+          roughness: 0.92,
+          metalness: 0.06
         });
         glassMesh = new THREE.Mesh(plinthGeo, plinthMat);
-        glassMesh.position.y = -2.84; // Elevado e apoiado no piso mineral
+        glassMesh.position.y = -2.80; // Centro em -2.80 -> base repousa exatamente em -3.20 (piso)
         glassMesh.receiveShadow = true;
         glassMesh.castShadow = true;
         group.add(glassMesh);
 
-        // Moldura chanfrada superior do pedestal
-        const capGeo = new THREE.BoxGeometry(2.38, 0.16, 2.38);
+        // Moldura chanfrada superior do pedestal (altura 0.16m, de -2.40m a -2.24m)
+        const capGeo = new THREE.BoxGeometry(2.32, 0.16, 2.32);
         const capMesh = new THREE.Mesh(capGeo, plinthMat);
-        capMesh.position.y = -2.40;
+        capMesh.position.y = -2.32;
         capMesh.receiveShadow = true;
         capMesh.castShadow = true;
         group.add(capMesh);
 
-        // Colar de engaste na base da coluna vertebral
-        const collarGeo = new THREE.CylinderGeometry(0.55, 0.68, 0.28, 32);
+        // Base Orgânica de Calcário / Montagem Curatorial (Conforme referência visual criativo 04.png)
+        // Altura 0.22m, de -2.24m a -2.02m
+        const mountGeo = new THREE.CylinderGeometry(0.78, 0.92, 0.22, 32);
+        const mountMat = new THREE.MeshStandardMaterial({
+          color: isLight ? 0xd4d2cc : 0x262a28,
+          roughness: 0.88,
+          metalness: 0.08
+        });
+        const mountMesh = new THREE.Mesh(mountGeo, mountMat);
+        mountMesh.position.y = -2.13;
+        mountMesh.receiveShadow = true;
+        mountMesh.castShadow = true;
+        group.add(mountMesh);
+
+        // Colar de engaste da coluna vertebral (altura 0.14m, de -2.02m a -1.88m)
+        const collarGeo = new THREE.CylinderGeometry(0.50, 0.62, 0.14, 32);
         const collarMat = new THREE.MeshStandardMaterial({
           color: isLight ? 0x2e3330 : 0x181b19,
-          roughness: 0.85,
-          metalness: 0.15
+          roughness: 0.82,
+          metalness: 0.20
         });
         const collar = new THREE.Mesh(collarGeo, collarMat);
-        collar.position.y = -2.18;
+        collar.position.y = -1.95;
         collar.receiveShadow = true;
         collar.castShadow = true;
         group.add(collar);
@@ -1851,25 +1875,19 @@ export const GalleryScene3D: React.FC = () => {
 
         // 1. Grupo Suporte do Modelo (Ondulação Cinética + Giro Interativo)
         const spineHolder = new THREE.Group();
+        spineHolder.position.set(0, 0, 0);
         espinhacoTotemGroup.add(spineHolder);
 
-        // 2. Escultura Sólida em Prata / Metal Acetinado (Referência Visual criativo 04.png)
-        // Coluna vertebral fóssil fundida em liga metálica acetinada de alta reflexão
-        const silverMaterial = new THREE.MeshPhysicalMaterial({
-          color: new THREE.Color(0xdde5ec), // Liga acetinada prata / estanho lunar
-          metalness: 0.94,                  // Prata de alta condutância metálica
-          roughness: 0.28,                  // Acabamento escovado acetinado nobre
-          reflectivity: 0.85,
-          clearcoat: 0.25,                  // Resina fina protetora de museu
-          clearcoatRoughness: 0.20,
-          envMapIntensity: 1.8,             // Reflexos ambientais ricos das luzes da galeria
-          side: THREE.DoubleSide
-        });
-
+        // 2. Escultura Sólida em Prata / Metal Acetinado Polido (Referência Visual criativo 04.png)
+        // Coluna vertebral fóssil fundida em liga nobre de prata e peltre com relevo e oclusão de alta definição
         const spineGltfLoader = new GLTFLoader();
         spineGltfLoader.setMeshoptDecoder(MeshoptDecoder);
 
+        let spineMeshAttached = false;
         const attachSpineMesh = (gltfScene: THREE.Group) => {
+          if (spineMeshAttached) return;
+          spineMeshAttached = true;
+
           let originalMesh: THREE.Mesh | null = null;
           gltfScene.traverse((child) => {
             if ((child as THREE.Mesh).isMesh && !originalMesh) {
@@ -1878,16 +1896,52 @@ export const GalleryScene3D: React.FC = () => {
           });
 
           if (originalMesh) {
+            const origMat = (originalMesh as THREE.Mesh).material as THREE.MeshStandardMaterial;
             const solidGeo = (originalMesh as THREE.Mesh).geometry.clone();
             solidGeo.computeVertexNormals();
             solidGeo.center();
-            // Rotação Z de 90° para posicionar a coluna vertebral na vertical
-            solidGeo.rotateZ(Math.PI / 2);
+
+            // Orientação anatômica autêntica conforme criativo 04.png:
+            // Rotação Z de -90° posiciona a cabeça/crânio na base e a coluna vertebral arqueando para cima
+            solidGeo.rotateZ(-Math.PI / 2);
+            solidGeo.computeBoundingBox();
+            const bbox = solidGeo.boundingBox!;
+            const scale = 8.45;
+
+            // Se o modelo tiver mapa de oclusão ou normal, garante segundo conjunto de UVs
+            if (!solidGeo.getAttribute('uv2') && solidGeo.getAttribute('uv')) {
+              solidGeo.setAttribute('uv2', solidGeo.getAttribute('uv'));
+            }
+
+            // Material Físico de Alta Fidelidade (Pewter / Prata Fundida de criativo 04.png)
+            // Utiliza as texturas originais embutidas no GLB (Color, NormalGL, ORM)
+            const silverMaterial = new THREE.MeshPhysicalMaterial({
+              map: origMat?.map || null,
+              normalMap: origMat?.normalMap || null,
+              normalScale: new THREE.Vector2(1.85, 1.85), // Esculpe com precisão cirúrgica cada vértebra e ranhura
+              roughnessMap: origMat?.roughnessMap || null,
+              metalnessMap: origMat?.metalnessMap || null,
+              aoMap: origMat?.aoMap || origMat?.roughnessMap || null,
+              aoMapIntensity: 1.5,
+              color: new THREE.Color(0xf5f7fa),           // Prata lunar nobre pura
+              metalness: 0.92,                            // Metal fundido altamente condutivo
+              roughness: 0.22,                            // Acabamento acetinado escovado
+              reflectivity: 0.95,
+              clearcoat: 0.35,                            // Película de cera / verniz de museu
+              clearcoatRoughness: 0.12,
+              envMapIntensity: 2.4,                       // Reflexos ambientais ricos da câmara PMREM
+              side: THREE.DoubleSide
+            });
 
             const spineSolid = new THREE.Mesh(solidGeo, silverMaterial);
-            // Escala 8.45x para coincidir rigorosamente com a escala monumental (~8.2m de altura)
-            spineSolid.scale.set(8.45, 8.45, 8.45);
-            spineSolid.position.y = 0.5;
+            spineSolid.scale.set(scale, scale, scale);
+
+            // Ancoragem milimétrica no colar do pedestal:
+            // O crânio se engasta no colar superior em y = -1.90m com zero flutuação ou vão
+            const lowestY = bbox.min.y * scale;
+            spineSolid.position.y = -1.90 - lowestY;
+            spineSolid.position.x = 0;
+            spineSolid.position.z = 0;
             spineSolid.castShadow = true;
             spineSolid.receiveShadow = true;
             (spineSolid as any).artworkData = art;
@@ -1899,70 +1953,49 @@ export const GalleryScene3D: React.FC = () => {
           }
         };
 
+        // Carrega prioritariamente o arquivo local para evitar latência ou restrições de CORS
         spineGltfLoader.load(
-          `${BUNNY_CDN_GIGANTERA}/models/espinhaco.glb`,
-          (gltf) => attachSpineMesh(gltf.scene),
+          `${cleanBase}models/espinhaco.glb`,
+          (gltfLocal) => attachSpineMesh(gltfLocal.scene),
           undefined,
           () => {
-            // Fallback local se o CDN tiver latência ou falhar
-            spineGltfLoader.load(`${cleanBase}models/espinhaco.glb`, (gltfLocal) => {
-              attachSpineMesh(gltfLocal.scene);
+            // Fallback para Bunny CDN se necessário
+            spineGltfLoader.load(`${BUNNY_CDN_GIGANTERA}/models/espinhaco.glb`, (gltf) => {
+              attachSpineMesh(gltf.scene);
             });
           }
         );
 
-        // 3. Nuvem de Pontos Pura & Otimizada (50k corpúsculos bioluminescentes)
-        // Em repouso (antes de interagir, vista de fora), opacidade sutil (0.14); desperta com ciano vivo ao interagir
-        const pCloudMat = new THREE.PointsMaterial({
-          color: isLight ? 0x009bb5 : 0x4deeea,
-          size: isLight ? 0.038 : 0.044, // Diâmetro balanceado para manter alta densidade na escala 3x
-          transparent: true,
-          opacity: 0.14,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false
-        });
-
-        fetch(`${BUNNY_CDN_GIGANTERA}/models/espinhaco_points.bin`)
-          .then((r) => {
-            if (!r.ok) throw new Error('CDN error');
-            return r.arrayBuffer();
-          })
-          .catch(() => fetch(`${cleanBase}models/espinhaco_points.bin`).then((r) => r.arrayBuffer()))
-          .then((buf) => {
-            const rawArr = new Float32Array(buf);
-            const pGeo = new THREE.BufferGeometry();
-            pGeo.setAttribute('position', new THREE.BufferAttribute(rawArr, 3));
-            const pCloud = new THREE.Points(pGeo, pCloudMat);
-            // Escala monumental 3x (5.7x): coluna vertebral imponente de ~8.2 metros de altura
-            pCloud.scale.set(5.7, 5.7, 5.7);
-            pCloud.position.y = 0.5;
-            spineHolder.add(pCloud);
-            if (espinhacoTotem) {
-              espinhacoTotem.pointsCloud = pCloud;
-            }
-          })
-          .catch((err) => console.warn('[Totem pointsCloud] Load error:', err));
-
-        // 4. Luzes de Iluminação de Museu Especializadas para Escultura Metálica
-        // Spotlight principal (key light quente-prateado rasante)
-        const spineKeySpot = new THREE.SpotLight(0xf2f7fc, 3.2, 24, Math.PI / 5, 0.45, 1.2);
-        spineKeySpot.position.set(3.8, 6.5, 4.2);
+        // 3. Sistema de Iluminação de Museu Especializado em Metal Esculpido (Highlights + Sombras Vivas)
+        // Key Spotlight rasante de alta definição projetando sombras de cada vértebra
+        const spineKeySpot = new THREE.SpotLight(0xfffcf5, 4.8, 36, Math.PI / 4.2, 0.35, 1.1);
+        spineKeySpot.position.set(3.8, 7.5, 4.2);
         spineKeySpot.target = spineHolder;
+        spineKeySpot.castShadow = true;
+        spineKeySpot.shadow.bias = -0.0001;
+        spineKeySpot.shadow.mapSize.width = 1024;
+        spineKeySpot.shadow.mapSize.height = 1024;
         espinhacoTotemGroup.add(spineKeySpot);
 
-        // Rim light traseiro frio para recortar a silhueta da espinha prateada contra a projeção escura
-        const spineRimLight = new THREE.PointLight(0x78d2f7, 2.0, 16.0, 1.3);
-        spineRimLight.position.set(-3.2, 4.0, -2.8);
+        // Top Rim Spot para desenhar as cristas da coluna contra o fundo escuro
+        const spineTopSpot = new THREE.SpotLight(0xf0f4fc, 3.8, 30, Math.PI / 3.8, 0.40, 1.2);
+        spineTopSpot.position.set(-3.2, 9.0, -1.5);
+        spineTopSpot.target = spineHolder;
+        espinhacoTotemGroup.add(spineTopSpot);
+
+        // Rim light traseiro neutro para recorte nítido da silhueta metálica
+        const spineRimLight = new THREE.PointLight(0xdde8f5, 1.4, 24.0, 1.4);
+        spineRimLight.position.set(-3.8, 4.5, -3.2);
         espinhacoTotemGroup.add(spineRimLight);
 
-        // Luz Interna Focal da Escultura Monumental
-        const totemLight = new THREE.PointLight(0x70d8ff, 1.4, 18.0, 1.2);
-        totemLight.position.set(0, 3.2, 1.2);
+        // Luz Interna Focal da Escultura Monumental (Branco de museu puro)
+        const totemLight = new THREE.PointLight(0xffffff, 1.4, 18.0, 1.4);
+        totemLight.position.set(0, 2.5, 1.2);
         espinhacoTotemGroup.add(totemLight);
 
-        // Luz suave de preenchimento inferior
-        const fillLight = new THREE.PointLight(0x4fc3f7, 1.0, 16.0, 1.3);
-        fillLight.position.set(0, -2.5, 0.8);
+        // Luz suave de preenchimento inferior sobre a base
+        const fillLight = new THREE.PointLight(0xedf0f5, 0.9, 14.0, 1.4);
+        fillLight.position.set(0, -1.2, 1.2);
         espinhacoTotemGroup.add(fillLight);
 
         group.add(espinhacoTotemGroup);
@@ -2028,7 +2061,8 @@ export const GalleryScene3D: React.FC = () => {
         gridRotY: 0,
         gridScale: 0.48,
         idx,
-        hitProxy: espinhacoHitProxyMesh
+        hitProxy: espinhacoHitProxyMesh,
+        currentLuminance: 0.28
       });
 
       if (isEspinhaco && espinhacoTotem) {
@@ -2116,54 +2150,9 @@ export const GalleryScene3D: React.FC = () => {
       artworkIdx: number;
     }[] = [];
 
-    const espinhacoItems = artworkItems.filter(
-      (item) => (item.artwork as any).interactiveExperience === 'espinhaco'
-    );
-
-    espinhacoItems.forEach((item, aIdx) => {
-      const auraCount = 800;
-      const auraPositions = new Float32Array(auraCount * 3);
-      const auraPhases = new Float32Array(auraCount);
-      const auraSpeeds = new Float32Array(auraCount);
-
-      // Distribute particles in a 3D ellipsoid around the vitrine
-      for (let p = 0; p < auraCount; p++) {
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        const r = 1.2 + Math.random() * 1.8; // 1.2 – 3.0m radius
-        auraPositions[p * 3]     = r * Math.sin(phi) * Math.cos(theta);
-        auraPositions[p * 3 + 1] = r * Math.sin(phi) * Math.sin(theta) * 0.7;
-        auraPositions[p * 3 + 2] = r * Math.cos(phi) * 0.5;
-        auraPhases[p] = Math.random() * Math.PI * 2;
-        auraSpeeds[p] = 0.3 + Math.random() * 0.7;
-      }
-
-      const auraGeo = new THREE.BufferGeometry();
-      auraGeo.setAttribute('position', new THREE.BufferAttribute(auraPositions, 3));
-
-      const auraMat = new THREE.PointsMaterial({
-        color: isLight ? 0x4488cc : 0x63b8e8,
-        size: 0.028,
-        transparent: true,
-        opacity: 0.0, // starts invisible — fades in when player is nearby
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        sizeAttenuation: true
-      });
-
-      const auraPoints = new THREE.Points(auraGeo, auraMat);
-      // Attach to the artwork group so it moves with it
-      item.group.add(auraPoints);
-
-      espinhacoAuraItems.push({
-        points: auraPoints,
-        mat: auraMat,
-        positions: auraPositions,
-        phases: auraPhases,
-        speeds: auraSpeeds,
-        artworkIdx: aIdx
-      });
-    });
+    // Removida qualquer nuvem ou halo de partículas da escultura Espinhaço:
+    // A escultura é exibida puramente como monolito fundido de metal maciço e prata lunar.
+    const espinhacoItems: typeof artworkItems = [];
 
     // 7. RIG DE INSPEÇÃO 3D EM PRIMEIRO PLANO (A Obra saindo da vitrine em 3D)
     // Renderizado em cena e câmera de inspeção dedicada com clearDepth() no loop de renderização,
@@ -3699,40 +3688,34 @@ export const GalleryScene3D: React.FC = () => {
         espinhacoWakeFactor = espinhacoTotem.wakeFactor;
         const wf = espinhacoWakeFactor;
 
-        // Rotação contínua 360° em turntable (gira continuamente sem congelar)
-        espinhacoTotem.spineHolder.rotation.y += delta * 0.45;
-        const baseFloat = Math.sin(elapsedTime * 1.5) * 0.04;
-        espinhacoTotem.spineHolder.position.y = baseFloat;
+        // Rotação contínua 360° em turntable clássico de museu
+        espinhacoTotem.spineHolder.rotation.y += delta * 0.40;
+        espinhacoTotem.spineHolder.position.y = 0; // Fixa e solidamente ancorada sobre o pedestal
 
         if (wf > 0.001) {
           // Ondulação cinética acoplada ao áudio ao se aproximar
           const waveFreq = 2.2 + audioEnergy * 1.5;
-          const spinePitch = Math.cos(elapsedTime * (waveFreq * 0.75)) * 0.06 * wf;
+          const spinePitch = Math.cos(elapsedTime * (waveFreq * 0.75)) * 0.05 * wf;
           espinhacoTotem.spineHolder.rotation.z = spinePitch;
-          espinhacoTotem.spineHolder.rotation.x = Math.sin(elapsedTime * 1.1) * 0.035 * wf;
+          espinhacoTotem.spineHolder.rotation.x = Math.sin(elapsedTime * 1.1) * 0.03 * wf;
 
-          // Luz interna pulsa em harmonia
-          espinhacoTotem.totemLight.intensity = 1.4 + (1.6 * wf) + (audioEnergy * 1.4 * wf);
-          espinhacoTotem.totemLight.color.setHex(audioEnergy > 0.4 ? 0x38bdf8 : 0x00e5ff);
+          // Luz interna intensifica suavemente com a presença
+          espinhacoTotem.totemLight.intensity = 1.4 + (1.2 * wf) + (audioEnergy * 0.8 * wf);
+          espinhacoTotem.totemLight.color.setHex(0xffffff);
         } else {
           espinhacoTotem.spineHolder.rotation.z = THREE.MathUtils.lerp(espinhacoTotem.spineHolder.rotation.z, 0, 0.05);
           espinhacoTotem.spineHolder.rotation.x = THREE.MathUtils.lerp(espinhacoTotem.spineHolder.rotation.x, 0, 0.05);
           espinhacoTotem.totemLight.intensity = 1.4;
-          espinhacoTotem.totemLight.color.setHex(0x70d8ff);
-        }
-
-        // Modulação da nuvem de pontos: recolhida e sutil antes de interagir (0.14), desperta em ciano vivo (0.96)
-        if (espinhacoTotem.pointsCloud) {
-          (espinhacoTotem.pointsCloud.material as THREE.PointsMaterial).opacity = 0.14 + 0.82 * wf;
+          espinhacoTotem.totemLight.color.setHex(0xffffff);
         }
 
         // Modulação da escultura sólida prateada (criativo 04.png):
-        // Em repouso brilha como prata maciça escovada sob as luzes de galeria;
-        // Ao interagir adquire luminescência orgânica pulsante no núcleo
+        // Em repouso brilha como prata lunar maciça escovada sob as luzes de galeria;
+        // Ao interagir adquire luminescência orgânica sutil em tom de aço temperado
         if (espinhacoTotem.solidMesh) {
           const solidMat = espinhacoTotem.solidMesh.material as THREE.MeshPhysicalMaterial;
-          solidMat.emissive.setHex(audioEnergy > 0.4 ? 0x00e5ff : 0x38bdf8);
-          solidMat.emissiveIntensity = wf * (0.32 + audioEnergy * 0.45);
+          solidMat.emissive.setHex(0x16202c); // Azul-aço temperado discreto e profundo
+          solidMat.emissiveIntensity = wf * (0.12 + audioEnergy * 0.16);
         }
 
         // Acopla o drone acústico de proximidade do fóssil vivente ao wakeFactor
@@ -3853,11 +3836,19 @@ export const GalleryScene3D: React.FC = () => {
             item.plaqueMesh.rotation.y = plaqueRotY;
             // Escalar a placa junto com a vitrine no acervo
             item.plaqueMesh.scale.set(hoverScale, hoverScale, hoverScale);
+
+            // Em modo acervo, todas as obras têm luminosidade plena (100% visibilidade de catálogo)
+            item.currentLuminance = 1.0;
+            item.paperMat.color.setRGB(1.0, 1.0, 1.0);
+            if (item.paperMat.emissive) {
+              item.paperMat.emissiveIntensity = 0.18;
+            }
           } else {
             // Exploração livre em primeira pessoa
-            const floatAmp = 0.09;
-            const floatY = item.hallwayPos.y + Math.sin(elapsedTime * 0.65 + item.idx * 0.85) * floatAmp;
-            // Clamp: vitrine nunca vai abaixo de hallwayPos.y - floatAmp (nunca toca o chão)
+            const isInteractive = item.artwork.medium === 'interactive' || (item.artwork as any).interactiveExperience === 'espinhaco';
+            // Escultura interativa e pedestal assentam-se estaticamente no solo (zero flutuação da base)
+            const floatAmp = isInteractive ? 0.0 : 0.09;
+            const floatY = item.hallwayPos.y + (isInteractive ? 0 : Math.sin(elapsedTime * 0.65 + item.idx * 0.85) * floatAmp);
             item.group.position.x = item.hallwayPos.x;
             item.group.position.y = floatY;
             item.group.position.z = item.hallwayPos.z;
@@ -3868,6 +3859,29 @@ export const GalleryScene3D: React.FC = () => {
             item.plaqueMesh.position.set(item.hallwayPos.x, -2.85, item.hallwayPos.z);
             item.plaqueMesh.rotation.y = item.hallwayRotY;
             item.plaqueMesh.scale.set(1.0, 1.0, 1.0);
+
+            // Filtro Dinâmico de Proximidade (Dim to Awake):
+            // As obras têm baixa luminosidade à distância e acendem suavemente conforme o visitante se aproxima,
+            // atingindo 100% de brilho normal em frente a elas.
+            if (!isInteractive) {
+              const d3D = camera.position.distanceTo(item.group.position);
+              // Distância distante (> 9.2m) = 0.25 (misteriosa, escura, baixa luminosidade)
+              // Distância próxima (< 3.8m) = 1.0 (brilho e saturação plenos)
+              const proximityNorm = THREE.MathUtils.clamp((9.2 - d3D) / (9.2 - 3.8), 0.0, 1.0);
+              const targetLuminance = isArchiveMode ? 1.0 : (0.25 + 0.75 * proximityNorm);
+
+              item.currentLuminance = THREE.MathUtils.lerp(
+                item.currentLuminance ?? 0.25,
+                targetLuminance,
+                Math.min(1.0, delta * 4.5)
+              );
+
+              const lum = item.currentLuminance;
+              item.paperMat.color.setRGB(lum, lum, lum);
+              if (item.paperMat.emissive) {
+                item.paperMat.emissiveIntensity = 0.02 + 0.16 * lum;
+              }
+            }
           }
         });
       }
@@ -4030,6 +4044,8 @@ export const GalleryScene3D: React.FC = () => {
       dustGeo.dispose();
       dustMat.dispose();
       hazeTexture.dispose();
+      studioEnvTex.dispose();
+      pmremGenerator.dispose();
 
       artworkItems.forEach((item) => {
         if (item.videoEl) {

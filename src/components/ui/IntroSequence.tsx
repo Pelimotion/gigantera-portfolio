@@ -79,18 +79,24 @@ export const IntroSequence: React.FC = () => {
         className="intro-floating-cue" 
         onClick={() => handleEnter3D()}
       >
-        {/* Headline Nobre e Direta — Sem repetições de tags ou taglines dispensáveis */}
-        <h1 className="cue-hero-title">GIGANTERA</h1>
-        <h2 className="cue-statement">
-          {siteConfig.heroHeadline.replace(/^GIGANTERA\s*[\n\r—–-]*\s*/i, '') || 'Um pavilhão. Não um portfólio.'}
-        </h2>
+        {/* Curatorial Header */}
+        <div className="intro-curatorial-pill font-mono">
+          <span>PORTFÓLIO & DIREÇÃO DE ARTE</span>
+          <span className="curatorial-dot">·</span>
+          <span>FELIPE CONCEIÇÃO</span>
+        </div>
 
-        {/* Bloco de Controles Inline (Contextual Mobile vs Desktop) */}
+        <h1 className="cue-hero-title">GIGANTERA</h1>
+        <p className="cue-curatorial-desc">
+          Pavilhão arquitetural imersivo. Uma travessia tridimensional brutalista por videoarte cinética,
+          escultura fóssil em WebGL e síntese de áudio autoral.
+        </p>
+
+        {/* Controls Block */}
         {isMobile ? (
           <div className="intro-controls-block font-mono is-mobile-controls">
-            <div className="intro-controls-title">CONTROLES MÓVEIS</div>
+            <div className="intro-controls-title">NAVEGAÇÃO TÁTIL</div>
 
-            {/* 1 Dedo: Olhar em volta */}
             <div className="intro-controls-row">
               <span className="intro-touch-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -105,24 +111,6 @@ export const IntroSequence: React.FC = () => {
 
             <div className="intro-controls-separator" />
 
-            {/* Janela Mágica: Giroscópio */}
-            <div className="intro-controls-row">
-              <span className="intro-touch-icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <path d="m4.93 4.93 4.24 4.24"></path>
-                  <path d="m14.83 9.17 4.24-4.24"></path>
-                  <path d="m14.83 14.83 4.24 4.24"></path>
-                  <path d="m9.17 14.83-4.24 4.24"></path>
-                  <circle cx="12" cy="12" r="4"></circle>
-                </svg>
-              </span>
-              <span>Janela Mágica: incline o celular para olhar</span>
-            </div>
-
-            <div className="intro-controls-separator" />
-
-            {/* Toque nas obras */}
             <div className="intro-controls-row">
               <span className="intro-touch-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -138,7 +126,6 @@ export const IntroSequence: React.FC = () => {
 
             <div className="intro-controls-separator" />
 
-            {/* Álbum CD */}
             <div className="intro-controls-row">
               <span className="intro-touch-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -146,59 +133,75 @@ export const IntroSequence: React.FC = () => {
                   <circle cx="12" cy="12" r="3"></circle>
                 </svg>
               </span>
-              <span>Toque no CD na entrada para ouvir as 17 faixas</span>
+              <span>Toque no CD na entrada para ouvir a trilha sonora</span>
             </div>
           </div>
         ) : (
           <div className="intro-controls-block font-mono">
-            <div className="intro-controls-title">CONTROLES</div>
+            <div className="intro-controls-title">CONTROLES & EXPLORAÇÃO</div>
 
-            {/* WASD + Direcionais */}
+            {/* WASD com animação suave de passos */}
             <div className="intro-controls-row">
               <div className="intro-wasd-grid">
                 <span className="intro-wasd-spacer" />
-                <kbd className="keycap">W</kbd>
+                <kbd className="keycap keycap-anim-w">W</kbd>
                 <span className="intro-wasd-spacer" />
-                <kbd className="keycap">A</kbd>
-                <kbd className="keycap">S</kbd>
-                <kbd className="keycap">D</kbd>
+                <kbd className="keycap keycap-anim-a">A</kbd>
+                <kbd className="keycap keycap-anim-s">S</kbd>
+                <kbd className="keycap keycap-anim-d">D</kbd>
               </div>
-              <span>Caminhar pelo pavilhão</span>
+              <span>Caminhar pelo pavilhão arquitetural</span>
             </div>
 
             <div className="intro-controls-separator" />
 
-            {/* Mouse Look */}
+            {/* Mouse Look com animação */}
             <div className="intro-controls-row">
               <span className="intro-mouse-icon">
                 <svg width="18" height="24" viewBox="0 0 24 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="2" width="20" height="28" rx="10"/>
-                  <path d="M12 9V14"/>
+                  <path d="M12 8V13" className="mouse-wheel-anim"/>
                   <line x1="2" y1="14" x2="22" y2="14"/>
                 </svg>
               </span>
-              <span>Clique + arraste para girar a câmera</span>
+              <span>Clique e arraste para olhar em 360°</span>
             </div>
 
             <div className="intro-controls-separator" />
 
-            {/* E — Interagir */}
+            {/* E — Interagir / Inspecionar */}
             <div className="intro-controls-row">
-              <kbd className="keycap">E</kbd>
-              <span>Inspecionar obras de arte</span>
+              <div className="intro-keycap-group">
+                <kbd className="keycap keycap-pulse">E</kbd>
+                <span className="keycap-separator">/</span>
+                <span className="keycap-inline-label">CLIQUE</span>
+              </div>
+              <span>Inspecionar obras & abrir cinema imersivo</span>
             </div>
 
             <div className="intro-controls-separator" />
 
-            {/* TAB — Acervo */}
-            <div className="intro-controls-row">
-              <kbd className="keycap keycap-sm">TAB</kbd>
-              <span>Ver acervo completo em grade</span>
+            {/* TAB — Acervo & 1-5 Atalhos */}
+            <div className="intro-controls-row intro-controls-row-split">
+              <div className="intro-ctrl-sub">
+                <kbd className="keycap keycap-sm">TAB</kbd>
+                <span>Catálogo em grade</span>
+              </div>
+              <div className="intro-ctrl-sub">
+                <div className="intro-num-pills">
+                  <span className="pill-digit">1</span>
+                  <span className="pill-digit">2</span>
+                  <span className="pill-digit">3</span>
+                  <span className="pill-digit">4</span>
+                  <span className="pill-digit">5</span>
+                </div>
+                <span>Saltar setores</span>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Ações de Entrada: Primária e Secundária integradas */}
+        {/* Ações de Entrada: Minimalista Obsidian Glass sem gradientes de cores */}
         <div className="intro-actions-cluster font-mono">
           <button
             type="button"
@@ -210,15 +213,9 @@ export const IntroSequence: React.FC = () => {
             aria-label="Entrar no Pavilhão e navegar"
           >
             <span className="intro-cta-icon" aria-hidden="true">
-              {isMobile ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5 3 19 12 5 21 5 3" />
-                </svg>
-              ) : (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"></polygon>
-                </svg>
-              )}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"></polygon>
+              </svg>
             </span>
             <span className="intro-cta-text">
               {isMobile ? 'TOCAR PARA ENTRAR' : 'ENTRAR NO PAVILHÃO'}
@@ -232,13 +229,13 @@ export const IntroSequence: React.FC = () => {
             title="Alternar para catálogo em grade (TAB)"
           >
             <kbd className="keycap keycap-xs">TAB</kbd>
-            <span>Ver acervo em grade</span>
+            <span>Ver acervo completo em grade</span>
           </button>
         </div>
 
-        {/* Micro-dica de assimilação intuitiva */}
+        {/* Micro-dica minimalista */}
         <div className="intro-click-to-start-hint font-mono">
-          <span>ou clique em qualquer ponto para iniciar</span>
+          <span>pressione qualquer tecla ou clique para iniciar</span>
         </div>
       </div>
     </div>

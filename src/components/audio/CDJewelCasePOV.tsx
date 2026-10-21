@@ -365,9 +365,9 @@ export const CDJewelCasePOV: React.FC = () => {
               className="cd-hud-pill-btn cd-hud-btn-stow"
               title="Guardar o CD e retornar ao salão 3D com a música tocando (ESC, E ou Q)"
             >
-              <kbd className="keycap keycap-coral">ESC</kbd>
+              <kbd className="keycap">ESC</kbd>
               <span className="keycap-label">/</span>
-              <kbd className="keycap keycap-coral">E</kbd>
+              <kbd className="keycap">E</kbd>
               <span>GUARDAR</span>
             </button>
           </div>

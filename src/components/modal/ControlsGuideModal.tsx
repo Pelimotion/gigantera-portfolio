@@ -77,23 +77,23 @@ export const ControlsGuideModal: React.FC = () => {
                   <h3 className="guide-section-title">EXPLORAR O PAVILHÃO</h3>
                   <div className="guide-rows">
                     <div className="guide-row">
-                      <span className="guide-key">🕹️ POLEGAR ESQ.</span>
+                      <span className="guide-key">POLEGAR ESQ.</span>
                       <span className="guide-desc">joystick 360° para caminhar</span>
                     </div>
                     <div className="guide-row">
-                      <span className="guide-key">👀 POLEGAR DIR.</span>
+                      <span className="guide-key">POLEGAR DIR.</span>
                       <span className="guide-desc">arrastar para olhar ao redor</span>
                     </div>
                     <div className="guide-row">
-                      <span className="guide-key">📍 TOCAR CHÃO</span>
+                      <span className="guide-key">TOQUE NO CHÃO</span>
                       <span className="guide-desc">caminhar até o ponto (waypoint)</span>
                     </div>
                     <div className="guide-row">
-                      <span className="guide-key">🖼️ TOCAR OBRA</span>
+                      <span className="guide-key">TOQUE NA OBRA</span>
                       <span className="guide-desc">aproximar ou abrir vitrine 3D</span>
                     </div>
                     <div className="guide-row">
-                      <span className="guide-key">◄ ► ILHA</span>
+                      <span className="guide-key">SETORES ◄ ►</span>
                       <span className="guide-desc">passo guiado entre estações</span>
                     </div>
                   </div>
@@ -180,7 +180,7 @@ export const ControlsGuideModal: React.FC = () => {
                   </div>
                   <div className="guide-row">
                     <span className="guide-key guide-key-close">
-                      <kbd className="keycap keycap-sm keycap-coral">ESC</kbd> / <kbd className="keycap keycap-sm keycap-coral">E</kbd>
+                      <kbd className="keycap keycap-sm">ESC</kbd> / <kbd className="keycap keycap-sm">E</kbd>
                     </span>
                     <span className="guide-desc">fechar visualização</span>
                   </div>
