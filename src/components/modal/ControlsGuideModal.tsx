@@ -151,6 +151,12 @@ export const ControlsGuideModal: React.FC = () => {
                       </span>
                       <span className="guide-desc">abrir obra ou interagir</span>
                     </div>
+                    <div className="guide-row">
+                      <span className="guide-key">
+                        <kbd className="keycap keycap-sm">1</kbd>–<kbd className="keycap keycap-sm">5</kbd>
+                      </span>
+                      <span className="guide-desc">saltar entre os 5 setores</span>
+                    </div>
                   </div>
                 </section>
               )}

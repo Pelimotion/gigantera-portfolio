@@ -84,13 +84,16 @@ export function computeModularGalleryLayout(artworks: Artwork[]): ModularGallery
   const artworksWithCoords: ModularGalleryLayout['artworksWithCoords'] = [];
   const viewingSpots: ViewingSpotInfo[] = [];
   const viewingOffset = 3.6; 
-  let currentZ = 10.0;
 
-  // 1. The Journey (Staggered Zig-Zag layout for stills and videos)
-  // Progressive disclosure: left, then right, then left...
-  const spacingZ = 8.5; // Distância entre as obras no eixo Z
+  // 1. The Journey (Staggered Zig-Zag layout for works)
+  // Distribuição harmoniosa de Z = +12.0m até Z = -49.2m (logo antes do umbral do Santuário Z = -52.0m)
+  const journeyStart = 12.0;
+  const journeyTargetEnd = -49.2;
+  const count = Math.max(1, interleavedWorks.length - 1);
+  const spacingZ = interleavedWorks.length > 1 ? (journeyStart - journeyTargetEnd) / count : 8.5;
   const sideX = 7.5; // Distância da obra do eixo central
 
+  let currentZ = journeyStart;
   interleavedWorks.forEach((art, i) => {
     // Alterna esquerda e direita
     const isLeft = i % 2 === 0;
@@ -121,9 +124,8 @@ export function computeModularGalleryLayout(artworks: Artwork[]): ModularGallery
     currentZ -= spacingZ;
   });
 
-  // 2. The Penumbra Sanctuary (Epic climax at the end)
-  currentZ -= 10.0; // Um respiro maior antes da obra final
-  const centerInteractiveZ = currentZ;
+  // 2. The Penumbra Sanctuary (Epic climax at the end — Z = -52m a -94m)
+  const centerInteractiveZ = -76.5; // Centro monumental da escultura interativa
 
   interactiveWorks.forEach((art) => {
     const x = 0.0;
@@ -132,9 +134,9 @@ export function computeModularGalleryLayout(artworks: Artwork[]): ModularGallery
 
     const computedCoords = { x, y: 0.45, z, rotY };
 
-    // Ponto de visualização
+    // Ponto de visualização ótimo
     const spotX = x;
-    const spotZ = z + viewingOffset * 1.2;
+    const spotZ = z + viewingOffset * 1.35;
 
     const viewingSpot: ViewingSpotInfo = {
       artworkId: art.id,
@@ -148,9 +150,9 @@ export function computeModularGalleryLayout(artworks: Artwork[]): ModularGallery
     viewingSpots.push(viewingSpot);
   });
 
-  // Fim do salão calculado proporcionalmente
-  const zEnd = currentZ - 14.0;
-  const backWallZ = zEnd - 4.0;
+  // Fim do salão do santuário e parede de fundo da projeção
+  const zEnd = -90.0;
+  const backWallZ = -94.0;
   const frontWallZ = zStart + 4.0;
   const hallLength = Math.abs(frontWallZ - backWallZ);
 

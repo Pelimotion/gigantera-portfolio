@@ -446,11 +446,17 @@ export const EspinhacoInteractive: React.FC = () => {
             const meshScale = targetHeight / Math.max(size.x, size.y, size.z);
             geom.scale(meshScale, meshScale, meshScale);
 
-            // 1. Malha Sólida PBR com materiais originais calibrados
-            const pbrMat = ((originalMesh as THREE.Mesh).material as THREE.MeshStandardMaterial).clone();
-            pbrMat.roughness = 0.32;
-            pbrMat.metalness = 0.88;
-            pbrMat.envMapIntensity = 1.3;
+            // 1. Malha Sólida PBR em Prata Acetinada (conforme referência criativo 04.png)
+            const pbrMat = new THREE.MeshPhysicalMaterial({
+              color: new THREE.Color(0xdde5ec),
+              metalness: 0.94,
+              roughness: 0.28,
+              reflectivity: 0.85,
+              clearcoat: 0.25,
+              clearcoatRoughness: 0.20,
+              envMapIntensity: 1.8,
+              side: THREE.DoubleSide
+            });
             pbrMat.onBeforeCompile = (shader) => {
               shader.uniforms.uKeyFlex = { value: new THREE.Vector2(0, 0) };
               pbrMat.userData.shader = shader; // Save ref for the animate loop

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Reflector } from 'three/examples/jsm/objects/Reflector.js';
 import { useAppStore } from '../../core/store';
-import { ARTWORKS_CATALOG } from '../../data/artworks';
+import { ARTWORKS_CATALOG, BUNNY_CDN_GIGANTERA, cleanBase } from '../../data/artworks';
 import { Artwork } from '../../types/art';
 import { TOKENS } from '../../tokens';
 import { soundEngine } from '../../core/soundEngine';
@@ -931,6 +931,128 @@ export const GalleryScene3D: React.FC = () => {
     const wallDarkTex = createWallTexture(false);
     const wallNormalTex = createWallNormalTexture();
 
+    // ─── PROJEÇÃO MONUMENTAL SANTUÁRIO DE FUNDO (SEMANA DA ARTE VERTICAL) ───
+    // Projeção imersiva de museu cobrindo quase toda a parede do fundo do Santuário atrás da escultura interativa.
+    // O vídeo preserva a sua proporção vertical 9:16 intacta no centro monumental (~9.5m de largura x 17m de altura),
+    // enquanto espalha o wash de luz e cor sobre a textura áspera e grânulos minerais da parede de gesso.
+    const projVideo = document.createElement('video');
+    projVideo.src = `${BUNNY_CDN_GIGANTERA}/projections/projecao-santuario-semana-arte_loop.mp4`;
+    projVideo.crossOrigin = 'anonymous';
+    projVideo.loop = true;
+    projVideo.muted = true;
+    projVideo.defaultMuted = true;
+    projVideo.playsInline = true;
+    projVideo.setAttribute('playsinline', '');
+    projVideo.setAttribute('webkit-playsinline', '');
+    projVideo.setAttribute('muted', '');
+    projVideo.setAttribute('data-projection', 'sanctuary-backwall');
+    projVideo.style.position = 'fixed';
+    projVideo.style.top = '-9999px';
+    projVideo.style.left = '-9999px';
+    projVideo.style.width = '1px';
+    projVideo.style.height = '1px';
+    projVideo.style.opacity = '0';
+    projVideo.style.pointerEvents = 'none';
+    document.body.appendChild(projVideo);
+
+    let projCenterMat: THREE.MeshStandardMaterial;
+    let projWingMat: THREE.MeshStandardMaterial;
+
+    const projLoader = new THREE.TextureLoader();
+    const projPosterUrl = `${BUNNY_CDN_GIGANTERA}/projections/projecao-santuario-semana-arte_poster.webp`;
+    const projPosterTex = projLoader.load(projPosterUrl, undefined, undefined, () => {
+      // Fallback local caso o CDN retorne erro de rede
+      projLoader.load(`${cleanBase}works/projections/projecao-santuario-semana-arte_poster.webp`, (fallbackTex) => {
+        fallbackTex.colorSpace = THREE.SRGBColorSpace;
+        if (!projVideoActive && projCenterMat && projWingMat) {
+          projCenterMat.map = fallbackTex;
+          projCenterMat.emissiveMap = fallbackTex;
+          projCenterMat.needsUpdate = true;
+          projWingMat.map = fallbackTex;
+          projWingMat.emissiveMap = fallbackTex;
+          projWingMat.needsUpdate = true;
+        }
+      });
+    });
+    projPosterTex.colorSpace = THREE.SRGBColorSpace;
+
+    const projVideoTex = new THREE.VideoTexture(projVideo);
+    projVideoTex.minFilter = THREE.LinearFilter;
+    projVideoTex.magFilter = THREE.LinearFilter;
+    projVideoTex.generateMipmaps = false;
+    projVideoTex.colorSpace = THREE.SRGBColorSpace;
+
+    let projVideoActive = false;
+    const switchProjToVideo = () => {
+      if (projVideoActive) return;
+      projVideoActive = true;
+      if (projCenterMat && projWingMat) {
+        projCenterMat.map = projVideoTex;
+        projCenterMat.emissiveMap = projVideoTex;
+        projCenterMat.needsUpdate = true;
+        projWingMat.map = projVideoTex;
+        projWingMat.emissiveMap = projVideoTex;
+        projWingMat.needsUpdate = true;
+      }
+    };
+
+    projVideo.addEventListener('loadeddata', () => {
+      projVideo.play().then(switchProjToVideo).catch(() => {});
+    });
+    projVideo.addEventListener('playing', switchProjToVideo);
+    projVideo.addEventListener('canplay', () => {
+      projVideo.play().then(switchProjToVideo).catch(() => {});
+    });
+    projVideo.play().then(switchProjToVideo).catch(() => {});
+
+    // ─── MONUMENTAL BACK WALL PROJECTION ARCHITECTURE ───
+    // 1. Painel Central Monumental (9.56m x 17m): proporção exata vertical 9:16 sem distorção
+    const projCenterGeo = new THREE.PlaneGeometry(9.56, 17.0);
+    projCenterMat = new THREE.MeshStandardMaterial({
+      map: projPosterTex,
+      emissive: new THREE.Color(0xffffff),
+      emissiveMap: projPosterTex,
+      emissiveIntensity: isLight ? 0.72 : 0.92,
+      roughness: 0.92,
+      metalness: 0.02,
+      normalMap: wallNormalTex,
+      normalScale: new THREE.Vector2(0.85, 0.85)
+    });
+    const projCenterMesh = new THREE.Mesh(projCenterGeo, projCenterMat);
+    projCenterMesh.position.set(0, 5.2, layout.backWallZ + 0.06);
+    projCenterMesh.receiveShadow = true;
+    scene.add(projCenterMesh);
+
+    // 2. Alas Laterais de Wash Atmosférico (7.82m cada): cobrindo os 25.2 metros totais da parede de fundo
+    const projWingGeo = new THREE.PlaneGeometry(7.82, 17.0);
+    projWingMat = new THREE.MeshStandardMaterial({
+      map: projPosterTex,
+      emissive: new THREE.Color(0xffffff),
+      emissiveMap: projPosterTex,
+      emissiveIntensity: isLight ? 0.28 : 0.42,
+      roughness: 0.95,
+      metalness: 0.01,
+      normalMap: wallNormalTex,
+      normalScale: new THREE.Vector2(0.85, 0.85),
+      transparent: true,
+      opacity: 0.70
+    });
+
+    const leftWingMesh = new THREE.Mesh(projWingGeo, projWingMat);
+    leftWingMesh.position.set(-8.69, 5.2, layout.backWallZ + 0.05);
+    leftWingMesh.receiveShadow = true;
+    scene.add(leftWingMesh);
+
+    const rightWingMesh = new THREE.Mesh(projWingGeo, projWingMat);
+    rightWingMesh.position.set(8.69, 5.2, layout.backWallZ + 0.05);
+    rightWingMesh.receiveShadow = true;
+    scene.add(rightWingMesh);
+
+    // Luz ambiente suave de rebatimento da projeção no piso do Santuário
+    const projFloorBounceLight = new THREE.PointLight(0xa5c4d4, isLight ? 0.9 : 1.35, 22, 1.4);
+    projFloorBounceLight.position.set(0, -1.8, layout.backWallZ + 6.0);
+    scene.add(projFloorBounceLight);
+
     const floorGeo = new THREE.PlaneGeometry(layout.roomWidth + 6, hallLen + 12, 1, 1);
     floorGeo.rotateX(-Math.PI / 2);
     const floorMat = new THREE.MeshStandardMaterial({
@@ -1405,8 +1527,6 @@ export const GalleryScene3D: React.FC = () => {
     restingSpine.position.set(-0.27, 0, 0);
     restingCDGroup.add(restingSpine);
 
-    const base = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) || '/';
-    const cleanBase = base.endsWith('/') ? base : base + '/';
     const getCDAssetUrl = (fileName: string) => `${cleanBase}cd/${fileName}`;
 
     const textureLoader = new THREE.TextureLoader();
@@ -1463,6 +1583,7 @@ export const GalleryScene3D: React.FC = () => {
       gridRotY: number;
       gridScale: number;
       idx: number;
+      hitProxy?: THREE.Mesh;
     }[] = [];
 
     interface EspinhacoTotemController {
@@ -1471,6 +1592,7 @@ export const GalleryScene3D: React.FC = () => {
       spineHolder: THREE.Group;
       totemLight: THREE.PointLight;
       solidMesh: THREE.Mesh | null;
+      hitProxy: THREE.Mesh | null;
       pointsCloud: THREE.Points | null;
       wakeFactor: number;
       currentYawOffset: number;
@@ -1507,17 +1629,39 @@ export const GalleryScene3D: React.FC = () => {
       let glassMesh: THREE.Mesh;
       
       if (isEspinhaco) {
-        // Base discreta e elegante integrada ao piso mineral escuro (sem caixa de vidro)
-        const pedGeo = new THREE.CylinderGeometry(2.4, 2.6, 0.08, 32);
-        const pedMat = new THREE.MeshStandardMaterial({
-          color: isLight ? 0x242826 : 0x0d0f0e,
-          roughness: 0.88,
-          metalness: 0.1
+        // Pedestal Arquitetônico em Basalto Cinzelado (Conforme referência visual criativo 04.png)
+        const plinthGeo = new THREE.BoxGeometry(2.6, 0.72, 2.6);
+        const plinthMat = new THREE.MeshStandardMaterial({
+          color: isLight ? 0x242826 : 0x121413,
+          roughness: 0.94,
+          metalness: 0.04
         });
-        glassMesh = new THREE.Mesh(pedGeo, pedMat);
-        glassMesh.position.y = -3.15; // Rente ao piso mineral
+        glassMesh = new THREE.Mesh(plinthGeo, plinthMat);
+        glassMesh.position.y = -2.84; // Elevado e apoiado no piso mineral
         glassMesh.receiveShadow = true;
+        glassMesh.castShadow = true;
         group.add(glassMesh);
+
+        // Moldura chanfrada superior do pedestal
+        const capGeo = new THREE.BoxGeometry(2.38, 0.16, 2.38);
+        const capMesh = new THREE.Mesh(capGeo, plinthMat);
+        capMesh.position.y = -2.40;
+        capMesh.receiveShadow = true;
+        capMesh.castShadow = true;
+        group.add(capMesh);
+
+        // Colar de engaste na base da coluna vertebral
+        const collarGeo = new THREE.CylinderGeometry(0.55, 0.68, 0.28, 32);
+        const collarMat = new THREE.MeshStandardMaterial({
+          color: isLight ? 0x2e3330 : 0x181b19,
+          roughness: 0.85,
+          metalness: 0.15
+        });
+        const collar = new THREE.Mesh(collarGeo, collarMat);
+        collar.position.y = -2.18;
+        collar.receiveShadow = true;
+        collar.castShadow = true;
+        group.add(collar);
         
         // Área de colisão invisível ampliada para a escultura de escala monumental 3x
         const hitGeo = new THREE.CylinderGeometry(2.8, 2.8, 8.8, 16);
@@ -1693,25 +1837,97 @@ export const GalleryScene3D: React.FC = () => {
       group.add(paperMesh);
 
       // ─── ESCULTURA 3D DO ESPINHAÇO ───
+      let espinhacoHitProxyMesh: THREE.Mesh | undefined;
       if (isEspinhaco) {
         const espinhacoTotemGroup = new THREE.Group();
 
-        // 2. Grupo Suporte do Modelo (Ondulação Cinética + Giro Interativo)
+        // Hit Proxy Interativo (Cilindro invisível cobrindo todo o fuste vertebral de ~8.5m)
+        const hitGeo = new THREE.CylinderGeometry(1.6, 1.8, 8.8, 16);
+        const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+        espinhacoHitProxyMesh = new THREE.Mesh(hitGeo, hitMat);
+        espinhacoHitProxyMesh.position.y = 1.8;
+        (espinhacoHitProxyMesh as any).artworkData = art;
+        group.add(espinhacoHitProxyMesh);
+
+        // 1. Grupo Suporte do Modelo (Ondulação Cinética + Giro Interativo)
         const spineHolder = new THREE.Group();
         espinhacoTotemGroup.add(spineHolder);
 
-        // 3. Nuvem de Pontos Pura & Otimizada (50k pontos, escala monumental 3x)
+        // 2. Escultura Sólida em Prata / Metal Acetinado (Referência Visual criativo 04.png)
+        // Coluna vertebral fóssil fundida em liga metálica acetinada de alta reflexão
+        const silverMaterial = new THREE.MeshPhysicalMaterial({
+          color: new THREE.Color(0xdde5ec), // Liga acetinada prata / estanho lunar
+          metalness: 0.94,                  // Prata de alta condutância metálica
+          roughness: 0.28,                  // Acabamento escovado acetinado nobre
+          reflectivity: 0.85,
+          clearcoat: 0.25,                  // Resina fina protetora de museu
+          clearcoatRoughness: 0.20,
+          envMapIntensity: 1.8,             // Reflexos ambientais ricos das luzes da galeria
+          side: THREE.DoubleSide
+        });
+
+        const spineGltfLoader = new GLTFLoader();
+        spineGltfLoader.setMeshoptDecoder(MeshoptDecoder);
+
+        const attachSpineMesh = (gltfScene: THREE.Group) => {
+          let originalMesh: THREE.Mesh | null = null;
+          gltfScene.traverse((child) => {
+            if ((child as THREE.Mesh).isMesh && !originalMesh) {
+              originalMesh = child as THREE.Mesh;
+            }
+          });
+
+          if (originalMesh) {
+            const solidGeo = (originalMesh as THREE.Mesh).geometry.clone();
+            solidGeo.computeVertexNormals();
+            solidGeo.center();
+            // Rotação Z de 90° para posicionar a coluna vertebral na vertical
+            solidGeo.rotateZ(Math.PI / 2);
+
+            const spineSolid = new THREE.Mesh(solidGeo, silverMaterial);
+            // Escala 8.45x para coincidir rigorosamente com a escala monumental (~8.2m de altura)
+            spineSolid.scale.set(8.45, 8.45, 8.45);
+            spineSolid.position.y = 0.5;
+            spineSolid.castShadow = true;
+            spineSolid.receiveShadow = true;
+            (spineSolid as any).artworkData = art;
+
+            spineHolder.add(spineSolid);
+            if (espinhacoTotem) {
+              espinhacoTotem.solidMesh = spineSolid;
+            }
+          }
+        };
+
+        spineGltfLoader.load(
+          `${BUNNY_CDN_GIGANTERA}/models/espinhaco.glb`,
+          (gltf) => attachSpineMesh(gltf.scene),
+          undefined,
+          () => {
+            // Fallback local se o CDN tiver latência ou falhar
+            spineGltfLoader.load(`${cleanBase}models/espinhaco.glb`, (gltfLocal) => {
+              attachSpineMesh(gltfLocal.scene);
+            });
+          }
+        );
+
+        // 3. Nuvem de Pontos Pura & Otimizada (50k corpúsculos bioluminescentes)
+        // Em repouso (antes de interagir, vista de fora), opacidade sutil (0.14); desperta com ciano vivo ao interagir
         const pCloudMat = new THREE.PointsMaterial({
           color: isLight ? 0x009bb5 : 0x4deeea,
           size: isLight ? 0.038 : 0.044, // Diâmetro balanceado para manter alta densidade na escala 3x
           transparent: true,
-          opacity: 0.94,
+          opacity: 0.14,
           blending: THREE.AdditiveBlending,
           depthWrite: false
         });
 
-        fetch(`${cleanBase}models/espinhaco_points.bin`)
-          .then((r) => r.arrayBuffer())
+        fetch(`${BUNNY_CDN_GIGANTERA}/models/espinhaco_points.bin`)
+          .then((r) => {
+            if (!r.ok) throw new Error('CDN error');
+            return r.arrayBuffer();
+          })
+          .catch(() => fetch(`${cleanBase}models/espinhaco_points.bin`).then((r) => r.arrayBuffer()))
           .then((buf) => {
             const rawArr = new Float32Array(buf);
             const pGeo = new THREE.BufferGeometry();
@@ -1727,13 +1943,25 @@ export const GalleryScene3D: React.FC = () => {
           })
           .catch((err) => console.warn('[Totem pointsCloud] Load error:', err));
 
-        // 4. Luz Interna Focal da Escultura Monumental
-        const totemLight = new THREE.PointLight(0x70d8ff, 2.5, 18.0, 1.2);
+        // 4. Luzes de Iluminação de Museu Especializadas para Escultura Metálica
+        // Spotlight principal (key light quente-prateado rasante)
+        const spineKeySpot = new THREE.SpotLight(0xf2f7fc, 3.2, 24, Math.PI / 5, 0.45, 1.2);
+        spineKeySpot.position.set(3.8, 6.5, 4.2);
+        spineKeySpot.target = spineHolder;
+        espinhacoTotemGroup.add(spineKeySpot);
+
+        // Rim light traseiro frio para recortar a silhueta da espinha prateada contra a projeção escura
+        const spineRimLight = new THREE.PointLight(0x78d2f7, 2.0, 16.0, 1.3);
+        spineRimLight.position.set(-3.2, 4.0, -2.8);
+        espinhacoTotemGroup.add(spineRimLight);
+
+        // Luz Interna Focal da Escultura Monumental
+        const totemLight = new THREE.PointLight(0x70d8ff, 1.4, 18.0, 1.2);
         totemLight.position.set(0, 3.2, 1.2);
         espinhacoTotemGroup.add(totemLight);
 
         // Luz suave de preenchimento inferior
-        const fillLight = new THREE.PointLight(0x4fc3f7, 1.5, 16.0, 1.3);
+        const fillLight = new THREE.PointLight(0x4fc3f7, 1.0, 16.0, 1.3);
         fillLight.position.set(0, -2.5, 0.8);
         espinhacoTotemGroup.add(fillLight);
 
@@ -1745,6 +1973,7 @@ export const GalleryScene3D: React.FC = () => {
           spineHolder,
           totemLight,
           solidMesh: null,
+          hitProxy: espinhacoHitProxyMesh || null,
           pointsCloud: null,
           wakeFactor: 0.0,
           currentYawOffset: 0.0
@@ -1798,11 +2027,13 @@ export const GalleryScene3D: React.FC = () => {
         gridPos: new THREE.Vector3(0, 0, 0),
         gridRotY: 0,
         gridScale: 0.48,
-        idx
+        idx,
+        hitProxy: espinhacoHitProxyMesh
       });
 
       if (isEspinhaco && espinhacoTotem) {
         espinhacoTotem.item = artworkItems[artworkItems.length - 1];
+        if (espinhacoHitProxyMesh) espinhacoTotem.hitProxy = espinhacoHitProxyMesh;
       }
     });
 
@@ -2044,9 +2275,10 @@ export const GalleryScene3D: React.FC = () => {
     playerController.onSectorSelect = (sectorNum) => {
       const state = useAppStore.getState();
       if (sectorNum === 1) state.warpToSector('entrance-audio');
-      else if (sectorNum === 2) state.warpToSector('interactive');
-      else if (sectorNum === 3) state.warpToSector('video');
-      else if (sectorNum === 4) state.warpToSector('still');
+      else if (sectorNum === 2) state.warpToSector('tetrapode');
+      else if (sectorNum === 3) state.warpToSector('costa-critica');
+      else if (sectorNum === 4) state.warpToSector('espinhaco-vitrines');
+      else if (sectorNum === 5) state.warpToSector('interactive-sanctuary');
     };
 
     playerController.onInteract = () => {
@@ -2067,11 +2299,12 @@ export const GalleryScene3D: React.FC = () => {
         ...artworkItems.map((m) => m.glassMesh),
         ...artworkItems.map((m) => m.paperMesh),
         ...artworkItems.map((m) => m.plaqueMesh),
+        ...artworkItems.filter((m) => m.hitProxy).map((m) => m.hitProxy!),
         cdCaseMesh,
         cdPaperMesh,
         cdBackMesh
       ];
-      const maxArtDist = camera.position.z < -60 ? 10.0 : 7.0;
+      const maxArtDist = camera.position.z < -50 ? 15.0 : 7.0;
       const hits = raycaster.intersectObjects(candidates);
       const validHits = hits.filter((h) => ((h.object as any).isCDStation ? h.distance <= 3.5 : h.distance <= maxArtDist));
       if (validHits.length > 0) {
@@ -2089,16 +2322,18 @@ export const GalleryScene3D: React.FC = () => {
       }
 
       // 2. Interação direcional de proximidade estreita:
-      // Somente se estiver a menos de 3.5m E com a visão apontada diretamente para a obra (dot > 0.65)
       const camDir = new THREE.Vector3();
       camera.getWorldDirection(camDir);
       const toObj = new THREE.Vector3();
 
       for (const item of artworkItems) {
         const dist = camera.position.distanceTo(item.group.position);
-        if (dist <= 3.5) {
+        const isSpine = item.artwork.medium === 'interactive' || (item.artwork as any).interactiveExperience === 'espinhaco';
+        const maxDist = isSpine ? 14.0 : 3.5;
+        if (dist <= maxDist) {
           toObj.subVectors(item.group.position, camera.position).normalize();
-          if (camDir.dot(toObj) > 0.65) {
+          const minDot = isSpine ? 0.35 : 0.65;
+          if (camDir.dot(toObj) > minDot) {
             soundEngine.playGlassPassSound();
             openCinema(item.artwork);
             return;
@@ -2201,7 +2436,8 @@ export const GalleryScene3D: React.FC = () => {
       const artCandidates = [
         ...artworkItems.map((m) => m.glassMesh),
         ...artworkItems.map((m) => m.paperMesh),
-        ...artworkItems.map((m) => m.plaqueMesh)
+        ...artworkItems.map((m) => m.plaqueMesh),
+        ...artworkItems.filter((m) => m.hitProxy).map((m) => m.hitProxy!)
       ];
       const artHits = raycaster.intersectObjects(artCandidates, true);
       if (artHits.length > 0) {
@@ -2214,7 +2450,8 @@ export const GalleryScene3D: React.FC = () => {
             if (artIdx !== -1) {
               state.setCurrentArtworkIndex(artIdx);
             }
-            if (hit.distance <= 12.0) {
+            const isSpine = hitArt.medium === 'interactive' || (hitArt as any).interactiveExperience === 'espinhaco';
+            if (hit.distance <= (isSpine ? 16.0 : 12.0)) {
               soundEngine.playGlassPassSound();
               openCinema(hitArt);
             } else {
@@ -2442,6 +2679,7 @@ export const GalleryScene3D: React.FC = () => {
         ...artworkItems.map((m) => m.glassMesh),
         ...artworkItems.map((m) => m.paperMesh),
         ...artworkItems.map((m) => m.plaqueMesh),
+        ...artworkItems.filter((m) => m.hitProxy).map((m) => m.hitProxy!),
         cdCaseMesh,
         cdPaperMesh,
         cdBackMesh,
@@ -2450,7 +2688,7 @@ export const GalleryScene3D: React.FC = () => {
         deckMesh
       ];
 
-      const maxArtDist = camera.position.z < -60 ? 10.0 : 7.0;
+      const maxArtDist = camera.position.z < -50 ? 15.0 : 7.0;
 
       // 1. Testa retículo central (0, 0) com alcance focado
       raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
@@ -2567,12 +2805,13 @@ export const GalleryScene3D: React.FC = () => {
         ...artworkItems.map((m) => m.glassMesh),
         ...artworkItems.map((m) => m.paperMesh),
         ...artworkItems.map((m) => m.plaqueMesh),
+        ...artworkItems.filter((m) => m.hitProxy).map((m) => m.hitProxy!),
         cdCaseMesh,
         cdPaperMesh,
         cdBackMesh
       ];
 
-      const maxArtDist = camera.position.z < -60 ? 10.0 : 7.0;
+      const maxArtDist = camera.position.z < -50 ? 15.0 : 7.0;
 
       // Se estiver em Pointer Lock (modo FPS), o clique sempre usa o centro da mira (0, 0)
       // Se estiver sem lock, testa o ponto clicado pelo cursor na tela
@@ -2687,10 +2926,16 @@ export const GalleryScene3D: React.FC = () => {
           state.warpToSector('entrance-audio');
         } else if (e.code === 'Digit2' || e.code === 'Numpad2' || e.key === '2') {
           e.preventDefault();
-          state.warpToSector('video');
+          state.warpToSector('tetrapode');
         } else if (e.code === 'Digit3' || e.code === 'Numpad3' || e.key === '3') {
           e.preventDefault();
-          state.warpToSector('still');
+          state.warpToSector('costa-critica');
+        } else if (e.code === 'Digit4' || e.code === 'Numpad4' || e.key === '4') {
+          e.preventDefault();
+          state.warpToSector('espinhaco-vitrines');
+        } else if (e.code === 'Digit5' || e.code === 'Numpad5' || e.key === '5') {
+          e.preventDefault();
+          state.warpToSector('interactive-sanctuary');
         }
       }
     };
@@ -3476,10 +3721,31 @@ export const GalleryScene3D: React.FC = () => {
           espinhacoTotem.totemLight.color.setHex(0x70d8ff);
         }
 
+        // Modulação da nuvem de pontos: recolhida e sutil antes de interagir (0.14), desperta em ciano vivo (0.96)
+        if (espinhacoTotem.pointsCloud) {
+          (espinhacoTotem.pointsCloud.material as THREE.PointsMaterial).opacity = 0.14 + 0.82 * wf;
+        }
+
+        // Modulação da escultura sólida prateada (criativo 04.png):
+        // Em repouso brilha como prata maciça escovada sob as luzes de galeria;
+        // Ao interagir adquire luminescência orgânica pulsante no núcleo
+        if (espinhacoTotem.solidMesh) {
+          const solidMat = espinhacoTotem.solidMesh.material as THREE.MeshPhysicalMaterial;
+          solidMat.emissive.setHex(audioEnergy > 0.4 ? 0x00e5ff : 0x38bdf8);
+          solidMat.emissiveIntensity = wf * (0.32 + audioEnergy * 0.45);
+        }
+
         // Acopla o drone acústico de proximidade do fóssil vivente ao wakeFactor
         soundEngine.setEspinhacoProximityHum(espinhacoWakeFactor);
       } else {
         soundEngine.setEspinhacoProximityHum(0);
+      }
+
+      // Otimização de Performance: só reproduz o vídeo de projeção se a câmera estiver no Santuário ou aproximando
+      if (projVideo && !projVideo.paused && camera.position.z > -20.0) {
+        projVideo.pause();
+      } else if (projVideo && projVideo.paused && camera.position.z <= -20.0 && projVideoActive) {
+        projVideo.play().catch(() => {});
       }
 
       // ─── ANIMAÇÃO DA AURA MAGNÉTICA ESPINHAÇO (Acoplada ao Wake-on-Interaction) ───
@@ -3772,6 +4038,21 @@ export const GalleryScene3D: React.FC = () => {
           item.videoEl.load();
         }
       });
+
+      if (projVideo) {
+        projVideo.pause();
+        projVideo.removeAttribute('src');
+        projVideo.load();
+        if (projVideo.parentNode) {
+          projVideo.parentNode.removeChild(projVideo);
+        }
+      }
+      projVideoTex.dispose();
+      projPosterTex.dispose();
+      projCenterGeo.dispose();
+      projCenterMat.dispose();
+      projWingGeo.dispose();
+      projWingMat.dispose();
 
       floorLightTex.dispose();
       floorDarkTex.dispose();

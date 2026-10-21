@@ -1,7 +1,8 @@
 # GIGANTERA — Arquitetura de Software & Engine 3D
 
-> **Versão:** 2.0 (Outubro 2026)  
+> **Versão:** 3.0 (Outubro 2026)  
 > **Domínio de Produção:** [https://gigantera.xyz](https://gigantera.xyz)  
+> **CDN Pull Zone:** [https://gigantera-penumbra.b-cdn.net/gigantera-portfolio](https://gigantera-penumbra.b-cdn.net/gigantera-portfolio)  
 > **Autoria:** Felipe Conceição ([Pelimotion](https://pelimotion.art))
 
 ---
@@ -44,9 +45,9 @@
 ┌───────────────────┴───────────────┐  ┌─────────────┴───────────────────┐
 │     GalleryScene3D (Three.js)     │  │  PlayerController (Câmera FPS)  │
 │ - Pavilhão Brutalista Modular     │  │ - Vetores de velocidade e atrito│
-│ - Vitrines de Vidro Físico PBR    │  │ - Pointer Lock / Rotação Mouse  │
-│ - CD Jewel Case Viewmodel 3D      │  │ - Joystick Virtual Mobile       │
-│ - Escultura Monumental Espinhaço  │  │ - Detecção de Colisão & Limites │
+│ - 10 Vitrines de Vidro Físico PBR │  │ - Pointer Lock / Rotação Mouse  │
+│ - Projeção Monumental de Fundo    │  │ - Joystick Virtual Mobile       │
+│ - Escultura em Prata + Basalto    │  │ - Detecção de Colisão & Limites │
 │ - Raycaster Físico Estrito        │  │ - Head Bobbing & Amortecimento  │
 └───────────────────┬───────────────┘  └─────────────────────────────────┘
                     │
@@ -56,7 +57,7 @@
 │  - Web Audio Context (Unlock seguro por primeiro gesto do usuário)     │
 │  - BiquadFilterNode (Filtro DJ Passa-Baixa / Passa-Alta resonante)     │
 │  - Catálogo de 17 Faixas Autorais com Live FFT Analyser Node           │
-│  - Efeitos Sonoros Hápticos (Clique mecânico, tick de hover, vidro)    │
+│  - Drone Acústico Proporcional ao WakeFactor do Espinhaço              │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -64,69 +65,41 @@
 
 ## 3. Coordenadas Espaciais e Setorização do Pavilhão
 
-O espaço da galeria foi construído sobre o eixo longitudinal **Z** (onde valores positivos estão na entrada e negativos no fundo):
+O espaço do pavilhão foi mapeado longitudinalmente sobre o eixo **Z** (valores positivos na entrada e negativos em direção ao Santuário):
 
 ```
-       [ENTRADA / CD]           [VÍDEOS]               [STILLS]           [SANTUÁRIO ESPINHAÇO]
-  Z = +25.0m  ──>  +14.0m  ──>   -25.0m   ──>        -60.0m     ──>     -76.5m  ──>  -102.0m
-  (Foyer do Álbum CD)   (Vitrines de Vídeo)   (Pranchetas Mate)    (Escultura 50k Partículas)
+       [FOYER / CD]              [CORREDOR 10 VITRINES]             [UMBRAL]        [SANTUÁRIO]        [PROJEÇÃO FUNDO]
+  Z = +22.0m  ──>  +14.0m   ──>    Z = +12.0m  ──>  -49.2m    ──>   Z = -52.0m  ──>  Z = -76.5m   ──>   Z = -93.94m
+   (Pedestal do CD 3D)           (10 Obras Espaçadas a 6.8m)       (Placa Bronze)   (Espinha Prata)    (Painel 25.2m x 17m)
 ```
 
 ### Detalhamento dos Setores:
-1. **Entrada & Sala de Escuta (`entrance-audio`, Z = +25m a +14m)**:
-   - Pedestal de acrílico e concreto localizado em `x = 2.8, z = 18.0`.
-   - Onde repousa o Álbum CD de 17 faixas autorais.
-   - Paredes defletoras com caustics sutis e iluminação zenital.
-2. **Corredor de Vídeo (`video`, Z = +14m a -25m)**:
-   - Vitrines suspensas alternadas nas paredes esquerda e direita.
-   - Texturas de vídeo dinâmicas sincronizadas via `<video>` elements com playback suave.
-3. **Galeria de Stills (`still`, Z = -25m a -60m)**:
-   - Obras fotográficas e renders 3D em papel mate giclée de alta densidade sob vidro museológico reflexivo.
-   - Plaquinhas informativas 3D em latão/alumínio com identificação curatorial.
-4. **Santuário do Espinhaço (`interactive`, Z = -60m a -102m)**:
-   - Piso com degradê procedural de microcimento claro para ardósia/basalto mineral escuro.
-   - Placa de identificação no umbral de transição ($Z \approx -52.2\text{m}$).
-   - Escultura monumental de partículas vivas com mais de 8 metros de altura centrada em `Z = -76.5m`.
+1. **Foyer de Entrada & Sala de Escuta (`entrance-audio`, Z = +22m a +14m)**:
+   - Pedestal ripado canelado com Estação de CD Jewel Case 3D (17 faixas autorais) em `x = 2.8, z = 18.0`.
+   - Paredes defletoras arquitetônicas (*baffles*) filtrando a luz zenital.
+2. **Setor 1 — Tetrápode (`tetrapode`, Z = +12.0m a -1.6m)**:
+   - Vitrines 01 e 02: *Concreto, pixel e tecnologia morta.*
+3. **Setor 2 — No$talgia (`nostalgia`, Z = -1.6m a -8.4m)**:
+   - Vitrine 03: *Monólito costeiro e herança caiçara.*
+4. **Setor 3 — Espinhaço (`espinhaco`, Z = -8.4m a -35.6m)**:
+   - Vitrines 04, 05, 06, 07 e 08: *Espinha, tainha e aço (estudos em tecido, mullets, matriz e TV).*
+5. **Setor 4 — Cine Itajaí & Aparecida (`cine-itajai-aparecida`, Z = -35.6m a -49.2m)**:
+   - Vitrines 09 e 10: *Molhes, interferências e rogai por nós brasileiros.*
+6. **Umbral & Santuário do Espinhaço (`interactive`, Z = -52.0m a -93.94m)**:
+   - Degradê de piso para basalto escuro com placa comemorativa em `Z = -52.2m`.
+   - Escultura monumental em prata sólida com plinto de basalto em `Z = -76.5m`.
+   - Instalação de projeção monumental de 25.2m cobrindo a parede de fundo em `Z = -93.94m`.
 
 ---
 
-## 4. O Ciclo de Renderização (Dual Scene Architecture)
+## 4. O Ciclo de Renderização e Culling Inteligente
 
-Em `GalleryScene3D.tsx`, o renderizador opera com técnica de **dupla cena** para evitar sobreposição de matrizes e z-fighting:
+Em `GalleryScene3D.tsx`, o loop de renderização executa otimizações estritas para sustentar 60 FPS estáveis mesmo em dispositivos intermediários:
 
-```ts
-// Render Principal do Pavilhão
-renderer.autoClear = false;
-renderer.clear();
-renderer.render(scene, camera);
-
-// Se o modo Cinema de Inspeção de Obra estiver ativo:
-if (currentCinemaArt && inspectionRig.visible) {
-  renderer.clearDepth(); // Limpa profundidade mantendo o fundo desfocado
-  renderer.render(inspectionScene, inspectionCam); // Renderiza a obra isolada em alta precisão
-}
-```
-
-### Vantagens Desta Abordagem:
-- **Inspeção sem Colisão com Cenário**: Quando o visitante clica para inspecionar uma obra, a peça entra no `inspectionScene` com câmera própria e controles de zoom (`targetInspZoom`) e rotação de exame, sem esbarrar nas paredes da galeria.
-- **Transição Fluida**: O fundo continua visível com iluminação atenuada, mantendo o sentimento de presença espacial.
-
----
-
-## 5. Gerenciamento de Estado (Zustand)
-
-O estado em `src/core/store.ts` é desacoplado de componentes visuais, garantindo:
-- **Zero re-renders desnecessários**: Componentes assinam apenas as chaves atômicas necessárias (ex.: `useAppStore(s => s.cinemaArtwork)`).
-- **Consistência de Ações**:
-  - `openCinema(art)`: Define a obra ativa, pausa ou chaveia áudio de vídeo, e reseta hovers residuais.
-  - `closeCinema()`: Restaura áudio do CD se estava tocando, registra `lastActionCloseTime` (cooldown anti-clique fantasma) e limpa alvos da mira.
-  - `warpToSector(sectorId)`: Desloca o jogador com glide cinemático para os pontos de observação predefinidos.
-
----
-
-## 6. Práticas para Manutenção e Novos Módulos
-
-Ao estender o sistema, respeite as seguintes diretrizes:
-1. **Nunca use fallbacks de proximidade para abrir janelas modais ou cinema**: Toda interação por clique ou tecla `E` deve depender de colisão física e verificação de ângulo visual.
-2. **Separe dados de lógica**: Novos dados curatoriais devem ser incluídos em `src/data/artworks.ts`. A engine lê dinamicamente as obras e projeta a geometria proceduralmente.
-3. **Mantenha os limites de colisão**: Ao adicionar novas estruturas físicas na galeria, registre suas coordenadas e raios no array `playerController.obstacles` para manter a integridade arquitetural da locomoção.
+### Otimizações no Render Loop:
+1. **Distance-Based Video Culling**:
+   - Elementos `<video>` das vitrines e da projeção monumental de fundo têm seu playback pausado quando a câmera se afasta além do raio de relevância acústica/visual (`camera.position.z > -20.0m` para a projeção de fundo).
+2. **Refletor Planar com Resolução Adaptativa**:
+   - O espelho d'água mineral do piso (`floorReflector`) utiliza textura de resolução reduzida (512px) associada a `roughnessMap`, gerando reflexo aveludado sem o custo proibitivo de raytracing nativo.
+3. **Detecção Raycast Estrita (Zero False-Positives)**:
+   - O raycaster filtra apenas camadas interativas registradas nos arrays de colisão (`interactiveMeshes`). Clicar no vazio ou em pisos/tetos jamais aciona modais ou chamadas de API.

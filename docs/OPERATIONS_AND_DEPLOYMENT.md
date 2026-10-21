@@ -1,101 +1,91 @@
-# GIGANTERA — Operações, Infraestrutura & Deploy Contínuo
+# GIGANTERA — Operações, Infraestrutura & Pipeline de Mídia
 
-> **Versão:** 2.0 (Outubro 2026)  
+> **Versão:** 3.0 (Outubro 2026)  
 > **Domínio de Produção:** [https://gigantera.xyz](https://gigantera.xyz)  
-> **Arquivos Fonte:** `vercel.json`, `scripts/sync_bunny_cdn.cjs`, `package.json`, `.env.example`
+> **CDN Pull Zone:** [https://gigantera-penumbra.b-cdn.net/gigantera-portfolio](https://gigantera-penumbra.b-cdn.net/gigantera-portfolio)  
+> **Pasta Master de Exposição:** `/Volumes/PLM_SSD_01/Pipeline SSD 01/Gigantera/Pipeline Gigantera/Out Gigantera/ONLINE`  
+> **Scripts de Suporte:** `scripts/process_media.py`, `scripts/upload_new_assets_bunny.cjs`, `scripts/sync_bunny_cdn.cjs`
 
 ---
 
-## 1. Comandos de Operação e Ciclo de Vida
+## 1. Organização dos Masters em `Out Gigantera/ONLINE`
+
+Para assegurar reprodutibilidade e integridade de arquivo, toda mídia de vídeo exposta no pavilhão é preservada na pasta mestre:
+```
+/Volumes/PLM_SSD_01/Pipeline SSD 01/Gigantera/Pipeline Gigantera/Out Gigantera/ONLINE/
+├── 00_projecao_santuario_semana_da_arte_vertical.mov (260.6 MB)
+├── 01_tetrapode_concreto_pixel_01.mp4 (108.3 MB)
+├── 02_tetrapode_tecnologia_morta_02.mp4 (102.4 MB)
+├── 03_nostalgia_monolito_costeiro_05.mp4 (91.3 MB)
+├── 04_espinhaco_projecao_tecido_09_2.mp4 (101.7 MB)
+├── 05_espinhaco_giant_mullets.mov (39.7 MB)
+├── 06_espinhaco_matriz_pontos_13c.mp4 (82.3 MB)
+├── 07_espinhaco_abissal_tracao_09_2.mp4 (268.2 MB)
+├── 08_espinhaco_mockup_tv_06.mp4 (46.4 MB)
+├── 09_cine_itajai_molhes_interferencias.mp4 (54.8 MB)
+└── 10_aparecida_rogai_por_nos_02.mp4 (40.4 MB)
+```
+
+---
+
+## 2. Pipeline de Transcodificação e Otimização (`scripts/process_media.py`)
+
+O script Python automatiza a geração de 3 camadas de mídia a partir dos masters:
+1. **Posters de Alta Resolução (`public/works/posters/`)**: WebP e JPG (1080×1920) extraídos em frame representativo e comprimidos via Pillow/FFmpeg.
+2. **Loops Leves de Vitrine 3D (`public/works/video/`)**: Vídeos de 8 segundos, mutados, comprimidos em CRF 24 com `-movflags +faststart` (~1.5–2.0 MB).
+3. **Masters de Streaming Completo (`public/works/full/`)**: Vídeo integral em H.264 CRF 22 com áudio estéreo AAC 192k e cabeçalho `moov atom` no início do arquivo para buffering instantâneo.
+4. **Loops de Projeção (`public/works/projections/`)**: Otimização do master vertical para reprodução contínua na parede de fundo.
 
 ```bash
-# 1. Instalação limpa de dependências
-npm install
+# Executar o pipeline de processamento de mídias
+python3 scripts/process_media.py
+```
 
-# 2. Execução do servidor de desenvolvimento local (Vite HMR)
-npm run dev
+---
 
-# 3. Verificação estrita de tipagem TypeScript (deve retornar 0 erros)
+## 3. Envio para Bunny.net Edge Storage (`scripts/upload_new_assets_bunny.cjs`)
+
+Para garantir streaming ultra-rápido no Brasil e globalmente sem consumir largura de banda da Vercel:
+
+- **Storage Zone:** `gigantera`
+- **Endpoint Regional:** `br.storage.bunnycdn.com` (São Paulo)
+- **Pull Zone Base:** `https://gigantera-penumbra.b-cdn.net/gigantera-portfolio/`
+- **Subpastas na CDN:**
+  - `posters/` — Imagens de capa WebP e JPG
+  - `previews/` — Loops leves das vitrines 3D
+  - `videos/` — Masters completos de streaming (CinemaView)
+  - `projections/` — Vídeo e posters da projeção monumental de fundo
+  - `models/` — Malha 3D `espinhaco.glb` (12.03 MB) e coordenadas `espinhaco_points.bin` (586 KB)
+
+```bash
+# Executar upload e validação de cabeçalhos HTTP 200 na CDN
+node scripts/upload_new_assets_bunny.cjs
+```
+
+---
+
+## 4. Comandos de Ciclo de Vida e Build
+
+```bash
+# 1. Checagem estrita de tipagem (0 erros garantidos)
 npx tsc --noEmit
 
-# 4. Compilação de bundle estático para produção
+# 2. Compilação de produção limpa
 npm run build
 
-# 5. Pré-visualização do bundle gerado em dist/
-npm run preview
+# 3. Pré-visualização local do bundle de produção
+npm run preview -- --port 4173 --host
+
+# 4. Deploy direto no Vercel (Production)
+npx vercel --prod --yes
 ```
 
 ---
 
-## 2. Infraestrutura de Hospedagem & Vercel Edge
+## 5. Rotina Recomendada para Adição de Novos Conteúdos
 
-O projeto está configurado para deploy automático na **Vercel** conectado ao repositório GitHub `Pelimotion/gigantera-portfolio` na branch `main`.
-
-### Arquivo `vercel.json`:
-- **Roteamento SPA**:
-  - `/ar` mapeado para `/ar/index.html` (WebAR Espinhaço).
-  - `/admin` mapeado para `/admin/index.html` (Curador e Media Kit).
-  - Rotas raiz e subpastas reescritas para `/index.html`.
-- **Cabeçalhos de Cache**:
-  - Arquivos com hash em `/assets/*`: `Cache-Control: public, max-age=31536000, immutable`.
-  - Arquivos HTML de entrada: `Cache-Control: public, max-age=0, must-revalidate` (garante que atualizações entrem no ar imediatamente após o deploy).
-- **CORS Habilitado**:
-  - `Access-Control-Allow-Origin: *` em assets estáticos para permitir carregamento WebGL e Web Audio sem bloqueios.
-
----
-
-## 3. Arquitetura de CDN & Edge Storage (Bunny.net)
-
-Para garantir que vídeos 4K, áudios de alta fidelidade e modelos 3D pesados não saturem a Vercel e carreguem instantaneamente no Brasil e no mundo:
-
-- **Pull Zone Oficial:** `https://gigantera-penumbra.b-cdn.net`
-- **Região de Edge Primária:** São Paulo (`br.storage.bunnycdn.com`)
-- **HTTP 206 (Byte-Range Requests)**: Habilitado para permitir busca instantânea (scrubbing) nos vídeos e áudios sem precisar baixar o arquivo inteiro primeiro.
-
-### Script de Sincronização Automática (`scripts/sync_bunny_cdn.cjs`):
-Permite enviar novos masters, faixas de áudio e posters diretamente do terminal para o storage edge:
-```bash
-# Executar sincronização de arquivos para a CDN da Bunny
-node scripts/sync_bunny_cdn.cjs
-```
-
----
-
-## 4. Variáveis de Ambiente (`.env`)
-
-Exemplo de configuração contida em `.env.example`:
-```env
-# URL base da CDN de mídia
-VITE_CDN_BASE_URL=https://gigantera-penumbra.b-cdn.net
-
-# Chaves de API para scripts de sync (armazenadas localmente/seguras)
-BUNNY_STORAGE_ZONE_NAME=gigantera-storage
-BUNNY_STORAGE_API_KEY=seu_token_aqui
-BUNNY_STORAGE_REGION=br
-```
-
----
-
-## 5. Rotina Recomendada para Novas Releases / Atualizações
-
-Sempre que realizar uma melhoria no código:
-
-1. Execute a checagem de tipos:
-   ```bash
-   npx tsc --noEmit
-   ```
-2. Valide o build:
-   ```bash
-   npm run build
-   ```
-3. Comite com mensagem semântica:
-   ```bash
-   git add .
-   git commit -m "feat/fix: descrição clara do que mudou"
-   git push origin main
-   ```
-4. Se desejar disparar deploy direto do terminal:
-   ```bash
-   npx vercel --prod --yes
-   ```
-5. Valide online em: [https://gigantera.xyz](https://gigantera.xyz)
+1. Salvar o master do vídeo na pasta `/Volumes/PLM_SSD_01/Pipeline SSD 01/Gigantera/Pipeline Gigantera/Out Gigantera/ONLINE` com nome padronizado.
+2. Rodar `python3 scripts/process_media.py` para gerar preview, poster e streaming master.
+3. Rodar `node scripts/upload_new_assets_bunny.cjs` para subir os arquivos para a Bunny CDN.
+4. Cadastrar a obra em `src/data/artworks.ts` e calibrar os pesos em `src/data/mediaKitData.ts`.
+5. Validar com `npx tsc --noEmit` e `npm run build`.

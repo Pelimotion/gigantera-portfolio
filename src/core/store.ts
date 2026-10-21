@@ -402,12 +402,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   setCameraTargetZ: (z) => {
     const clamped = Math.max(TOKENS.navigation.zEnd, Math.min(TOKENS.navigation.zStart, z));
     let sectorId = 'entrance-audio';
-    if (clamped < -60) {
-      sectorId = 'interactive';
-    } else if (clamped < -25) {
-      sectorId = 'still';
-    } else if (clamped < 14) {
-      sectorId = 'video';
+    if (clamped < -50) {
+      sectorId = 'interactive-sanctuary';
+    } else if (clamped < -14) {
+      sectorId = 'espinhaco-vitrines';
+    } else if (clamped < 2) {
+      sectorId = 'costa-critica';
+    } else if (clamped < 13.8) {
+      sectorId = 'tetrapode';
     } else {
       sectorId = 'entrance-audio';
     }
@@ -417,12 +419,14 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   updateCameraZ: (currentZ, velocity) => {
     let sectorId = 'entrance-audio';
-    if (currentZ < -60) {
-      sectorId = 'interactive';
-    } else if (currentZ < -25) {
-      sectorId = 'still';
-    } else if (currentZ < 14) {
-      sectorId = 'video';
+    if (currentZ < -50) {
+      sectorId = 'interactive-sanctuary';
+    } else if (currentZ < -14) {
+      sectorId = 'espinhaco-vitrines';
+    } else if (currentZ < 2) {
+      sectorId = 'costa-critica';
+    } else if (currentZ < 13.8) {
+      sectorId = 'tetrapode';
     } else {
       sectorId = 'entrance-audio';
     }
@@ -438,7 +442,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     const layout = computeModularGalleryLayout(ARTWORKS_CATALOG);
 
     if (sectorId === 'entrance-audio') {
-      // Estação de CD em x = 2.8, z = 18.0. Fica de frente olhando reto para o estojo:
       const targetSpot = {
         x: 2.8,
         z: 21.0,
@@ -454,65 +457,89 @@ export const useAppStore = create<AppState>((set, get) => ({
       return;
     }
 
-    if (sectorId === 'interactive') {
-      const interactiveArt = layout.artworksWithCoords.find((a) => a.medium === 'interactive');
+    if (sectorId === 'interactive' || sectorId === 'interactive-sanctuary') {
+      const interactiveArt = layout.artworksWithCoords.find(
+        (a) => a.medium === 'interactive' || (a as any).interactiveExperience === 'espinhaco'
+      );
       if (interactiveArt) {
-        const dx = interactiveArt.computedCoords.x - interactiveArt.viewingSpot.x;
-        const dz = interactiveArt.computedCoords.z - interactiveArt.viewingSpot.z;
-        const targetYaw = Math.atan2(-dx, -dz);
         set({
-          activeSectorId: sectorId,
+          activeSectorId: 'interactive-sanctuary',
           hasPlayerMoved: true,
           targetGlideSpot: {
-            x: interactiveArt.viewingSpot.x,
-            z: interactiveArt.viewingSpot.z,
-            targetYaw,
+            x: 0,
+            z: -68.0,
+            targetYaw: 0,
             artworkId: interactiveArt.id
           }
         });
-        get().setCameraTargetZ(interactiveArt.viewingSpot.z);
+        get().setCameraTargetZ(-68.0);
         return;
       }
     }
 
-    if (sectorId === 'video') {
-      const firstVideo = layout.artworksWithCoords.find((a) => a.medium === 'video');
-      if (firstVideo) {
-        const dx = firstVideo.computedCoords.x - firstVideo.viewingSpot.x;
-        const dz = firstVideo.computedCoords.z - firstVideo.viewingSpot.z;
+    if (sectorId === 'tetrapode') {
+      const art = layout.artworksWithCoords.find((a) => a.id.startsWith('tetrapode'));
+      if (art) {
+        const dx = art.computedCoords.x - art.viewingSpot.x;
+        const dz = art.computedCoords.z - art.viewingSpot.z;
         const targetYaw = Math.atan2(-dx, -dz);
         set({
           activeSectorId: sectorId,
           hasPlayerMoved: true,
           targetGlideSpot: {
-            x: firstVideo.viewingSpot.x,
-            z: firstVideo.viewingSpot.z,
+            x: art.viewingSpot.x,
+            z: art.viewingSpot.z,
             targetYaw,
-            artworkId: firstVideo.id
+            artworkId: art.id
           }
         });
-        get().setCameraTargetZ(firstVideo.viewingSpot.z);
+        get().setCameraTargetZ(art.viewingSpot.z);
         return;
       }
     }
 
-    if (sectorId === 'still') {
-      const firstStill = layout.artworksWithCoords.find((a) => a.medium === 'still');
-      if (firstStill) {
-        const dx = firstStill.computedCoords.x - firstStill.viewingSpot.x;
-        const dz = firstStill.computedCoords.z - firstStill.viewingSpot.z;
+    if (sectorId === 'costa-critica') {
+      const art = layout.artworksWithCoords.find(
+        (a) => a.id.startsWith('nostalgia') || a.id.startsWith('cine') || a.id.startsWith('aparecida')
+      );
+      if (art) {
+        const dx = art.computedCoords.x - art.viewingSpot.x;
+        const dz = art.computedCoords.z - art.viewingSpot.z;
         const targetYaw = Math.atan2(-dx, -dz);
         set({
           activeSectorId: sectorId,
           hasPlayerMoved: true,
           targetGlideSpot: {
-            x: firstStill.viewingSpot.x,
-            z: firstStill.viewingSpot.z,
+            x: art.viewingSpot.x,
+            z: art.viewingSpot.z,
             targetYaw,
-            artworkId: firstStill.id
+            artworkId: art.id
           }
         });
-        get().setCameraTargetZ(firstStill.viewingSpot.z);
+        get().setCameraTargetZ(art.viewingSpot.z);
+        return;
+      }
+    }
+
+    if (sectorId === 'espinhaco-vitrines') {
+      const art = layout.artworksWithCoords.find(
+        (a) => a.id.startsWith('espinhaco') && a.medium === 'video'
+      );
+      if (art) {
+        const dx = art.computedCoords.x - art.viewingSpot.x;
+        const dz = art.computedCoords.z - art.viewingSpot.z;
+        const targetYaw = Math.atan2(-dx, -dz);
+        set({
+          activeSectorId: sectorId,
+          hasPlayerMoved: true,
+          targetGlideSpot: {
+            x: art.viewingSpot.x,
+            z: art.viewingSpot.z,
+            targetYaw,
+            artworkId: art.id
+          }
+        });
+        get().setCameraTargetZ(art.viewingSpot.z);
         return;
       }
     }

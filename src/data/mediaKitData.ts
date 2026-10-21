@@ -52,18 +52,17 @@ export const CURATORIAL_STATEMENTS = {
  * Eliminando estimativas genéricas e refletindo arquivos reais
  */
 export const WORK_REAL_SIZES: Record<string, { webSize: string; masterSize: string }> = {
-  'video-espinhaco-cinetico': { webSize: '514 KB', masterSize: '1.85 GB' },
-  'video-stipples-particulas': { webSize: '894 KB', masterSize: '1.85 GB' },
-  'video-espinha-metalica': { webSize: '1.0 MB', masterSize: '1.85 GB' },
-  'video-mapping-led': { webSize: '250 KB', masterSize: '1.85 GB' },
-  'video-onda-padroes': { webSize: '1.6 MB', masterSize: '1.85 GB' },
-  'video-cores-spectrum': { webSize: '1.1 MB', masterSize: '1.85 GB' },
-  'still-registro-abissal': { webSize: '192 KB', masterSize: '65 MB' },
-  'still-cinetica-prata': { webSize: '385 KB', masterSize: '65 MB' },
-  'still-relevo-neotribal': { webSize: '298 KB', masterSize: '65 MB' },
-  'still-monolito-costeiro': { webSize: '456 KB', masterSize: '65 MB' },
-  'still-litificacao-final': { webSize: '425 KB', masterSize: '65 MB' },
-  'still-rastreamento-vetorial': { webSize: '290 KB', masterSize: '65 MB' },
+  'tetrapode-pixel-concreto-01': { webSize: '20.4 MB', masterSize: '108.3 MB' },
+  'tetrapode-tecnologia-morta-02': { webSize: '23.3 MB', masterSize: '102.4 MB' },
+  'nostalgia-monolito-costeiro-05': { webSize: '17.6 MB', masterSize: '91.3 MB' },
+  'espinhaco-projecao-tecido-09-2': { webSize: '21.0 MB', masterSize: '101.7 MB' },
+  'espinhaco-giant-mullets': { webSize: '21.2 MB', masterSize: '39.7 MB' },
+  'espinhaco-matriz-pontos-13c': { webSize: '17.7 MB', masterSize: '82.3 MB' },
+  'espinhaco-abissal-tracao-09-2': { webSize: '67.9 MB', masterSize: '268.2 MB' },
+  'espinhaco-mockup-tv-06': { webSize: '21.5 MB', masterSize: '46.4 MB' },
+  'cine-itajai-molhes-interferencias': { webSize: '19.3 MB', masterSize: '54.8 MB' },
+  'aparecida-rogai-por-nos-02': { webSize: '24.3 MB', masterSize: '40.4 MB' },
+  'espinhaco-interactive-root': { webSize: '600 KB', masterSize: '12.6 MB' },
 };
 
 export function getWorkRealSize(artId: string, isVideo: boolean): { webSize: string; masterSize: string; displaySize: string } {
@@ -172,7 +171,7 @@ export const PRESS_KIT_ASSETS: PressKitAsset[] = [
     format: 'PDF / TXT',
     resolutionOrSize: 'Documento Editorial',
     fileUrl: '',
-    copyableContent: `# PRESS RELEASE // GIGANTERA\nArtista: Felipe Conceição\nAno: 2026\n\nTAGLINE:\n${GIGANTERA_TEXTOS_CANONICOS.tagline}\n\nBIOGRAFIA:\n${GIGANTERA_TEXTOS_CANONICOS.bioShort}\n\nARTIST STATEMENT:\n${GIGANTERA_TEXTOS_CANONICOS.artistStatement}\n\nPROCESSO & MATERIAIS:\n${GIGANTERA_TEXTOS_CANONICOS.processNotes}\n\nSÉRIES EM EXIBIÇÃO:\n- Espinhaço (Matriz Mineral & Cinética)\n- Notalgia (Topografia Costeira & Subaquático)\n- Sedimento (Litificação & Fósseis 3D)\n- Zimbro (Rastreamento Espectral & Vetores)\n- Discografia: 17 faixas autorais em Estação de Áudio física.`,
+    copyableContent: `# PRESS RELEASE // GIGANTERA\nArtista: Felipe Conceição\nAno: 2026\n\nTAGLINE:\n${GIGANTERA_TEXTOS_CANONICOS.tagline}\n\nBIOGRAFIA:\n${GIGANTERA_TEXTOS_CANONICOS.bioShort}\n\nARTIST STATEMENT:\n${GIGANTERA_TEXTOS_CANONICOS.artistStatement}\n\nPROCESSO & MATERIAIS:\n${GIGANTERA_TEXTOS_CANONICOS.processNotes}\n\nSÉRIES EM EXIBIÇÃO:\n- Tetrápode (Concreto, Pixel e Tecnologia Morta)\n- No$talgia (Monólito Costeiro e Território)\n- Espinhaço (Espinha, Tainha e Aço)\n- Cine Itajaí (Molhes, Capivaras e Interferências)\n- Aparecida (Rogai Por Nós Brasileiros)\n- Discografia: 17 faixas autorais em Estação de Áudio física.`,
     status: 'ready'
   }
 ];

@@ -4,9 +4,12 @@
   "private": true,
   "type": "module",
   "description": "GIGANTERA — Pavilhão Imersivo 3D, Acervo Artístico e Experiência AR",
+  "engines": {
+    "node": ">=20.12.0"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "node node_modules/typescript/lib/tsc.js && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
