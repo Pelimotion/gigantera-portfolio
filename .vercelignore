@@ -1,0 +1,12 @@
+# Dependencies
+node_modules
+
+# Large media masters (streamed from Bunny CDN Edge & stored in Out Gigantera/ONLINE)
+public/works/full
+public/works/projections
+
+# Logs and environment
+.env
+.env.local
+.env.*.local
+*.log
