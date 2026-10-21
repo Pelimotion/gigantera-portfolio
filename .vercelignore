@@ -1,9 +1,9 @@
 # Dependencies
 node_modules
 
-# Large media masters (streamed from Bunny CDN Edge & stored in Out Gigantera/ONLINE)
-public/works/full
-public/works/projections
+# Build outputs (Vercel builds dist via npm run build)
+dist
+dist-ssr
 
 # Logs and environment
 .env
