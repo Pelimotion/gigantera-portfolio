@@ -10,7 +10,37 @@
 
 ---
 
-## 🎯 RESUMO EXECUTIVO: GRANDE ATUALIZAÇÃO CONSOLIDADA
+## 🎯 RESUMO EXECUTIVO: GRANDE ATUALIZAÇÃO CONSOLIDADA & REFINO ESCULTURAL HIGH-END
+
+A sessão concluiu com rigor técnico e artístico as 5 diretrizes mestras solicitadas, elevando a experiência do visitante ao patamar de museu de arte contemporânea de nível internacional:
+
+1. **Escultura Interativa ("Espinhaço") Unificada em Prata / Peltre Maciço (Conforme `criativo 04.png`)**:
+   - **Eliminação de Duplicatas e Partículas**: A nuvem de pontos concorrente e a aura de partículas foram 100% removidas. Existe agora uma **única escultura monumental** sólida.
+   - **Material Físico PBR de Alta Definição**: Integração direta das texturas embutidas do modelo 3D (`Color`, `NormalGL` com relevo `1.85`, e mapa `ORM` com oclusão profunda `1.5`), eliminando o aspecto plano acinzentado-azulado anterior. Acabamento em prata lunar pura fundida (`color: 0xf5f7fa`, `metalness: 0.92`, `roughness: 0.22`, `clearcoat: 0.35`, `reflectivity: 0.95`).
+   - **Orientação Anatômica Correta**: Rotação Z de `-90°` (`-Math.PI / 2`) posicionando o crânio/base na parte inferior e a coluna vertebral arqueando elegantemente para cima até a cauda no teto, exatamente como em `criativo 04.png`.
+   - **Base Monolítica 100% Fixa e Assentada**: O plinto de basalto (`2.5m × 0.80m × 2.5m`) repousa rente ao piso (`y = -3.20m`) com zero vão. O colar superior engasta a base do crânio a `y = -1.90m`. A base possui `floatAmp = 0`, permanecendo imóvel enquanto apenas a escultura gira em turntable.
+   - **Iluminação de Museu Especializada**: Foco key spotlight quente (`0xfffcf5`, 4.8), top rim spot (`0xf0f4fc`, 3.8), rim light neutro (`0xdde8f5`, 1.4) e luz interna focal pura (`0xffffff`), sem tons azulados invasivos.
+
+2. **Onboarding / Mini-Tutorial / Splash Screen Minimalista Obsidian**:
+   - Reformulado como splash card de boas-vindas do portfólio (`PORTFÓLIO & DIREÇÃO DE ARTE · FELIPE CONCEIÇÃO`).
+   - Eliminação de gradientes coloridos em botões: substituídos por vidro obsidian escuro (`rgba(255, 255, 255, 0.09)`) e borda hairline branca.
+   - Micro-animações intuitivas: ciclo rítmico das teclas WASD, indicador de mouse com glide da roda de rolagem e pulso tátil nas teclas de interação.
+   - Emojis removidos do Guia de Controles (`ControlsGuideModal.tsx`), adotando tipografia técnica brutalista.
+
+3. **Título da Aba Web e Identidade**:
+   - Aba web agora exibe exclusivamente: `<title>GIGANTERA // Felipe Conceição</title>`.
+   - O termo `PAVILHÃO DIGITAL` foi preservado estritamente no badge do cabeçalho interno da página (`GalleryHeader.tsx`).
+
+4. **Favicon Animado Sequencial (G, I, G, A @ 0.5s)**:
+   - Gerado `public/favicon.gif` com 4 frames em Helvetica Neue Bold centralizada, fundo obsidian e borda suave.
+   - Driver dinâmico em canvas (`src/utils/animatedFavicon.ts`) inicializado no `main.tsx` para sincronização cruzada em Chrome, Safari e Firefox.
+
+5. **Filtro de Proximidade Dinâmico nas Obras (Dim-to-Awake)**:
+   - As obras ao longo do corredor mantêm baixa luminosidade (`0.25`) à distância e acendem gradualmente conforme o visitante se aproxima (`proximityNorm` entre 9.2m e 3.8m), atingindo `1.0` (100% de brilho) bem em frente a elas.
+
+6. **Deploy de Produção Validado**:
+   - Build de produção compilado sem advertências em 1.8s.
+   - Publicado e ativo em produção global no domínio oficial: **https://gigantera.xyz**.
 
 A sessão executou uma grande reestruturação artística, técnica e de infraestrutura do pavilhão imersivo **GIGANTERA**, atingindo o mais alto nível de excelência visual, responsividade e organização de produção:
 
