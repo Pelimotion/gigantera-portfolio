@@ -1728,6 +1728,36 @@
         return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
       },
 
+      seekTo(sec) {
+        if (!this.audio) this.init();
+        if (!this.audio) return;
+        const targetSec = parseFloat(sec);
+        if (isNaN(targetSec) || targetSec < 0) return;
+
+        const applySeek = () => {
+          try {
+            this.audio.currentTime = targetSec;
+            if (this.audio.paused) {
+              this.audio.play().catch(() => {});
+            }
+          } catch (e) {
+            console.warn('Falha no seek:', e);
+          }
+        };
+
+        if (this.audio.readyState >= 1) {
+          applySeek();
+        } else {
+          const onReady = () => {
+            applySeek();
+            this.audio.removeEventListener('loadedmetadata', onReady);
+            this.audio.removeEventListener('canplay', onReady);
+          };
+          this.audio.addEventListener('loadedmetadata', onReady, { once: true });
+          this.audio.addEventListener('canplay', onReady, { once: true });
+        }
+      },
+
       togglePlayPause() {
         if (!this.audio || !this.audio.src) return;
         if (this.isPlaying) {
@@ -2917,10 +2947,8 @@
       if (DeckPlayer.currentTrackKey !== trackKey) {
         playLibraryTrack(idx);
       }
-      setTimeout(() => {
-        DeckPlayer.seekTo(seconds);
-        showNotification('Saltou para ' + cueName + ' (' + DeckPlayer.formatTime(seconds) + ')', 'info');
-      }, 150);
+      DeckPlayer.seekTo(seconds);
+      showNotification('Saltou para ' + cueName + ' (' + DeckPlayer.formatTime(seconds) + ')', 'info');
     }
 
     function openSpecsModal(idx) {
@@ -4776,7 +4804,11 @@
     renderCanonicalDropGrid();
     setupTagEditorModal();
     renderDashboard();
-    pollState();
+    if (!window.location.origin.includes('gigantera.xyz')) {
+      pollState();
+    } else {
+      setBackendConnected(false);
+    }
     refreshLogs();
     loadFullLibraryTracks();
     loadHunterHistory();
