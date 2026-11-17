@@ -389,6 +389,66 @@
     background: linear-gradient(90deg, var(--accent-cyan), var(--accent-emerald));
     transition: width 0.3s ease;
   }
+
+  /* 13 CANONICAL DROP TARGETS GRID */
+  .canonical-drop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .drop-target-card {
+    background: var(--bg-card);
+    border: 1px dashed var(--border-strong);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+  .drop-target-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--accent-cyan);
+    transform: translateY(-2px);
+  }
+  .drop-target-card.drag-over {
+    background: rgba(6, 182, 212, 0.15) !important;
+    border: 2px solid var(--accent-cyan) !important;
+    box-shadow: 0 0 16px rgba(6, 182, 212, 0.5);
+    transform: scale(1.03);
+  }
+  .drop-target-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .drop-target-folder {
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .drop-target-count {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: var(--bg-surface);
+    color: var(--accent-cyan);
+    border: 1px solid var(--border-strong);
+  }
+  .drop-target-hint {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
 </style>
 </head>
 <body>
@@ -731,6 +791,27 @@
     <!-- ABA 4: ACERVO REKORDBOX (561 FAIXAS) & SPECS INSPECTOR -->
     <section id="tabLibrary" class="tab-panel">
       <div class="panel-card">
+        
+        <!-- ALVOS DRAG & DROP : 13 PASTAS CANONICAS CLUB-READY -->
+        <div style="padding: 14px 18px 0 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 11px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase;">
+              Alvos Drag & Drop : 13 Pastas Canonicas Club-Ready (Arraste uma musica para organizar)
+            </span>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-emerald btn-sm" id="btnExportLocalRekordbox" onclick="exportRekordboxXmlV6(window.CURRENT_LIBRARY_RENDERED || [], 'rekordbox_curadoria_v6.xml')">
+                <span>💾</span> Exportar Rekordbox XML v6
+              </button>
+              <button class="btn btn-cyan btn-sm" onclick="connectLocalFsDirectory()">
+                <span>📁</span> Localizar Pasta Curadoria
+              </button>
+            </div>
+          </div>
+          <div class="canonical-drop-grid" id="canonicalDropGrid">
+            <!-- Renderizado dinamicamente via JavaScript -->
+          </div>
+        </div>
+
         <div class="panel-head">
           <div>
             <div class="panel-title">
@@ -853,7 +934,14 @@
             <div class="panel-title">
               <span>💾</span> Exportador Master USB Pioneer (Club Standard)
             </div>
-            <button class="btn" onclick="refreshUsbDevices()">
+            <div style="display: flex; gap: 8px;">
+              <button class="btn" id="btnRefreshUsbList" onclick="refreshUsbDevices()">
+                <span>🔄</span> Varrer Dispositivos
+              </button>
+              <button class="btn btn-warning" id="btnDotCleanUsb" onclick="executeDotClean()">
+                <span>🧹</span> dot_clean AppleDouble
+              </button>
+            </div>
               <span>🔄</span> Varrer Dispositivos
             </button>
           </div>
@@ -868,7 +956,7 @@
                 <label style="font-size: 11px; font-weight: 700; color: var(--text-muted);">1. Selecione o Pen Drive / Disco de Destino:</label>
                 <span id="usbDeviceCompatBadge" class="badge badge-gray">Aguardando selecao</span>
               </div>
-              <select id="usbTargetSelect" class="input-text" style="width: 100%; font-size: 13px;" onchange="onUsbTargetChange()">
+              <select id="usbTargetSelect" data-device-select="usbDeviceSelect" class="input-text" style="width: 100%; font-size: 13px;" onchange="onUsbTargetChange()">
                 <option value="">Carregando dispositivos externos...</option>
               </select>
             </div>
@@ -1400,6 +1488,70 @@
       <div class="modal-footer">
         <button class="btn" onclick="closeSpecsModal()">Fechar</button>
         <button class="btn btn-primary" id="specsModalPlayBtn">▶ Ouvir no Deck</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- MODAL: ID3V2.3 TAG EDITOR NATIVO NO BROWSER -->
+  <div class="modal-overlay" id="tagEditorModal">
+    <div class="modal-card" style="width: 540px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; color: #fff;">Editor de Tags ID3v2.3 (Pioneer Club Standard)</div>
+        <button class="btn" style="padding: 2px 6px;" id="btnCloseTagEditor">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 14px;">
+          Edita metadados binarios padrao ID3v2.3 diretamente no arquivo fisico no seu disco local sem uso de servidores intermediarios.
+        </p>
+
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">Titulo da Musica (TIT2)</label>
+          <input type="text" class="input-text" id="tagInputTitle" style="width: 100%;">
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">Artista Principal (TPE1)</label>
+          <input type="text" class="input-text" id="tagInputArtist" style="width: 100%;">
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">Album / EP (TALB)</label>
+          <input type="text" class="input-text" id="tagInputAlbum" style="width: 100%;">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+          <div>
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">BPM Estimado (TBPM)</label>
+            <input type="number" step="0.1" class="input-text" id="tagInputBpm" style="width: 100%;">
+          </div>
+          <div>
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">Tonalidade Camelot (TKEY)</label>
+            <input type="text" class="input-text" id="tagInputKey" placeholder="ex: 8A ou Am" style="width: 100%;">
+          </div>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">Pasta Canonica / Genero (TCON)</label>
+          <select class="input-text" id="tagInputGenre" style="width: 100%;">
+            <!-- Preenchido dinamicamente com as 13 pastas -->
+          </select>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">Comentarios Club / Telemetria (COMM)</label>
+          <input type="text" class="input-text" id="tagInputComments" placeholder="Gigantera Club Master" style="width: 100%;">
+        </div>
+
+        <div>
+          <button class="btn btn-purple btn-sm" id="btnAutoFillMirInModal">
+            ⚡ Preencher Automatico via Web MIR
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="btnCancelTagEditor">Cancelar</button>
+        <button class="btn btn-primary" id="btnSaveTagsToDisk">Salvar Tags no Arquivo</button>
       </div>
     </div>
   </div>
@@ -3670,6 +3822,9 @@
 
     // Inicializacao
     DeckPlayer.init();
+    setupUsbRigManager();
+    renderCanonicalDropGrid();
+    setupTagEditorModal();
     renderDashboard();
     refreshLogs();
     pollState();
@@ -3695,5 +3850,582 @@
       }
     }
   </script>
+
+  <script>
+    // ============================================================================
+    // MODULOS AVANCADOS : WEBMIR, ID3V2.3 WRITER, REKORDBOX XML V6 & USB RIG
+    // ============================================================================
+
+    const CANONICAL_13_FOLDERS = [
+      "00_Set_Massa",
+      "01_Tech_House",
+      "02_Minimal_DeepTech",
+      "03_Brasilidades_Edits",
+      "04_House_Classic",
+      "05_Indie_Dance",
+      "06_Acid_Electro",
+      "07_Breakbeat",
+      "08_Techno_Peak",
+      "09_Melodic_Trance",
+      "10_Low_BPM",
+      "11_Ethnic_Organic",
+      "12_Club_Hits_Remixes"
+    ];
+
+    class WebAudioMIR {
+      constructor() {
+        this.ctx = null;
+        this.majorProfile = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+        this.minorProfile = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+        this.noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        
+        this.camelotMajor = {
+          "C": "8B", "G": "9B", "D": "10B", "A": "11B", "E": "12B", "B": "1B",
+          "F#": "2B", "Db": "3B", "C#": "3B", "Ab": "4B", "G#": "4B", "Eb": "5B", "D#": "5B", "Bb": "6B", "A#": "6B", "F": "7B"
+        };
+        this.camelotMinor = {
+          "A": "8A", "E": "9A", "B": "10A", "F#": "11A", "C#": "12A", "Db": "12A",
+          "G#": "1A", "Ab": "1A", "D#": "2A", "Eb": "2A", "A#": "3A", "Bbm": "3A", "F": "4A",
+          "C": "5A", "G": "6A", "D": "7A"
+        };
+      }
+
+      getAudioContext() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx({ sampleRate: 22050 });
+        }
+        return this.ctx;
+      }
+
+      async analyzeFile(fileOrBlob, progressCb = null) {
+        if (progressCb) progressCb('Decodificando audio...');
+        const arrayBuffer = await fileOrBlob.arrayBuffer();
+        const ctx = this.getAudioContext();
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+        const duration = audioBuffer.duration;
+        const sampleRate = audioBuffer.sampleRate;
+        const channelData = audioBuffer.getChannelData(0);
+
+        if (progressCb) progressCb('Calculando BPM e transientes...');
+        const bpm = this.calculateBpm(channelData, sampleRate);
+
+        if (progressCb) progressCb('Identificando tonalidade Camelot...');
+        const keyInfo = this.calculateKey(channelData, sampleRate);
+        const cues = this.estimateHotCues(duration, bpm);
+
+        return {
+          duration,
+          sampleRate,
+          bpm,
+          key: keyInfo.keyName,
+          camelot: keyInfo.camelot,
+          cues
+        };
+      }
+
+      calculateBpm(data, sampleRate) {
+        const frameSize = 512;
+        const envLength = Math.floor(data.length / frameSize);
+        const envelope = new Float32Array(envLength);
+
+        for (let i = 0; i < envLength; i++) {
+          let sum = 0;
+          const start = i * frameSize;
+          for (let j = 0; j < frameSize; j++) {
+            const val = data[start + j];
+            sum += val * val;
+          }
+          envelope[i] = Math.sqrt(sum / frameSize);
+        }
+
+        const flux = new Float32Array(envLength);
+        for (let i = 1; i < envLength; i++) {
+          const diff = envelope[i] - envelope[i - 1];
+          flux[i] = diff > 0 ? diff : 0;
+        }
+
+        const envRate = sampleRate / frameSize;
+        const minLag = Math.floor(envRate * 60 / 140);
+        const maxLag = Math.floor(envRate * 60 / 115);
+
+        let bestLag = minLag;
+        let maxCorr = -1;
+
+        for (let lag = minLag; lag <= maxLag; lag++) {
+          let corr = 0;
+          const count = Math.min(2000, envLength - lag);
+          for (let i = 0; i < count; i++) {
+            corr += flux[i] * flux[i + lag];
+          }
+          if (corr > maxCorr) {
+            maxCorr = corr;
+            bestLag = lag;
+          }
+        }
+
+        let calculatedBpm = (envRate * 60) / bestLag;
+        while (calculatedBpm < 115) calculatedBpm *= 2;
+        while (calculatedBpm > 138) calculatedBpm /= 2;
+
+        return Math.round(calculatedBpm * 10) / 10;
+      }
+
+      calculateKey(data, sampleRate) {
+        const chroma = new Float32Array(12);
+        const step = 2048;
+        const maxSamples = Math.min(data.length, sampleRate * 120);
+        const startSample = Math.floor(Math.max(0, (data.length - maxSamples) / 2));
+
+        for (let i = startSample; i < startSample + maxSamples; i += step) {
+          let frameRms = 0;
+          for (let j = 0; j < 512; j++) {
+            const s = data[i + j] || 0;
+            frameRms += s * s;
+          }
+          const bin = Math.floor((i / step) % 12);
+          chroma[bin] += Math.sqrt(frameRms);
+        }
+
+        let norm = 0;
+        for (let i = 0; i < 12; i++) norm += chroma[i] * chroma[i];
+        norm = Math.sqrt(norm) || 1;
+        for (let i = 0; i < 12; i++) chroma[i] /= norm;
+
+        let bestScore = -999;
+        let bestKey = "Am";
+        let isMajor = false;
+        let bestRoot = "A";
+
+        for (let r = 0; r < 12; r++) {
+          let majScore = 0;
+          let minScore = 0;
+          for (let i = 0; i < 12; i++) {
+            const c = chroma[(i + r) % 12];
+            majScore += c * this.majorProfile[i];
+            minScore += c * this.minorProfile[i];
+          }
+
+          if (majScore > bestScore) {
+            bestScore = majScore;
+            bestRoot = this.noteNames[r];
+            bestKey = `${bestRoot}`;
+            isMajor = true;
+          }
+          if (minScore > bestScore) {
+            bestScore = minScore;
+            bestRoot = this.noteNames[r];
+            bestKey = `${bestRoot}m`;
+            isMajor = false;
+          }
+        }
+
+        const camelot = isMajor 
+          ? (this.camelotMajor[bestRoot] || "8B") 
+          : (this.camelotMinor[bestRoot] || "8A");
+
+        return {
+          keyName: bestKey,
+          camelot: camelot
+        };
+      }
+
+      estimateHotCues(duration, bpm) {
+        const beatSec = 60 / (bpm || 125);
+        const bar32 = Math.round(beatSec * 32 * 10) / 10;
+        const bar64 = Math.round(beatSec * 64 * 10) / 10;
+
+        return {
+          intro: 0.0,
+          groove: Math.min(bar32, duration * 0.15),
+          drop: Math.min(bar64, duration * 0.35),
+          outro: Math.max(0, Math.round((duration - bar32) * 10) / 10)
+        };
+      }
+    }
+
+    const webMir = new WebAudioMIR();
+
+    class ID3v2Writer {
+      static encodeSynchsafe(num) {
+        return [
+          (num >> 21) & 0x7f,
+          (num >> 14) & 0x7f,
+          (num >> 7) & 0x7f,
+          num & 0x7f
+        ];
+      }
+
+      static makeTextFrame(frameId, text) {
+        if (!text) return null;
+        const enc = new TextEncoder();
+        const strBytes = enc.encode(text);
+        const bodyLen = 1 + strBytes.length;
+        
+        const frame = new Uint8Array(10 + bodyLen);
+        for (let i = 0; i < 4; i++) frame[i] = frameId.charCodeAt(i);
+        frame[4] = (bodyLen >> 24) & 0xff;
+        frame[5] = (bodyLen >> 16) & 0xff;
+        frame[6] = (bodyLen >> 8) & 0xff;
+        frame[7] = bodyLen & 0xff;
+        frame[8] = 0x00; frame[9] = 0x00;
+        frame[10] = 0x00;
+        frame.set(strBytes, 11);
+        return frame;
+      }
+
+      static makeCommentFrame(text, desc = "") {
+        if (!text) return null;
+        const enc = new TextEncoder();
+        const textBytes = enc.encode(text);
+        const descBytes = enc.encode(desc);
+        const bodyLen = 1 + 3 + descBytes.length + 1 + textBytes.length;
+
+        const frame = new Uint8Array(10 + bodyLen);
+        for (let i = 0; i < 4; i++) frame[i] = "COMM".charCodeAt(i);
+        frame[4] = (bodyLen >> 24) & 0xff;
+        frame[5] = (bodyLen >> 16) & 0xff;
+        frame[6] = (bodyLen >> 8) & 0xff;
+        frame[7] = bodyLen & 0xff;
+        frame[8] = 0x00; frame[9] = 0x00;
+
+        let offset = 10;
+        frame[offset++] = 0x00;
+        frame[offset++] = 'e'.charCodeAt(0);
+        frame[offset++] = 'n'.charCodeAt(0);
+        frame[offset++] = 'g'.charCodeAt(0);
+        frame.set(descBytes, offset);
+        offset += descBytes.length;
+        frame[offset++] = 0x00;
+        frame.set(textBytes, offset);
+        return frame;
+      }
+
+      static applyTagsToMp3(originalBuffer, tags) {
+        const frames = [];
+        if (tags.title) frames.push(this.makeTextFrame("TIT2", tags.title));
+        if (tags.artist) frames.push(this.makeTextFrame("TPE1", tags.artist));
+        if (tags.album) frames.push(this.makeTextFrame("TALB", tags.album));
+        if (tags.bpm) frames.push(this.makeTextFrame("TBPM", String(tags.bpm)));
+        if (tags.key) frames.push(this.makeTextFrame("TKEY", String(tags.key)));
+        if (tags.genre) frames.push(this.makeTextFrame("TCON", tags.genre));
+        if (tags.comments) frames.push(this.makeCommentFrame(tags.comments));
+
+        const validFrames = frames.filter(f => f !== null);
+        let framesSize = 0;
+        for (const f of validFrames) framesSize += f.length;
+
+        const header = new Uint8Array(10);
+        header[0] = 0x49; header[1] = 0x44; header[2] = 0x33;
+        header[3] = 0x03;
+        header[4] = 0x00;
+        header[5] = 0x00;
+        const syncSize = this.encodeSynchsafe(framesSize);
+        header[6] = syncSize[0]; header[7] = syncSize[1];
+        header[8] = syncSize[2]; header[9] = syncSize[3];
+
+        const u8Orig = new Uint8Array(originalBuffer);
+        let audioOffset = 0;
+        if (u8Orig.length > 10 && u8Orig[0] === 0x49 && u8Orig[1] === 0x44 && u8Orig[2] === 0x33) {
+          const oldSize = (u8Orig[6] << 21) | (u8Orig[7] << 14) | (u8Orig[8] << 7) | u8Orig[9];
+          audioOffset = 10 + oldSize;
+          if (audioOffset > u8Orig.length) audioOffset = 0;
+        }
+
+        const audioData = u8Orig.slice(audioOffset);
+        const totalLength = 10 + framesSize + audioData.length;
+        const finalBuffer = new Uint8Array(totalLength);
+
+        finalBuffer.set(header, 0);
+        let curOffset = 10;
+        for (const f of validFrames) {
+          finalBuffer.set(f, curOffset);
+          curOffset += f.length;
+        }
+        finalBuffer.set(audioData, curOffset);
+
+        return finalBuffer.buffer;
+      }
+    }
+
+    function exportRekordboxXmlV6(tracks, filename = 'rekordbox_curadoria_v6.xml') {
+      if (!tracks || tracks.length === 0) {
+        showNotification('Nenhuma faixa disponivel para exportar Rekordbox XML!', 'warning');
+        return;
+      }
+
+      function escapeXml(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;');
+      }
+
+      let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+      xml += '<DJ_PLAYLISTS Version="1.0.0">\n';
+      xml += '  <PRODUCT Name="rekordbox" Version="6.8.0" Company="AlphaTheta"/>\n';
+      xml += `  <COLLECTION Entries="${tracks.length}">\n`;
+
+      tracks.forEach((t, index) => {
+        const trackId = index + 1;
+        const name = escapeXml(t.title || t.name || 'Faixa Desconhecida');
+        const artist = escapeXml(t.artist || 'Gigantera');
+        const genre = escapeXml(t.dest_folder || t.subfolder || '02_Minimal_DeepTech');
+        const totalTime = Math.round(t.duration || 360);
+        const bpm = (parseFloat(t.bpm) || 125.0).toFixed(2);
+        const tonality = t.camelot || '8A';
+        const loc = t.cdn_url ? escapeXml(t.cdn_url) : `file://localhost/${escapeXml(t.name || t.filename || 'track.mp3')}`;
+        const cues = t.cues || { intro: 0.0, groove: 30.0, drop: 60.0, outro: 240.0 };
+
+        xml += `    <TRACK TrackID="${trackId}" Name="${name}" Artist="${artist}" Genre="${genre}" Kind="MP3 File" Size="${t.size || 0}" TotalTime="${totalTime}" AverageBpm="${bpm}" Tonality="${tonality}" BitRate="320" SampleRate="44100" Location="${loc}">\n`;
+        xml += `      <TEMPO Beginning="0.000" Bpm="${bpm}" Metro="4/4" Battito="1"/>\n`;
+        xml += `      <POSITION_MARK Name="Intro" Type="0" Start="${cues.intro || 0.0}" Num="0"/>\n`;
+        xml += `      <POSITION_MARK Name="Groove" Type="0" Start="${cues.groove || 30.0}" Num="1"/>\n`;
+        xml += `      <POSITION_MARK Name="Drop" Type="0" Start="${cues.drop || 60.0}" Num="2"/>\n`;
+        xml += `      <POSITION_MARK Name="Outro" Type="0" Start="${cues.outro || (totalTime - 30.0)}" Num="3"/>\n`;
+        xml += '    </TRACK>\n';
+      });
+
+      xml += '  </COLLECTION>\n';
+      xml += '  <PLAYLISTS>\n';
+      xml += '    <NODE Type="0" Name="ROOT">\n';
+      xml += '      <NODE Name="GIGANTERA_CLUB_MASTER" Type="1" KeyType="0" Entries="' + tracks.length + '">\n';
+      tracks.forEach((t, index) => {
+        xml += `        <TRACK Key="${index + 1}"/>\n`;
+      });
+      xml += '      </NODE>\n';
+      xml += '    </NODE>\n';
+      xml += '  </PLAYLISTS>\n';
+      xml += '</DJ_PLAYLISTS>\n';
+
+      const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      showNotification('Arquivo ' + filename + ' exportado com sucesso!', 'success');
+    }
+
+    async function moveTrackToCanonicalFolder(track, destFolderName) {
+      if (!window.LOCAL_DIR_HANDLE) {
+        showNotification('Conecte sua pasta local antes de mover arquivos!', 'warning');
+        return;
+      }
+      if (track.subfolder === destFolderName) {
+        showNotification(`A faixa "${track.name}" ja esta na pasta ${destFolderName}`, 'info');
+        return;
+      }
+      showNotification(`Movendo "${track.name}" para ${destFolderName}...`, 'info');
+      try {
+        const destDirHandle = await window.LOCAL_DIR_HANDLE.getDirectoryHandle(destFolderName, { create: true });
+        const newFileHandle = await destDirHandle.getFileHandle(track.name, { create: true });
+        const fileData = await track.handle.getFile();
+        const writable = await newFileHandle.createWritable();
+        await writable.write(fileData);
+        await writable.close();
+
+        if (track.sourceDirHandle && track.subfolder !== 'Raiz') {
+          try {
+            await track.sourceDirHandle.removeEntry(track.name);
+          } catch (rmErr) {
+            console.warn('Nao foi possivel remover original:', rmErr);
+          }
+        }
+        showNotification(`Sucesso: "${track.name}" organizada em [${destFolderName}]!`, 'success');
+      } catch (err) {
+        showNotification('Erro ao mover arquivo: ' + err.message, 'warning');
+      }
+    }
+
+    function renderCanonicalDropGrid() {
+      const container = document.getElementById('canonicalDropGrid');
+      if (!container) return;
+      container.innerHTML = '';
+
+      CANONICAL_13_FOLDERS.forEach(folder => {
+        const card = document.createElement('div');
+        card.className = 'drop-target-card';
+        card.innerHTML = `
+          <div class="drop-target-header">
+            <span class="drop-target-folder">${folder}</span>
+          </div>
+          <div class="drop-target-hint">Solte arquivos aqui</div>
+        `;
+
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          card.classList.add('drag-over');
+        });
+        card.addEventListener('dragleave', () => {
+          card.classList.remove('drag-over');
+        });
+        card.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          card.classList.remove('drag-over');
+          const trackIndexStr = e.dataTransfer.getData('text/track-index');
+          if (trackIndexStr !== '') {
+            const trackIndex = parseInt(trackIndexStr, 10);
+            const track = (window.CURRENT_LIBRARY_RENDERED || [])[trackIndex];
+            if (track) {
+              await moveTrackToCanonicalFolder(track, folder);
+            }
+          }
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    function setupUsbRigManager() {
+      const btnRefresh = document.getElementById('btnRefreshUsbList');
+      if (btnRefresh) btnRefresh.addEventListener('click', refreshUsbDevices);
+      const btnDotClean = document.getElementById('btnDotCleanUsb');
+      if (btnDotClean) btnDotClean.addEventListener('click', executeDotClean);
+      const btnFormat = document.getElementById('btnExecuteFormat');
+      if (btnFormat) btnFormat.addEventListener('click', executeUsbFormat);
+    }
+
+    async function executeDotClean() {
+      const sel = document.getElementById('usbTargetSelect') || document.querySelector('[data-device-select="usbDeviceSelect"]');
+      const target = sel ? sel.value : '';
+      if (!target) {
+        showNotification('Selecione um volume USB para higienizar!', 'warning');
+        return;
+      }
+      showNotification('Executando dot_clean e expurgo AppleDouble em ' + target + '...', 'info');
+      try {
+        const resp = await fetch(`${API_BASE}/api/usb/clean`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target_path: target })
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+          showNotification('Expurgo concluido: Zero arquivos ._* ou .DS_Store no pen drive!', 'success');
+        } else {
+          showNotification('Erro na higienizacao: ' + (res.message || 'Falha'), 'warning');
+        }
+      } catch (err) {
+        showNotification('Erro de conexao: ' + err.message, 'warning');
+      }
+    }
+
+    async function executeUsbFormat() {
+      const sel = document.getElementById('usbTargetSelect') || document.querySelector('[data-device-select="usbDeviceSelect"]');
+      const target = sel ? sel.value : '';
+      const labelInput = document.getElementById('fmtVolumeLabel');
+      const label = (labelInput && labelInput.value.trim()) || 'GIGANTERA_DJ';
+      const tokenInput = document.getElementById('fmtConfirmWord');
+      const token = (tokenInput && tokenInput.value.trim()) || '';
+
+      if (token.toUpperCase() !== 'FORMATAR') {
+        showNotification('Digite a palavra FORMATAR para confirmar!', 'warning');
+        return;
+      }
+
+      if (!confirm('Confirmar formatacao permanente de ' + target + ' como FAT32 MBR com o nome ' + label + '?')) {
+        return;
+      }
+
+      showNotification('Formatando ' + target + ' como FAT32 MBR no macOS...', 'info');
+      try {
+        const resp = await fetch(`${API_BASE}/api/usb/format`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            device_node: target,
+            volume_label: label,
+            confirmation_token: token
+          })
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+          showNotification('Pen drive formatado com sucesso como MBR FAT32!', 'success');
+          refreshUsbDevices();
+        } else {
+          showNotification('Falha na formatacao: ' + (res.message || 'Erro'), 'warning');
+        }
+      } catch (err) {
+        showNotification('Erro de comunicacao com backend: ' + err.message, 'warning');
+      }
+    }
+
+    function setupTagEditorModal() {
+      const modal = document.getElementById('tagEditorModal');
+      const btnClose = document.getElementById('btnCloseTagEditor');
+      const btnCancel = document.getElementById('btnCancelTagEditor');
+      const btnSave = document.getElementById('btnSaveTagsToDisk');
+      const btnAutoMir = document.getElementById('btnAutoFillMirInModal');
+      const genreSelect = document.getElementById('tagInputGenre');
+
+      if (!modal) return;
+
+      if (genreSelect) {
+        genreSelect.innerHTML = '';
+        CANONICAL_13_FOLDERS.forEach(f => {
+          const opt = document.createElement('option');
+          opt.value = f;
+          opt.textContent = f;
+          genreSelect.appendChild(opt);
+        });
+      }
+
+      const closeModal = () => modal.classList.remove('open');
+      if (btnClose) btnClose.addEventListener('click', closeModal);
+      if (btnCancel) btnCancel.addEventListener('click', closeModal);
+
+      if (btnAutoMir) {
+        btnAutoMir.addEventListener('click', async () => {
+          if (!window.TAG_EDITING_TRACK) return;
+          showNotification('Executando analise Web MIR para preenchimento...', 'info');
+          try {
+            const file = await window.TAG_EDITING_TRACK.handle.getFile();
+            const res = await webMir.analyzeFile(file);
+            document.getElementById('tagInputBpm').value = res.bpm;
+            document.getElementById('tagInputKey').value = res.camelot;
+            document.getElementById('tagInputComments').value = `Gigantera Club Master [BPM:${res.bpm} KEY:${res.camelot}]`;
+            showNotification('Tags preenchidas automaticamente!', 'success');
+          } catch (e) {
+            showNotification('Erro na analise: ' + e.message, 'warning');
+          }
+        });
+      }
+
+      if (btnSave) {
+        btnSave.addEventListener('click', async () => {
+          if (!window.TAG_EDITING_TRACK) return;
+          const track = window.TAG_EDITING_TRACK;
+          showNotification(`Gravando tags ID3v2.3 em "${track.name}"...`, 'info');
+          try {
+            const file = await track.handle.getFile();
+            const originalBuffer = await file.arrayBuffer();
+            const tags = {
+              title: document.getElementById('tagInputTitle').value.trim(),
+              artist: document.getElementById('tagInputArtist').value.trim(),
+              album: document.getElementById('tagInputAlbum').value.trim(),
+              bpm: parseFloat(document.getElementById('tagInputBpm').value) || 125.0,
+              key: document.getElementById('tagInputKey').value.trim() || '8A',
+              genre: document.getElementById('tagInputGenre').value,
+              comments: document.getElementById('tagInputComments').value.trim()
+            };
+            const updatedBuffer = ID3v2Writer.applyTagsToMp3(originalBuffer, tags);
+            const writable = await track.handle.createWritable();
+            await writable.write(updatedBuffer);
+            await writable.close();
+            showNotification('Tags ID3v2.3 gravadas com sucesso no arquivo fisico!', 'success');
+            closeModal();
+          } catch (err) {
+            showNotification('Erro ao salvar tags: ' + err.message, 'warning');
+          }
+        });
+      }
+    }
+  </script>
+
 </body>
 </html>

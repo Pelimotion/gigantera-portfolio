@@ -73,6 +73,10 @@
       "destination": "/admin/index.html"
     },
     {
+      "source": "/api/dj/:path*",
+      "destination": "https://api-dj.gigantera.xyz/api/:path*"
+    },
+    {
       "source": "/dj",
       "destination": "/dj/index.html"
     },
