@@ -1565,13 +1565,26 @@
 
     function apiUrl(path) {
       const cleanPath = path.startsWith('/') ? path : '/' + path;
+      const subPath = cleanPath.startsWith('/api/') ? cleanPath.slice(4) : (cleanPath === '/api' ? '' : cleanPath);
       if (window.location.origin.includes('gigantera.xyz')) {
-        return '/api/dj' + (cleanPath.startsWith('/api/') ? cleanPath.slice(4) : cleanPath);
+        return '/api/dj' + subPath;
       } else if (window.location.protocol === 'file:') {
-        return 'http://127.0.0.1:5555' + (cleanPath.startsWith('/api/') ? cleanPath : '/api' + cleanPath);
+        return 'http://127.0.0.1:5555/api' + subPath;
       } else {
-        return cleanPath.startsWith('/api/') ? cleanPath : '/api' + cleanPath;
+        return '/api' + subPath;
       }
+    }
+
+    async function safeFetchJson(url, options = {}) {
+      const res = await fetch(url, options);
+      if (!res.ok) {
+        throw new Error('HTTP ' + res.status);
+      }
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        throw new Error('Content-Type nao e JSON');
+      }
+      return await res.json();
     }
 
     function setBackendConnected(isConnected) {
@@ -1772,11 +1785,17 @@
           const tit = (t.title || '').toLowerCase();
           const art = (t.artist || '').toLowerCase();
           const combo = art + '||' + tit;
+          let pathFn = '';
+          if (t.path) {
+            pathFn = t.path.split('/').pop().toLowerCase();
+          }
 
           if (fn && window.LOCAL_FILE_HANDLES.has(fn)) {
             localHandle = window.LOCAL_FILE_HANDLES.get(fn).handle;
           } else if (cleanFn && window.LOCAL_FILE_HANDLES.has(cleanFn)) {
             localHandle = window.LOCAL_FILE_HANDLES.get(cleanFn).handle;
+          } else if (pathFn && window.LOCAL_FILE_HANDLES.has(pathFn)) {
+            localHandle = window.LOCAL_FILE_HANDLES.get(pathFn).handle;
           } else if (window.LOCAL_FILE_HANDLES.has(combo)) {
             localHandle = window.LOCAL_FILE_HANDLES.get(combo).handle;
           } else if (tit && window.LOCAL_FILE_HANDLES.has(tit)) {
@@ -1795,35 +1814,48 @@
           }
         }
 
-        // 2. Se backend local estiver conectado
+        // 2. Fallback Anycast CDN Bunny.net (Fail-safe universal de streaming)
+        if (!audioSrc) {
+          if (t.cdn_url) {
+            audioSrc = t.cdn_url;
+          } else if (t.dest_folder && (t.filename || t.name)) {
+            audioSrc = `https://gigantera-penumbra.b-cdn.net/audio/curadoria/${encodeURIComponent(t.dest_folder)}/${encodeURIComponent(t.filename || t.name)}`;
+          } else if (t.path && t.path.includes('Curadoria_Preparada/')) {
+            const parts = t.path.split('Curadoria_Preparada/')[1].split('/');
+            if (parts.length >= 2) {
+              const folder = parts[0];
+              const file = parts.slice(1).join('/');
+              audioSrc = `https://gigantera-penumbra.b-cdn.net/audio/curadoria/${encodeURIComponent(folder)}/${encodeURIComponent(file)}`;
+            }
+          } else if (t.path && t.path.includes('/')) {
+            const parts = t.path.split('/');
+            if (parts.length >= 2) {
+              const folder = parts[parts.length - 2];
+              const file = parts[parts.length - 1];
+              if (folder.startsWith('0') || folder.startsWith('1')) {
+                audioSrc = `https://gigantera-penumbra.b-cdn.net/audio/curadoria/${encodeURIComponent(folder)}/${encodeURIComponent(file)}`;
+              }
+            }
+          } else if (t.url && (t.url.startsWith('http://') || t.url.startsWith('https://'))) {
+            audioSrc = t.url;
+          } else if (t.preview_url && (t.preview_url.startsWith('http://') || t.preview_url.startsWith('https://'))) {
+            audioSrc = t.preview_url;
+          }
+        }
+
+        // 3. Fallback Backend Proxy (Apenas se o backend local estiver ativo)
         if (!audioSrc && window.BACKEND_CONNECTED) {
           const safeArtist = encodeURIComponent(t.artist || '');
           const safeTitle = encodeURIComponent(t.title || '');
           const safeHash = encodeURIComponent(t.hash || '');
           const safeUrl = encodeURIComponent(t.url || '');
           const safePath = encodeURIComponent(t.localPath || t.local_filepath || t.path || '');
-          audioSrc = apiUrl(`/api/proxy_audio?hash=${safeHash}&artist=${safeArtist}&title=${safeTitle}&url=${safeUrl}&path=${safePath}`);
+          audioSrc = apiUrl(`/proxy_audio?hash=${safeHash}&artist=${safeArtist}&title=${safeTitle}&url=${safeUrl}&path=${safePath}`);
         }
 
-        // 3. Fallback Anycast CDN Bunny.net (Fail-safe universal de streaming)
         if (!audioSrc) {
-          if (t.cdn_url) {
-            audioSrc = t.cdn_url;
-          } else if (t.dest_folder && (t.filename || t.name)) {
-            audioSrc = `https://gigantera-penumbra.b-cdn.net/audio/curadoria/${encodeURIComponent(t.dest_folder)}/${encodeURIComponent(t.filename || t.name)}`;
-          } else if (t.url && (t.url.startsWith('http://') || t.url.startsWith('https://'))) {
-            audioSrc = t.url;
-          }
-        }
-
-        // 4. Fallback relativo final
-        if (!audioSrc) {
-          const safeArtist = encodeURIComponent(t.artist || '');
-          const safeTitle = encodeURIComponent(t.title || '');
-          const safeHash = encodeURIComponent(t.hash || '');
-          const safeUrl = encodeURIComponent(t.url || '');
-          const safePath = encodeURIComponent(t.localPath || t.local_filepath || t.path || '');
-          audioSrc = apiUrl(`/api/proxy_audio?hash=${safeHash}&artist=${safeArtist}&title=${safeTitle}&url=${safeUrl}&path=${safePath}`);
+          showNotification('Audio indisponivel offline para esta faixa. Inicie o daemon no MacBook.', 'warning');
+          return;
         }
 
         this.audio.src = audioSrc;
@@ -2514,18 +2546,31 @@
       }
     }
 
-    function loadHunterHistory() {
-      fetch(`${API_BASE}/api/history`)
-        .then(r => r.json())
-        .then(data => {
+    async function loadHunterHistory() {
+      try {
+        if (window.BACKEND_CONNECTED) {
+          const data = await safeFetchJson(apiUrl('/history'));
           window.HUNTER_DOWNLOAD_HISTORY = data.history || [];
-          const countEl = document.getElementById('hunterHistoryCount');
-          if (countEl) countEl.textContent = window.HUNTER_DOWNLOAD_HISTORY.length;
-          renderHunterHistoryTable();
-        })
-        .catch(err => {
-          console.warn('Erro ao carregar historico de downloads:', err);
-        });
+        } else {
+          const cached = localStorage.getItem('gigantera_hunter_history');
+          if (cached) {
+            window.HUNTER_DOWNLOAD_HISTORY = JSON.parse(cached);
+          } else {
+            try {
+              const cloudData = await safeFetchJson('/dj/hunter_history.json');
+              window.HUNTER_DOWNLOAD_HISTORY = cloudData.history || [];
+            } catch (_) {
+              window.HUNTER_DOWNLOAD_HISTORY = [];
+            }
+          }
+        }
+      } catch (_) {
+        const cached = localStorage.getItem('gigantera_hunter_history');
+        window.HUNTER_DOWNLOAD_HISTORY = cached ? JSON.parse(cached) : [];
+      }
+      const countEl = document.getElementById('hunterHistoryCount');
+      if (countEl) countEl.textContent = (window.HUNTER_DOWNLOAD_HISTORY || []).length;
+      renderHunterHistoryTable();
     }
 
     function renderHunterHistoryTable() {
@@ -2583,6 +2628,10 @@
     }
 
     function triggerInflowRefresh() {
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Varredura underground proativa requer daemon local no MacBook.', 'info');
+        return;
+      }
       showNotification('Varrendo novas fontes underground excluindo faixas ja no acervo...', 'info');
       fetch(`${API_BASE}/api/inflow/refresh`, {
         method: 'POST',
@@ -2603,46 +2652,45 @@
       });
     }
 
-    function loadFullLibraryTracks() {
-      fetch(apiUrl('/api/library/all'))
-        .then(r => {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.json();
-        })
-        .then(data => {
-          if (!data || !data.tracks) throw new Error('Dados invalidos');
-          if (!APP_STATE.library) APP_STATE.library = {};
-          APP_STATE.library.all_tracks = data.tracks || [];
-          const kpi = document.getElementById('metricPreparedTracks');
-          if (kpi) kpi.textContent = APP_STATE.library.all_tracks.length;
-          matchLocalFilesWithLibrary();
-          renderLibraryTable();
-        })
-        .catch(err => {
-          console.warn('Backend local offline ou inacessivel. Ativando Modo Nuvem Fail-Safe (manifest_curadoria.json)...', err);
-          loadManifestFromCloud();
-        });
+    async function loadFullLibraryTracks() {
+      if (window.BACKEND_CONNECTED) {
+        try {
+          const data = await safeFetchJson(apiUrl('/library/all'));
+          if (data && data.tracks && data.tracks.length > 0) {
+            if (!APP_STATE.library) APP_STATE.library = {};
+            APP_STATE.library.all_tracks = data.tracks;
+            const kpi = document.getElementById('metricPreparedTracks');
+            if (kpi) kpi.textContent = APP_STATE.library.all_tracks.length;
+            matchLocalFilesWithLibrary();
+            renderLibraryTable();
+            return;
+          }
+        } catch (_) {
+          // Fallback silencioso para manifesto nuvem
+        }
+      }
+      loadManifestFromCloud();
     }
 
-    function loadManifestFromCloud() {
-      fetch('/dj/manifest_curadoria.json')
-        .then(r => {
-          if (!r.ok) return fetch('https://gigantera-penumbra.b-cdn.net/audio/curadoria/manifest_curadoria.json');
-          return r;
-        })
-        .then(r => r.json())
-        .then(manifest => {
+    async function loadManifestFromCloud() {
+      try {
+        let manifest = null;
+        try {
+          manifest = await safeFetchJson('/dj/manifest_curadoria.json');
+        } catch (_) {
+          manifest = await safeFetchJson('https://gigantera-penumbra.b-cdn.net/audio/curadoria/manifest_curadoria.json');
+        }
+        if (manifest && manifest.tracks) {
           if (!APP_STATE.library) APP_STATE.library = {};
-          APP_STATE.library.all_tracks = manifest.tracks || [];
+          APP_STATE.library.all_tracks = manifest.tracks;
           const kpi = document.getElementById('metricPreparedTracks');
           if (kpi) kpi.textContent = APP_STATE.library.all_tracks.length;
           matchLocalFilesWithLibrary();
           renderLibraryTable();
-          showNotification('Modo Nuvem Ativo: 561 faixas prontas com streaming Anycast CDN!', 'info');
-        })
-        .catch(e => {
-          console.error('Falha ao carregar manifesto remoto:', e);
-        });
+        }
+      } catch (e) {
+        console.warn('Modo Nuvem: usando acervo embutido no estado inicial.');
+      }
     }
 
     window.LIB_PAGE = 1;
@@ -2657,6 +2705,10 @@
       const t = window.CURRENT_LIBRARY_RENDERED && window.CURRENT_LIBRARY_RENDERED[idx];
       if (!t || !t.path) {
         showNotification('Caminho do arquivo nao encontrado no acervo', 'error');
+        return;
+      }
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Abrir no Finder requer daemon local ativo no MacBook.', 'info');
         return;
       }
       fetch(`${API_BASE}/api/reveal_in_finder?path=${encodeURIComponent(t.path)}`)
@@ -2970,6 +3022,12 @@
       if (!select) return;
       select.innerHTML = '<option value="">Buscando volumes e pen drives...</option>';
 
+      if (!window.BACKEND_CONNECTED) {
+        select.innerHTML = '<option value="">Modo Nuvem: selecione as pastas locais pelo conector Web FS</option>';
+        onUsbTargetChange();
+        return;
+      }
+
       fetch(`${API_BASE}/api/usb/devices`)
         .then(r => r.json())
         .then(data => {
@@ -3282,27 +3340,34 @@
     window.PROMOS_STATE = { labels: [], config: {} };
     window._currentModalLabelId = null;
 
-    function loadPromosData() {
-      fetch(`${API_BASE}/api/promos`)
-        .then(r => r.json())
-        .then(data => {
-          window.PROMOS_STATE = data;
-          const kpis = data.metrics || {};
-          const elTotal = document.getElementById('promoMetricTotal');
-          const elApplied = document.getElementById('promoMetricApplied');
-          const elAccepted = document.getElementById('promoMetricAccepted');
-          const elCoverage = document.getElementById('promoMetricCoverage');
+    async function loadPromosData() {
+      try {
+        if (window.BACKEND_CONNECTED) {
+          window.PROMOS_STATE = await safeFetchJson(apiUrl('/promos'));
+        } else {
+          window.PROMOS_STATE = await safeFetchJson('/dj/promos_pools_data.json');
+        }
+      } catch (_) {
+        try {
+          window.PROMOS_STATE = await safeFetchJson('/dj/promos_pools_data.json');
+        } catch (e) {
+          console.warn('Modo Nuvem: dados de promos pools operando offline.');
+        }
+      }
 
-          if (elTotal) elTotal.textContent = kpis.total_labels || (data.labels || []).length;
-          if (elApplied) elApplied.textContent = kpis.applied_count || 0;
-          if (elAccepted) elAccepted.textContent = kpis.accepted_count || 0;
-          if (elCoverage) elCoverage.textContent = (kpis.coverage_percent || 0).toFixed(0) + '%';
+      const data = window.PROMOS_STATE || { labels: [], metrics: {} };
+      const kpis = data.metrics || {};
+      const elTotal = document.getElementById('promoMetricTotal');
+      const elApplied = document.getElementById('promoMetricApplied');
+      const elAccepted = document.getElementById('promoMetricAccepted');
+      const elCoverage = document.getElementById('promoMetricCoverage');
 
-          renderPromosCards();
-        })
-        .catch(err => {
-          console.warn('Erro ao carregar dados de promo pools:', err);
-        });
+      if (elTotal) elTotal.textContent = kpis.total_labels || (data.labels || []).length;
+      if (elApplied) elApplied.textContent = kpis.applied_count || 0;
+      if (elAccepted) elAccepted.textContent = kpis.accepted_count || 0;
+      if (elCoverage) elCoverage.textContent = (kpis.coverage_percent || 0).toFixed(0) + '%';
+
+      renderPromosCards();
     }
 
     function renderPromosCards() {
@@ -3579,43 +3644,73 @@
       });
     }
 
-    function refreshLogs() {
-      fetch(`${API_BASE}/api/logs`)
-        .then(r => r.json())
-        .then(logs => {
-          const c = document.getElementById('logConsole');
-          if (!c) return;
-          c.innerHTML = '';
-          logs.forEach(l => {
-            const div = document.createElement('div');
-            div.className = 'log-line';
-            div.innerHTML = `
-              <span class="log-ts">${l.timestamp}</span>
-              <span class="log-lvl-${l.level}">[${l.level}]</span>
-              <span class="log-msg">${l.message}</span>
-            `;
-            c.appendChild(div);
-          });
-          c.scrollTop = c.scrollHeight;
-        })
-        .catch(() => {});
+    let pollTimer = null;
+    let pollIntervalMs = 5000;
+    let logsTimer = null;
+
+    async function refreshLogs() {
+      if (!window.BACKEND_CONNECTED) {
+        const c = document.getElementById('logConsole');
+        if (c && c.children.length === 0) {
+          c.innerHTML = `
+            <div class="log-line">
+              <span class="log-ts">--:--:--</span>
+              <span class="log-lvl-INFO">[MODO NUVEM]</span>
+              <span class="log-msg">Fail-Safe Ativo: streaming via Anycast CDN e indexacao local prontas. Inicie o daemon local para streaming de logs em tempo real.</span>
+            </div>
+          `;
+        }
+        scheduleNextLogs(30000);
+        return;
+      }
+
+      try {
+        const logs = await safeFetchJson(apiUrl('/logs'));
+        const c = document.getElementById('logConsole');
+        if (!c) return;
+        c.innerHTML = '';
+        logs.forEach(l => {
+          const div = document.createElement('div');
+          div.className = 'log-line';
+          div.innerHTML = `
+            <span class="log-ts">${l.timestamp}</span>
+            <span class="log-lvl-${l.level}">[${l.level}]</span>
+            <span class="log-msg">${l.message}</span>
+          `;
+          c.appendChild(div);
+        });
+        c.scrollTop = c.scrollHeight;
+        scheduleNextLogs(4000);
+      } catch (_) {
+        scheduleNextLogs(30000);
+      }
     }
 
-    function pollState() {
-      fetch(`${API_BASE}/api/state`)
-        .then(r => {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.json();
-        })
-        .then(s => {
-          setBackendConnected(true);
-          APP_STATE = s;
-          renderDashboard();
-          DeckPlayer.updateUI();
-        })
-        .catch(() => {
-          setBackendConnected(false);
-        });
+    function scheduleNextLogs(delay = 4000) {
+      if (logsTimer) clearTimeout(logsTimer);
+      logsTimer = setTimeout(refreshLogs, delay);
+    }
+
+    async function pollState() {
+      try {
+        const s = await safeFetchJson(apiUrl('/state'));
+        setBackendConnected(true);
+        APP_STATE = s;
+        renderDashboard();
+        DeckPlayer.updateUI();
+        if (pollIntervalMs !== 5000) {
+          pollIntervalMs = 5000;
+        }
+      } catch (_) {
+        setBackendConnected(false);
+        pollIntervalMs = 45000;
+      }
+      scheduleNextPoll();
+    }
+
+    function scheduleNextPoll() {
+      if (pollTimer) clearTimeout(pollTimer);
+      pollTimer = setTimeout(pollState, pollIntervalMs);
     }
 
     function openScanModal() {
@@ -3630,6 +3725,11 @@
       if (!src) return;
       closeScanModal();
       
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Mineracao autonoma requer daemon local ativo no MacBook.', 'warning');
+        return;
+      }
+
       document.getElementById('agentDot').className = 'pulse-dot working';
       document.getElementById('agentStatusText').textContent = 'Iniciando mineracao...';
 
@@ -3654,6 +3754,11 @@
     }
 
     function submitEnqueue() {
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Adicionar a fila requer daemon local ativo no MacBook.', 'warning');
+        closeEnqueueModal();
+        return;
+      }
       const dj = document.getElementById('enqDj').value;
       const ev = document.getElementById('enqEvent').value;
       const genre = document.getElementById('enqGenre').value;
@@ -3685,6 +3790,11 @@
     }
 
     function submitInflowScan() {
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Varredura proativa requer daemon local ativo no MacBook.', 'warning');
+        closeInflowModal();
+        return;
+      }
       const tag = document.getElementById('inflowModalTag').value;
       const query = document.getElementById('inflowModalQuery').value.trim();
       const limit = parseInt(document.getElementById('inflowModalLimit').value) || 10;
@@ -3705,6 +3815,10 @@
     }
 
     function checkUsbLive() {
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Checagem USB nativa requer daemon local no MacBook.', 'info');
+        return;
+      }
       fetch(`${API_BASE}/api/usb`)
         .then(r => r.json())
         .then(u => {
@@ -3775,6 +3889,10 @@
     }
 
     function revealInFinder(filePath) {
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Abrir no Finder requer daemon local ativo no MacBook.', 'info');
+        return;
+      }
       const resolved = (filePath && filePath.includes('%')) ? decodeURIComponent(filePath) : (filePath || '');
       if (!resolved) {
         showNotification('Caminho do arquivo nao informado.', 'warning');
@@ -3799,6 +3917,10 @@
     }
 
     function downloadTrackDirect(artist, title, dlUrl, sourceSet) {
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Download de faixa requer daemon local ativo no MacBook.', 'warning');
+        return;
+      }
       showNotification('Iniciando download e preparacao de audio: ' + artist + ' : ' + title, 'info');
       fetch(`${API_BASE}/api/download_track`, {
         method: 'POST',
@@ -3994,8 +4116,23 @@
               window.LOCAL_FILE_HANDLES.set(lowerName, info);
               const cleanBase = name.replace(/\.[^/.]+$/, "").toLowerCase();
               window.LOCAL_FILE_HANDLES.set(cleanBase, info);
+
+              // Strip prefixos numericos (ex: "01 - Theus Mago" -> "Theus Mago")
+              const cleanStripped = cleanBase.replace(/^\d+[\s_-]+/, '').trim();
+              if (cleanStripped !== cleanBase) {
+                window.LOCAL_FILE_HANDLES.set(cleanStripped, info);
+              }
+
               if (cleanBase.includes(' - ')) {
                 const parts = cleanBase.split(' - ');
+                const artist = parts[0].trim();
+                const title = parts.slice(1).join(' - ').trim();
+                window.LOCAL_FILE_HANDLES.set(artist + '||' + title, info);
+                window.LOCAL_FILE_HANDLES.set(title, info);
+              }
+
+              if (cleanStripped.includes(' - ')) {
+                const parts = cleanStripped.split(' - ');
                 const artist = parts[0].trim();
                 const title = parts.slice(1).join(' - ').trim();
                 window.LOCAL_FILE_HANDLES.set(artist + '||' + title, info);
@@ -4010,7 +4147,7 @@
         await scanDir(dirHandle);
         matchLocalFilesWithLibrary();
         renderLibraryTable();
-        showNotification('Pasta local conectada: ' + dirHandle.name + ' (' + foundCount + ' musicas indexadas para playback direto)', 'success');
+        showNotification('Pasta local conectada: ' + dirHandle.name + ' (' + foundCount + ' musicas indexadas). Faixas sem arquivo local tocam via Anycast CDN!', 'success');
         
         const beacon = document.getElementById('connBeacon');
         const dot = document.getElementById('connDot');
@@ -4027,8 +4164,13 @@
     function matchLocalFilesWithLibrary() {
       if (!window.LOCAL_FILE_HANDLES || !APP_STATE.library || !APP_STATE.library.all_tracks) return;
       APP_STATE.library.all_tracks.forEach(t => {
-        const fn = (t.filename || t.name || '').toLowerCase();
-        const cleanFn = fn.replace(/\.[^/.]+$/, "");
+        let fn = (t.filename || t.name || '').toLowerCase();
+        if (!fn && t.path) {
+          fn = t.path.split('/').pop().toLowerCase();
+          t.filename = t.path.split('/').pop();
+        }
+        const cleanFn = fn ? fn.replace(/\.[^/.]+$/, "") : "";
+        const cleanStripped = cleanFn ? cleanFn.replace(/^\d+[\s_-]+/, '').trim() : "";
         const tit = (t.title || '').toLowerCase();
         const art = (t.artist || '').toLowerCase();
         const combo = art + '||' + tit;
@@ -4038,6 +4180,9 @@
           t.isLocal = true;
         } else if (cleanFn && window.LOCAL_FILE_HANDLES.has(cleanFn)) {
           t.localFileHandle = window.LOCAL_FILE_HANDLES.get(cleanFn).handle;
+          t.isLocal = true;
+        } else if (cleanStripped && window.LOCAL_FILE_HANDLES.has(cleanStripped)) {
+          t.localFileHandle = window.LOCAL_FILE_HANDLES.get(cleanStripped).handle;
           t.isLocal = true;
         } else if (window.LOCAL_FILE_HANDLES.has(combo)) {
           t.localFileHandle = window.LOCAL_FILE_HANDLES.get(combo).handle;
@@ -4631,13 +4776,11 @@
     renderCanonicalDropGrid();
     setupTagEditorModal();
     renderDashboard();
-    refreshLogs();
     pollState();
+    refreshLogs();
     loadFullLibraryTracks();
     loadHunterHistory();
     loadPromosData();
-    setInterval(pollState, 5000);
-    setInterval(refreshLogs, 4000);
   
   </script>
 
