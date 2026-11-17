@@ -1563,7 +1563,19 @@
       ? '/api/dj'
       : (window.location.protocol === 'file:' ? 'http://127.0.0.1:5555' : '');
 
+    function apiUrl(path) {
+      const cleanPath = path.startsWith('/') ? path : '/' + path;
+      if (window.location.origin.includes('gigantera.xyz')) {
+        return '/api/dj' + (cleanPath.startsWith('/api/') ? cleanPath.slice(4) : cleanPath);
+      } else if (window.location.protocol === 'file:') {
+        return 'http://127.0.0.1:5555' + (cleanPath.startsWith('/api/') ? cleanPath : '/api' + cleanPath);
+      } else {
+        return cleanPath.startsWith('/api/') ? cleanPath : '/api' + cleanPath;
+      }
+    }
+
     function setBackendConnected(isConnected) {
+      window.BACKEND_CONNECTED = isConnected;
       const banner = document.getElementById('offlineBanner');
       const connDot = document.getElementById('connDot');
       const connText = document.getElementById('connStatusText');
@@ -1577,13 +1589,23 @@
         }
         if (connBeacon) connBeacon.style.borderColor = 'rgba(16, 185, 129, 0.3)';
       } else {
-        if (banner) banner.classList.add('visible');
-        if (connDot) connDot.style.background = 'var(--accent-rose)';
-        if (connText) {
-          connText.textContent = 'Servidor Offline';
-          connText.style.color = 'var(--accent-rose)';
+        if (window.LOCAL_DIR_HANDLE) {
+          if (banner) banner.classList.remove('visible');
+          if (connDot) connDot.style.background = 'var(--accent-emerald)';
+          if (connText) {
+            connText.textContent = 'Disco Local: ' + window.LOCAL_DIR_HANDLE.name;
+            connText.style.color = 'var(--accent-emerald)';
+          }
+          if (connBeacon) connBeacon.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        } else {
+          if (banner) banner.classList.remove('visible');
+          if (connDot) connDot.style.background = 'var(--accent-amber)';
+          if (connText) {
+            connText.textContent = 'Modo Nuvem (Bunny CDN)';
+            connText.style.color = 'var(--accent-amber)';
+          }
+          if (connBeacon) connBeacon.style.borderColor = 'rgba(245, 158, 11, 0.4)';
         }
-        if (connBeacon) connBeacon.style.borderColor = 'rgba(244, 63, 94, 0.4)';
       }
     }
 
@@ -1732,7 +1754,7 @@
         this.currentIndex = startIndex || 0;
       },
 
-      playTrack(t) {
+      async playTrack(t) {
         if (!this.audio) this.init();
         if (!this.audio) return;
 
@@ -1740,14 +1762,71 @@
         const key = (t.artist + '_' + t.title + '_' + (t.hash || '')).toLowerCase();
         this.currentTrackKey = key;
 
-        const safeArtist = encodeURIComponent(t.artist || '');
-        const safeTitle = encodeURIComponent(t.title || '');
-        const safeHash = encodeURIComponent(t.hash || '');
-        const safeUrl = encodeURIComponent(t.url || '');
-        const safePath = encodeURIComponent(t.localPath || t.local_filepath || t.path || '');
-        const src = `${API_BASE}/api/proxy_audio?hash=${safeHash}&artist=${safeArtist}&title=${safeTitle}&url=${safeUrl}&path=${safePath}`;
+        let audioSrc = null;
 
-        this.audio.src = src;
+        // 1. Prioridade Maxima: Arquivo local nativo no SSD via Web File System Access API (Zero latencia, sem backend)
+        let localHandle = t.localFileHandle || t.handle;
+        if (!localHandle && window.LOCAL_FILE_HANDLES) {
+          const fn = (t.filename || t.name || '').toLowerCase();
+          const cleanFn = fn.replace(/\.[^/.]+$/, "");
+          const tit = (t.title || '').toLowerCase();
+          const art = (t.artist || '').toLowerCase();
+          const combo = art + '||' + tit;
+
+          if (fn && window.LOCAL_FILE_HANDLES.has(fn)) {
+            localHandle = window.LOCAL_FILE_HANDLES.get(fn).handle;
+          } else if (cleanFn && window.LOCAL_FILE_HANDLES.has(cleanFn)) {
+            localHandle = window.LOCAL_FILE_HANDLES.get(cleanFn).handle;
+          } else if (window.LOCAL_FILE_HANDLES.has(combo)) {
+            localHandle = window.LOCAL_FILE_HANDLES.get(combo).handle;
+          } else if (tit && window.LOCAL_FILE_HANDLES.has(tit)) {
+            localHandle = window.LOCAL_FILE_HANDLES.get(tit).handle;
+          }
+        }
+
+        if (localHandle) {
+          try {
+            const file = await localHandle.getFile();
+            audioSrc = URL.createObjectURL(file);
+            t.platform = 'Disco Local SSD';
+            t.isLocal = true;
+          } catch (err) {
+            console.warn('Falha ao obter arquivo via file handle local:', err);
+          }
+        }
+
+        // 2. Se backend local estiver conectado
+        if (!audioSrc && window.BACKEND_CONNECTED) {
+          const safeArtist = encodeURIComponent(t.artist || '');
+          const safeTitle = encodeURIComponent(t.title || '');
+          const safeHash = encodeURIComponent(t.hash || '');
+          const safeUrl = encodeURIComponent(t.url || '');
+          const safePath = encodeURIComponent(t.localPath || t.local_filepath || t.path || '');
+          audioSrc = apiUrl(`/api/proxy_audio?hash=${safeHash}&artist=${safeArtist}&title=${safeTitle}&url=${safeUrl}&path=${safePath}`);
+        }
+
+        // 3. Fallback Anycast CDN Bunny.net (Fail-safe universal de streaming)
+        if (!audioSrc) {
+          if (t.cdn_url) {
+            audioSrc = t.cdn_url;
+          } else if (t.dest_folder && (t.filename || t.name)) {
+            audioSrc = `https://gigantera-penumbra.b-cdn.net/audio/curadoria/${encodeURIComponent(t.dest_folder)}/${encodeURIComponent(t.filename || t.name)}`;
+          } else if (t.url && (t.url.startsWith('http://') || t.url.startsWith('https://'))) {
+            audioSrc = t.url;
+          }
+        }
+
+        // 4. Fallback relativo final
+        if (!audioSrc) {
+          const safeArtist = encodeURIComponent(t.artist || '');
+          const safeTitle = encodeURIComponent(t.title || '');
+          const safeHash = encodeURIComponent(t.hash || '');
+          const safeUrl = encodeURIComponent(t.url || '');
+          const safePath = encodeURIComponent(t.localPath || t.local_filepath || t.path || '');
+          audioSrc = apiUrl(`/api/proxy_audio?hash=${safeHash}&artist=${safeArtist}&title=${safeTitle}&url=${safeUrl}&path=${safePath}`);
+        }
+
+        this.audio.src = audioSrc;
         this.audio.play().catch(err => {
           console.warn('Playback pendente ou restrito pelo navegador:', err);
         });
@@ -2525,17 +2604,44 @@
     }
 
     function loadFullLibraryTracks() {
-      fetch(`${API_BASE}/api/library/all`)
-        .then(r => r.json())
+      fetch(apiUrl('/api/library/all'))
+        .then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
         .then(data => {
+          if (!data || !data.tracks) throw new Error('Dados invalidos');
           if (!APP_STATE.library) APP_STATE.library = {};
           APP_STATE.library.all_tracks = data.tracks || [];
           const kpi = document.getElementById('metricPreparedTracks');
           if (kpi) kpi.textContent = APP_STATE.library.all_tracks.length;
+          matchLocalFilesWithLibrary();
           renderLibraryTable();
         })
         .catch(err => {
-          console.warn('Erro ao carregar acervo master completo:', err);
+          console.warn('Backend local offline ou inacessivel. Ativando Modo Nuvem Fail-Safe (manifest_curadoria.json)...', err);
+          loadManifestFromCloud();
+        });
+    }
+
+    function loadManifestFromCloud() {
+      fetch('/dj/manifest_curadoria.json')
+        .then(r => {
+          if (!r.ok) return fetch('https://gigantera-penumbra.b-cdn.net/audio/curadoria/manifest_curadoria.json');
+          return r;
+        })
+        .then(r => r.json())
+        .then(manifest => {
+          if (!APP_STATE.library) APP_STATE.library = {};
+          APP_STATE.library.all_tracks = manifest.tracks || [];
+          const kpi = document.getElementById('metricPreparedTracks');
+          if (kpi) kpi.textContent = APP_STATE.library.all_tracks.length;
+          matchLocalFilesWithLibrary();
+          renderLibraryTable();
+          showNotification('Modo Nuvem Ativo: 561 faixas prontas com streaming Anycast CDN!', 'info');
+        })
+        .catch(e => {
+          console.error('Falha ao carregar manifesto remoto:', e);
         });
     }
 
@@ -2707,17 +2813,45 @@
     function playLibraryTrack(idx) {
       const t = window.CURRENT_LIBRARY_RENDERED && window.CURRENT_LIBRARY_RENDERED[idx];
       if (!t) return;
+
+      if (!t.localFileHandle && window.LOCAL_FILE_HANDLES) {
+        const fn = (t.filename || t.name || '').toLowerCase();
+        const cleanFn = fn.replace(/\.[^/.]+$/, "");
+        const tit = (t.title || '').toLowerCase();
+        const art = (t.artist || '').toLowerCase();
+        const combo = art + '||' + tit;
+
+        if (fn && window.LOCAL_FILE_HANDLES.has(fn)) {
+          t.localFileHandle = window.LOCAL_FILE_HANDLES.get(fn).handle;
+          t.isLocal = true;
+        } else if (cleanFn && window.LOCAL_FILE_HANDLES.has(cleanFn)) {
+          t.localFileHandle = window.LOCAL_FILE_HANDLES.get(cleanFn).handle;
+          t.isLocal = true;
+        } else if (window.LOCAL_FILE_HANDLES.has(combo)) {
+          t.localFileHandle = window.LOCAL_FILE_HANDLES.get(combo).handle;
+          t.isLocal = true;
+        } else if (tit && window.LOCAL_FILE_HANDLES.has(tit)) {
+          t.localFileHandle = window.LOCAL_FILE_HANDLES.get(tit).handle;
+          t.isLocal = true;
+        }
+      }
+
       const trackObj = {
         hash: 'lib_' + (t.track_id || idx),
         artist: t.artist || '',
         title: t.title || '',
         remix: t.dest_folder || 'Master',
         url: '',
+        cdn_url: t.cdn_url || (t.dest_folder && (t.filename || t.name) ? `https://gigantera-penumbra.b-cdn.net/audio/curadoria/${encodeURIComponent(t.dest_folder)}/${encodeURIComponent(t.filename || t.name)}` : ''),
         downloadUrl: '',
-        platform: 'Acervo Master (561 Faixas)',
-        isFree: false,
+        platform: t.localFileHandle ? 'Disco Local SSD' : 'Anycast CDN (561 Faixas)',
+        isFree: Boolean(t.localFileHandle),
         setName: t.dest_folder || '',
-        localPath: t.path || ''
+        localPath: t.path || '',
+        dest_folder: t.dest_folder || '',
+        filename: t.filename || t.name || '',
+        localFileHandle: t.localFileHandle || null,
+        isLocal: Boolean(t.localFileHandle || t.isLocal)
       };
       const btn = document.querySelector(`button[data-lib-index="${idx}"]`);
       DeckPlayer.toggleTrack(btn, trackObj);
@@ -3820,40 +3954,105 @@
       exportSingleSetMd(s.set_id);
     }
 
-    // Inicializacao
-    DeckPlayer.init();
-    setupUsbRigManager();
-    renderCanonicalDropGrid();
-    setupTagEditorModal();
-    renderDashboard();
-    refreshLogs();
-    pollState();
-    loadHunterHistory();
-    loadPromosData();
-    setInterval(pollState, 5000);
-    setInterval(refreshLogs, 4000);
-  </script>
 
-  <script>
+
+    // ============================================================================
+    // CONECTOR WEB FILE SYSTEM ACCESS API & INDEXACAO LOCAL
+    // ============================================================================
+
     async function connectLocalFsDirectory() {
       if (!('showDirectoryPicker' in window)) {
-        alert('Seu navegador nao suporta a Web File System Access API nativa. Utilize Google Chrome ou Microsoft Edge no desktop.');
+        alert('Seu navegador nao suporta a Web File System Access API nativa. Utilize Google Chrome, Brave ou Microsoft Edge no desktop.');
         return;
       }
       try {
         const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        showNotification('Pasta local conectada com sucesso: ' + handle.name, 'success');
+        window.LOCAL_DIR_HANDLE = handle;
+        showNotification('Conectando pasta local: ' + handle.name + '...', 'info');
+        await indexLocalDirectory(handle);
       } catch (err) {
         if (err.name !== 'AbortError') {
-          showNotification('Erro ao conectar pasta: ' + err.message, 'error');
+          showNotification('Erro ao conectar pasta: ' + err.message, 'warning');
         }
       }
     }
-  </script>
 
-  <script>
+    async function indexLocalDirectory(dirHandle) {
+      window.LOCAL_FILE_HANDLES = new Map();
+      let foundCount = 0;
+
+      async function scanDir(handle, relPath = '') {
+        for await (const [name, entry] of handle.entries()) {
+          if (entry.kind === 'directory') {
+            await scanDir(entry, relPath ? (relPath + '/' + name) : name);
+          } else if (entry.kind === 'file') {
+            const ext = name.split('.').pop().toLowerCase();
+            if (['mp3', 'wav', 'aiff', 'flac', 'm4a'].includes(ext)) {
+              foundCount++;
+              const info = { handle: entry, name: name, subfolder: relPath };
+              const lowerName = name.toLowerCase();
+              window.LOCAL_FILE_HANDLES.set(lowerName, info);
+              const cleanBase = name.replace(/\.[^/.]+$/, "").toLowerCase();
+              window.LOCAL_FILE_HANDLES.set(cleanBase, info);
+              if (cleanBase.includes(' - ')) {
+                const parts = cleanBase.split(' - ');
+                const artist = parts[0].trim();
+                const title = parts.slice(1).join(' - ').trim();
+                window.LOCAL_FILE_HANDLES.set(artist + '||' + title, info);
+                window.LOCAL_FILE_HANDLES.set(title, info);
+              }
+            }
+          }
+        }
+      }
+
+      try {
+        await scanDir(dirHandle);
+        matchLocalFilesWithLibrary();
+        renderLibraryTable();
+        showNotification('Pasta local conectada: ' + dirHandle.name + ' (' + foundCount + ' musicas indexadas para playback direto)', 'success');
+        
+        const beacon = document.getElementById('connBeacon');
+        const dot = document.getElementById('connDot');
+        const txt = document.getElementById('connStatusText');
+        if (txt) txt.textContent = 'Disco Local: ' + dirHandle.name;
+        if (dot) dot.style.background = 'var(--accent-emerald)';
+        if (beacon) beacon.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      } catch (e) {
+        console.warn('Erro ao varrer pasta local:', e);
+        showNotification('Erro na indexacao da pasta: ' + e.message, 'warning');
+      }
+    }
+
+    function matchLocalFilesWithLibrary() {
+      if (!window.LOCAL_FILE_HANDLES || !APP_STATE.library || !APP_STATE.library.all_tracks) return;
+      APP_STATE.library.all_tracks.forEach(t => {
+        const fn = (t.filename || t.name || '').toLowerCase();
+        const cleanFn = fn.replace(/\.[^/.]+$/, "");
+        const tit = (t.title || '').toLowerCase();
+        const art = (t.artist || '').toLowerCase();
+        const combo = art + '||' + tit;
+
+        if (fn && window.LOCAL_FILE_HANDLES.has(fn)) {
+          t.localFileHandle = window.LOCAL_FILE_HANDLES.get(fn).handle;
+          t.isLocal = true;
+        } else if (cleanFn && window.LOCAL_FILE_HANDLES.has(cleanFn)) {
+          t.localFileHandle = window.LOCAL_FILE_HANDLES.get(cleanFn).handle;
+          t.isLocal = true;
+        } else if (window.LOCAL_FILE_HANDLES.has(combo)) {
+          t.localFileHandle = window.LOCAL_FILE_HANDLES.get(combo).handle;
+          t.isLocal = true;
+        } else if (tit && window.LOCAL_FILE_HANDLES.has(tit)) {
+          t.localFileHandle = window.LOCAL_FILE_HANDLES.get(tit).handle;
+          t.isLocal = true;
+        }
+      });
+    }
+
     // ============================================================================
-    // MODULOS AVANCADOS : WEBMIR, ID3V2.3 WRITER, REKORDBOX XML V6 & USB RIG
+    // MODULOS AVANCADOS DAS FASES 4 E 5
+    // ============================================================================
+// MODULOS AVANCADOS : WEBMIR, ID3V2.3 WRITER, REKORDBOX XML V6 & USB RIG
     // ============================================================================
 
     const CANONICAL_13_FOLDERS = [
@@ -4425,6 +4624,21 @@
         });
       }
     }
+
+    // Inicializacao
+    DeckPlayer.init();
+    setupUsbRigManager();
+    renderCanonicalDropGrid();
+    setupTagEditorModal();
+    renderDashboard();
+    refreshLogs();
+    pollState();
+    loadFullLibraryTracks();
+    loadHunterHistory();
+    loadPromosData();
+    setInterval(pollState, 5000);
+    setInterval(refreshLogs, 4000);
+  
   </script>
 
 </body>
