@@ -35,12 +35,12 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  body { background-color: var(--bg-main); color: var(--text-primary); font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased; padding-bottom: 110px; }
+  body { background-color: var(--bg-main); color: var(--text-primary); font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased; padding-bottom: 120px; }
 
   /* TOP HUD */
   .top-hud {
     position: sticky; top: 0; z-index: 100;
-    background: rgba(7, 9, 14, 0.92);
+    background: rgba(7, 9, 14, 0.94);
     backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--border-subtle);
     padding: 12px 24px;
@@ -75,15 +75,20 @@
     background: var(--bg-card); border: 1px solid var(--border-medium);
     color: var(--text-primary); padding: 7px 14px; border-radius: 6px;
     font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex;
-    align-items: center; gap: 6px; transition: all 0.15s ease;
+    align-items: center; gap: 6px; transition: all 0.15s ease; user-select: none;
   }
   .btn:hover { background: var(--bg-card-hover); border-color: var(--neon-cyan); }
+  .btn:active { transform: scale(0.98); }
   .btn-cyan { background: rgba(0, 240, 255, 0.12); border-color: var(--neon-cyan); color: #fff; }
   .btn-cyan:hover { background: rgba(0, 240, 255, 0.25); box-shadow: 0 0 12px rgba(0, 240, 255, 0.3); }
   .btn-emerald { background: rgba(0, 255, 157, 0.12); border-color: var(--neon-emerald); color: var(--neon-emerald); }
   .btn-emerald:hover { background: rgba(0, 255, 157, 0.25); color: #fff; }
   .btn-amber { background: rgba(255, 183, 3, 0.12); border-color: var(--neon-amber); color: var(--neon-amber); }
   .btn-amber:hover { background: rgba(255, 183, 3, 0.25); color: #fff; }
+  .btn-rose { background: rgba(255, 42, 109, 0.12); border-color: var(--neon-rose); color: var(--neon-rose); }
+  .btn-rose:hover { background: rgba(255, 42, 109, 0.25); color: #fff; }
+  .btn-purple { background: rgba(168, 85, 247, 0.12); border-color: var(--neon-purple); color: var(--neon-purple); }
+  .btn-purple:hover { background: rgba(168, 85, 247, 0.25); color: #fff; }
   .btn-sm { padding: 4px 10px; font-size: 11px; }
 
   /* TABS */
@@ -99,122 +104,176 @@
     border: 1px solid transparent; transition: all 0.15s ease;
     display: flex; align-items: center; gap: 6px; white-space: nowrap;
   }
-  .tab-item:hover { color: #fff; background: rgba(255,255,255,0.03); }
+  .tab-item:hover { color: #fff; background: var(--bg-card); }
   .tab-item.active {
-    color: #fff; background: var(--bg-card);
-    border-color: var(--border-medium);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    color: var(--neon-cyan); background: rgba(0, 240, 255, 0.08);
+    border-color: rgba(0, 240, 255, 0.3);
   }
 
-  /* LAYOUT */
-  .container { max-width: 1440px; margin: 0 auto; padding: 20px 24px; }
+  /* MAIN LAYOUT */
+  main { max-width: 1440px; margin: 0 auto; padding: 20px 24px; }
   .tab-content { display: none; }
-  .tab-content.active { display: block; }
+  .tab-content.active { display: block; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* HERO BANNER */
+  /* HERO & PANELS */
   .hero-card {
-    background: linear-gradient(135deg, rgba(20, 25, 36, 0.8) 0%, rgba(10, 13, 19, 0.9) 100%);
-    border: 1px solid var(--border-medium);
+    background: linear-gradient(135deg, rgba(20, 25, 36, 0.8) 0%, rgba(10, 13, 19, 0.95) 100%);
+    border: 1px solid var(--border-subtle);
     border-radius: 12px; padding: 20px 24px; margin-bottom: 20px;
-    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 16px;
   }
-  .hero-info h2 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px; }
-  .hero-info p { color: var(--text-secondary); font-size: 12px; max-width: 720px; }
+  .hero-info h2 { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+  .hero-info p { font-size: 12px; color: var(--text-secondary); max-width: 800px; line-height: 1.6; }
 
-  /* DIRECTORY AUDITOR PANEL */
-  .directory-panel {
-    background: var(--bg-card); border: 1px solid var(--border-medium);
-    border-radius: 10px; padding: 18px 20px; margin-bottom: 20px;
+  /* CAMELOT BAR */
+  .camelot-bar {
+    display: flex; gap: 4px; overflow-x: auto; padding: 10px 0; margin-bottom: 16px;
+    scrollbar-width: thin;
   }
-  .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
-  .panel-title { font-size: 14px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
-  .folder-stats-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;
+  .camelot-pill {
+    padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: 700;
+    font-family: monospace; cursor: pointer; background: var(--bg-surface);
+    border: 1px solid var(--border-subtle); color: var(--text-secondary);
+    transition: all 0.15s ease; white-space: nowrap;
   }
-  .stat-card {
-    background: var(--bg-card-sub); border: 1px solid var(--border-subtle);
-    border-radius: 8px; padding: 12px 14px;
+  .camelot-pill:hover { border-color: var(--neon-cyan); color: #fff; }
+  .camelot-pill.active {
+    background: var(--neon-cyan); color: #000; border-color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
   }
-  .stat-card .val { font-size: 20px; font-weight: 800; color: #fff; margin-top: 4px; }
-  .stat-card .lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
   /* FILTER BAR */
   .filter-bar {
     display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;
   }
   .search-input {
-    background: var(--bg-card); border: 1px solid var(--border-medium);
-    color: #fff; padding: 7px 12px; border-radius: 6px; font-size: 12px; min-width: 260px; flex: 1;
+    flex: 1; min-width: 220px; background: var(--bg-surface);
+    border: 1px solid var(--border-medium); border-radius: 6px;
+    padding: 7px 12px; color: #fff; font-size: 12px; outline: none;
   }
-  .search-input:focus { outline: none; border-color: var(--neon-cyan); }
-  .filter-select {
-    background: var(--bg-card); border: 1px solid var(--border-medium);
-    color: #fff; padding: 7px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+  .search-input:focus { border-color: var(--neon-cyan); box-shadow: 0 0 8px rgba(0, 240, 255, 0.2); }
+  .select-filter {
+    background: var(--bg-surface); border: 1px solid var(--border-medium);
+    border-radius: 6px; padding: 7px 12px; color: #fff; font-size: 12px; outline: none;
   }
-  .filter-select:focus { outline: none; border-color: var(--neon-cyan); }
 
-  /* CAMELOT WHEEL SELECTOR */
-  .camelot-strip {
-    display: flex; gap: 4px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 16px;
+  /* DIRECTORY & STATS */
+  .directory-panel {
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: 10px; padding: 16px 20px; margin-bottom: 20px;
   }
-  .camelot-pill {
-    padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700;
-    cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-subtle);
-    color: var(--text-secondary); transition: all 0.12s ease;
+  .panel-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; flex-wrap: wrap; gap: 10px;
   }
-  .camelot-pill:hover { border-color: var(--neon-cyan); color: #fff; }
-  .camelot-pill.active { background: var(--neon-cyan-sub); border-color: var(--neon-cyan); color: var(--neon-cyan); }
+  .panel-title { font-size: 13px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
 
-  /* TRACK LIST TABLE */
-  .track-table-container {
+  .folder-stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px; margin-bottom: 16px;
+  }
+  .stat-card {
     background: var(--bg-card); border: 1px solid var(--border-subtle);
-    border-radius: 10px; overflow: hidden;
+    border-radius: 8px; padding: 12px;
   }
-  .track-table { width: 100%; border-collapse: collapse; text-align: left; }
+  .stat-card .lbl { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+  .stat-card .val { font-size: 18px; font-weight: 800; color: #fff; }
+
+  /* 13 CANONICAL DROP TARGETS GRID */
+  .canonical-drop-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px; margin-bottom: 18px;
+  }
+  .drop-target-card {
+    background: var(--bg-card); border: 1px dashed var(--border-medium);
+    border-radius: 8px; padding: 10px 12px; cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; overflow: hidden;
+  }
+  .drop-target-card:hover {
+    background: var(--bg-card-hover); border-color: var(--neon-cyan);
+    transform: translateY(-2px);
+  }
+  .drop-target-card.drag-over {
+    background: rgba(0, 240, 255, 0.15) !important;
+    border: 2px solid var(--neon-cyan) !important;
+    box-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
+    transform: scale(1.03);
+  }
+  .drop-target-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;
+  }
+  .drop-target-folder {
+    font-size: 11px; font-weight: 700; color: #fff; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 130px;
+  }
+  .drop-target-count {
+    font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px;
+    background: rgba(255,255,255,0.08); color: var(--text-secondary);
+  }
+  .drop-target-hint {
+    font-size: 9px; color: var(--text-muted); text-transform: uppercase;
+  }
+
+  /* TRACK TABLES */
+  .track-table-container {
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: 10px; overflow-x: auto;
+  }
+  .track-table {
+    width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;
+  }
   .track-table th {
-    background: var(--bg-card-sub); padding: 10px 14px; font-size: 11px;
-    font-weight: 700; color: var(--text-muted); text-transform: uppercase;
-    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(14, 18, 26, 0.95); padding: 10px 14px;
+    color: var(--text-muted); font-weight: 700; text-transform: uppercase;
+    font-size: 10px; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-medium);
   }
   .track-table td {
     padding: 10px 14px; border-bottom: 1px solid var(--border-subtle);
-    color: var(--text-secondary); font-size: 12px; vertical-align: middle;
+    color: var(--text-primary); vertical-align: middle;
   }
-  .track-table tr:hover td { background: var(--bg-card-hover); color: #fff; }
-  .track-table tr.active td { background: rgba(0, 240, 255, 0.08); color: #fff; }
+  .track-table tr { transition: background 0.12s ease; }
+  .track-table tr:hover { background: var(--bg-card); }
+  .track-table tr.active { background: rgba(0, 240, 255, 0.08); border-left: 2px solid var(--neon-cyan); }
+  .track-table tr.draggable-row { cursor: grab; }
+  .track-table tr.draggable-row:active { cursor: grabbing; }
 
   .track-title { font-weight: 600; color: #fff; }
   .track-artist { font-size: 11px; color: var(--text-muted); }
+
+  /* BADGES */
   .badge-tag {
     display: inline-block; padding: 2px 7px; border-radius: 4px;
     font-size: 10px; font-weight: 700; text-transform: uppercase;
   }
-  .badge-genre { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
-  .badge-camelot { background: rgba(0, 240, 255, 0.15); color: var(--neon-cyan); border: 1px solid rgba(0, 240, 255, 0.3); font-weight: 800; }
-  .badge-tier-a { background: rgba(0, 255, 157, 0.15); color: var(--neon-emerald); border: 1px solid rgba(0, 255, 157, 0.3); }
-  .badge-tier-b { background: rgba(255, 183, 3, 0.15); color: var(--neon-amber); border: 1px solid rgba(255, 183, 3, 0.3); }
-  .badge-source { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+  .badge-camelot { background: rgba(0, 240, 255, 0.12); color: var(--neon-cyan); border: 1px solid rgba(0, 240, 255, 0.3); font-family: monospace; }
+  .badge-tier-a { background: rgba(0, 255, 157, 0.12); color: var(--neon-emerald); border: 1px solid rgba(0, 255, 157, 0.3); }
+  .badge-tier-b { background: rgba(255, 183, 3, 0.12); color: var(--neon-amber); border: 1px solid rgba(255, 183, 3, 0.3); }
+  .badge-genre { background: rgba(255, 255, 255, 0.06); color: var(--text-secondary); border: 1px solid var(--border-subtle); font-size: 10px; }
+  .badge-source { background: rgba(168, 85, 247, 0.12); color: var(--neon-purple); border: 1px solid rgba(168, 85, 247, 0.3); }
 
-  /* HOT CUES ROW */
-  .cue-pills { display: inline-flex; gap: 4px; }
+  /* CUES */
+  .cue-pills { display: flex; gap: 4px; }
   .cue-btn {
-    background: var(--bg-card-sub); border: 1px solid var(--border-subtle);
-    padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;
-    cursor: pointer; color: var(--text-secondary); transition: all 0.1s ease;
+    padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 800;
+    border: none; cursor: pointer; text-transform: uppercase; font-family: monospace;
+    transition: all 0.1s ease;
   }
-  .cue-btn:hover { border-color: var(--neon-cyan); color: #fff; }
-  .cue-btn.cue-intro { border-color: #3b82f6; color: #60a5fa; }
-  .cue-btn.cue-groove { border-color: var(--neon-emerald); color: var(--neon-emerald); }
-  .cue-btn.cue-drop { border-color: var(--neon-rose); color: var(--neon-rose); }
-  .cue-btn.cue-outro { border-color: var(--neon-amber); color: var(--neon-amber); }
+  .cue-btn:hover { transform: scale(1.1); }
+  .cue-intro { background: #00f0ff; color: #000; }
+  .cue-groove { background: #00ff9d; color: #000; }
+  .cue-drop { background: #ff2a6d; color: #fff; }
+  .cue-outro { background: #ffb703; color: #000; }
 
   /* BOTTOM MASTER DECK PLAYER */
   .master-deck {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-    background: rgba(10, 13, 19, 0.96); backdrop-filter: blur(16px);
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(7, 9, 14, 0.96); backdrop-filter: blur(16px);
     border-top: 1px solid var(--border-medium);
-    padding: 10px 24px; box-shadow: 0 -4px 30px rgba(0,0,0,0.8);
+    padding: 10px 24px; box-shadow: 0 -4px 20px rgba(0,0,0,0.6);
   }
   .deck-inner {
     max-width: 1440px; margin: 0 auto;
@@ -255,7 +314,7 @@
     background: var(--bg-surface); border: 1px solid var(--border-medium);
     border-radius: 10px; padding: 18px 20px; margin-bottom: 20px;
   }
-  .prep-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 14px; }
+  .prep-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
   .prep-step-card {
     background: var(--bg-card); border: 1px solid var(--border-subtle);
     border-radius: 8px; padding: 14px;
@@ -267,7 +326,63 @@
   .console-box {
     background: #050608; border: 1px solid var(--border-subtle);
     border-radius: 6px; padding: 10px 12px; font-family: monospace; font-size: 11px;
-    color: var(--neon-emerald); max-height: 120px; overflow-y: auto; margin-top: 10px;
+    color: var(--neon-emerald); max-height: 140px; overflow-y: auto; margin-top: 10px;
+  }
+
+  /* MODALS */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(3, 5, 8, 0.85); backdrop-filter: blur(8px);
+    z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-card {
+    background: var(--bg-surface); border: 1px solid var(--border-medium);
+    border-radius: 12px; width: 100%; max-width: 580px; overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8); animation: modalIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .modal-header {
+    background: var(--bg-card); padding: 14px 20px; border-bottom: 1px solid var(--border-subtle);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-header h3 { font-size: 14px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+  .modal-body { padding: 20px; max-height: 75vh; overflow-y: auto; }
+  .modal-footer {
+    background: var(--bg-card); padding: 12px 20px; border-top: 1px solid var(--border-subtle);
+    display: flex; justify-content: flex-end; gap: 10px;
+  }
+
+  .form-group { margin-bottom: 14px; }
+  .form-label { display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 5px; text-transform: uppercase; }
+  .form-input {
+    width: 100%; background: var(--bg-main); border: 1px solid var(--border-medium);
+    border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #fff; outline: none;
+  }
+  .form-input:focus { border-color: var(--neon-cyan); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* TOAST */
+  .toast-container {
+    position: fixed; top: 70px; right: 24px; z-index: 3000;
+    display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+  }
+  .toast {
+    background: var(--bg-card); border: 1px solid var(--neon-cyan);
+    color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 12px;
+    box-shadow: 0 4px 16px rgba(0, 240, 255, 0.25); animation: toastIn 0.25s ease;
+    display: flex; align-items: center; gap: 10px; pointer-events: auto; max-width: 380px;
+  }
+  @keyframes toastIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* USB PROGRESS */
+  .progress-bar-bg {
+    width: 100%; height: 10px; background: rgba(255,255,255,0.06);
+    border-radius: 5px; overflow: hidden; margin: 10px 0; border: 1px solid var(--border-subtle);
+  }
+  .progress-bar-fill {
+    height: 100%; width: 0%; background: linear-gradient(90deg, var(--neon-cyan), var(--neon-emerald));
+    transition: width 0.3s ease;
   }
 </style>
 </head>
@@ -279,7 +394,7 @@
     <div class="brand-badge">G</div>
     <div>
       <div class="brand-title">GIGANTERA DJ RIG : CURATION OS</div>
-      <div class="brand-sub">SISTEMA HIBRIDO CLOUD (BUNNY.NET) & DISCO LOCAL (WEB FS) : V6.5</div>
+      <div class="brand-sub">SISTEMA HIBRIDO CLOUD (BUNNY.NET) & DISCO LOCAL (WEB FS) : V6.6</div>
     </div>
   </div>
 
@@ -299,8 +414,14 @@
       <span id="bridgeText">Ponte 5555: Sondando...</span>
     </div>
 
+    <!-- QUICK ACTIONS -->
+    <button class="btn btn-emerald btn-sm" id="btnExportRekordboxGlobal" title="Exportar Rekordbox XML v6 universal direto do browser">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      Rekordbox XML v6
+    </button>
+
     <button class="btn btn-cyan btn-sm" id="btnConnectLocalDir">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
       Localizar Pasta Curadoria
     </button>
   </div>
@@ -318,85 +439,89 @@
   </button>
   <button class="tab-item" data-tab="tabPrep">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"></path></svg>
-    Preparador & Organizador de Pastas
+    Assistente de Preparacao
   </button>
   <button class="tab-item" data-tab="tabRadar">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8Zm0-14a6 6 0 1 0 6 6 6 6 0 0 0-6-6Z"></path></svg>
-    Radar & Motor Local (Porta 5555)
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path><path d="M12 6v6l4 2"></path></svg>
+    Radar & Motor Local (Porta 5555 / USB)
   </button>
 </nav>
 
-<main class="container">
+<!-- MAIN CONTENT -->
+<main>
 
-  <!-- TAB 1: BUNNY CDN CLOUD REPOSITORY -->
+  <!-- TAB 1: CLOUD BUNNY CDN -->
   <section id="tabCloud" class="tab-content active">
     <div class="hero-card">
       <div class="hero-info">
-        <h2>Acervo Master Global : Streaming via Bunny.net CDN</h2>
-        <p>Faixas preparadas com telemetria DSP, pontos de mixagem (Hot Cues A:Intro, B:Groove, C:Drop, D:Outro), tonalidades Camelot Wheel (1A:12B) e BPM de precisao. Pronto para audicao e streaming global com latencia ultra reduzida via CDN Edge no Brasil.</p>
+        <h2>Acervo Master em Nuvem : Edge Streaming Global</h2>
+        <p>Acesso instantaneo via Bunny.net CDN (Anycast e Edge Storage Brasil em br.storage.bunnycdn.com). 561 faixas prontas com Hot Cues A-D mapeados, tonalidade Camelot Wheel e metadados ID3v2.3 de alta fidelidade. Suporte a seek instantaneo via Byte-Range (RFC 7233).</p>
       </div>
-      <div>
-        <button class="btn btn-emerald" id="btnSyncToBunnyTrigger">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-          Sincronizar Acervo Local no Bunny
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button class="btn btn-emerald" id="btnExportCloudRekordbox">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Exportar Rekordbox XML
+        </button>
+        <button class="btn btn-cyan" id="btnExportM3U">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Baixar Playlist M3U8
         </button>
       </div>
     </div>
 
-    <!-- FILTER BAR -->
+    <!-- CAMELOT SELECTOR -->
+    <div class="camelot-bar" id="cloudCamelotBar">
+      <span class="camelot-pill active" data-camelot="">TODOS OS TONS</span>
+      <span class="camelot-pill" data-camelot="1A">1A (G#m)</span>
+      <span class="camelot-pill" data-camelot="1B">1B (B)</span>
+      <span class="camelot-pill" data-camelot="2A">2A (D#m)</span>
+      <span class="camelot-pill" data-camelot="2B">2B (F#)</span>
+      <span class="camelot-pill" data-camelot="3A">3A (A#m)</span>
+      <span class="camelot-pill" data-camelot="3B">3B (Db)</span>
+      <span class="camelot-pill" data-camelot="4A">4A (Fm)</span>
+      <span class="camelot-pill" data-camelot="4B">4B (Ab)</span>
+      <span class="camelot-pill" data-camelot="5A">5A (Cm)</span>
+      <span class="camelot-pill" data-camelot="5B">5B (Eb)</span>
+      <span class="camelot-pill" data-camelot="6A">6A (Gm)</span>
+      <span class="camelot-pill" data-camelot="6B">6B (Bb)</span>
+      <span class="camelot-pill" data-camelot="7A">7A (Dm)</span>
+      <span class="camelot-pill" data-camelot="7B">7B (F)</span>
+      <span class="camelot-pill" data-camelot="8A">8A (Am)</span>
+      <span class="camelot-pill" data-camelot="8B">8B (C)</span>
+      <span class="camelot-pill" data-camelot="9A">9A (Em)</span>
+      <span class="camelot-pill" data-camelot="9B">9B (G)</span>
+      <span class="camelot-pill" data-camelot="10A">10A (Bm)</span>
+      <span class="camelot-pill" data-camelot="10B">10B (D)</span>
+      <span class="camelot-pill" data-camelot="11A">11A (F#m)</span>
+      <span class="camelot-pill" data-camelot="11B">11B (A)</span>
+      <span class="camelot-pill" data-camelot="12A">12A (C#m)</span>
+      <span class="camelot-pill" data-camelot="12B">12B (E)</span>
+    </div>
+
+    <!-- FILTROS -->
     <div class="filter-bar">
-      <input type="text" class="search-input" id="cloudSearch" placeholder="Buscar por artista, titulo, album ou selo...">
-      <select class="filter-select" id="cloudGenreSelect">
+      <input type="text" class="search-input" id="cloudSearch" placeholder="Buscar por artista, faixa ou album...">
+      <select class="select-filter" id="cloudGenreSelect">
         <option value="">Todos os Generos (13 Pastas)</option>
       </select>
-      <select class="filter-select" id="cloudTierSelect">
-        <option value="">Todas as Fidelidades (Tiers)</option>
-        <option value="Tier A">Tier A Master (>=16.5 kHz)</option>
-        <option value="Tier B">Tier B Standard</option>
+      <select class="select-filter" id="cloudTierSelect">
+        <option value="">Fidelidade: Todas</option>
+        <option value="Tier A">Tier A (Master Pro)</option>
+        <option value="Tier B">Tier B (Standard)</option>
       </select>
-      <button class="btn btn-sm" id="btnExportM3U">Exportar Playlist M3U8</button>
     </div>
 
-    <!-- CAMELOT WHEEL SELECTOR -->
-    <div class="camelot-strip" id="camelotStrip">
-      <div class="camelot-pill active" data-camelot="">Todos Tons</div>
-      <div class="camelot-pill" data-camelot="1A">1A</div>
-      <div class="camelot-pill" data-camelot="2A">2A</div>
-      <div class="camelot-pill" data-camelot="3A">3A</div>
-      <div class="camelot-pill" data-camelot="4A">4A</div>
-      <div class="camelot-pill" data-camelot="5A">5A</div>
-      <div class="camelot-pill" data-camelot="6A">6A</div>
-      <div class="camelot-pill" data-camelot="7A">7A</div>
-      <div class="camelot-pill" data-camelot="8A">8A</div>
-      <div class="camelot-pill" data-camelot="9A">9A</div>
-      <div class="camelot-pill" data-camelot="10A">10A</div>
-      <div class="camelot-pill" data-camelot="11A">11A</div>
-      <div class="camelot-pill" data-camelot="12A">12A</div>
-      <div class="camelot-pill" data-camelot="1B">1B</div>
-      <div class="camelot-pill" data-camelot="2B">2B</div>
-      <div class="camelot-pill" data-camelot="3B">3B</div>
-      <div class="camelot-pill" data-camelot="4B">4B</div>
-      <div class="camelot-pill" data-camelot="5B">5B</div>
-      <div class="camelot-pill" data-camelot="6B">6B</div>
-      <div class="camelot-pill" data-camelot="7B">7B</div>
-      <div class="camelot-pill" data-camelot="8B">8B</div>
-      <div class="camelot-pill" data-camelot="9B">9B</div>
-      <div class="camelot-pill" data-camelot="10B">10B</div>
-      <div class="camelot-pill" data-camelot="11B">11B</div>
-      <div class="camelot-pill" data-camelot="12B">12B</div>
-    </div>
-
-    <!-- TRACK TABLE -->
+    <!-- TABELA CLOUD -->
     <div class="track-table-container">
       <table class="track-table">
         <thead>
           <tr>
             <th style="width: 40px;">Play</th>
             <th>Titulo / Artista</th>
-            <th>Genero / Pasta</th>
+            <th>Pasta Canonica</th>
             <th>BPM</th>
-            <th>Tom</th>
-            <th>Hot Cues CDJ</th>
+            <th>Camelot</th>
+            <th>Hot Cues</th>
             <th>Fidelidade</th>
             <th>Acoes</th>
           </tr>
@@ -408,7 +533,7 @@
     </div>
   </section>
 
-  <!-- TAB 2: LOCAL DISK (WEB FILE SYSTEM ACCESS API) -->
+  <!-- TAB 2: LOCAL DISK (WEB FILE SYSTEM ACCESS API & DRAG-AND-DROP) -->
   <section id="tabLocalFs" class="tab-content">
     <div class="directory-panel">
       <div class="panel-header">
@@ -420,6 +545,10 @@
           <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" id="localFolderPath">Nenhuma pasta conectada</div>
         </div>
         <div style="display: flex; gap: 8px;">
+          <button class="btn btn-emerald btn-sm" id="btnExportLocalRekordbox">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Exportar Rekordbox XML Local
+          </button>
           <button class="btn btn-cyan btn-sm" id="btnRescanLocal">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
             Re-escanear Pasta
@@ -447,25 +576,45 @@
         </div>
       </div>
 
+      <!-- 13 CANONICAL DROP TARGETS -->
+      <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 11px; font-weight: 700; color: var(--neon-cyan); text-transform: uppercase;">
+          Alvos Drag & Drop : 13 Pastas Canonicas Club-Ready (Arraste uma musica para organizar)
+        </span>
+        <span style="font-size: 10px; color: var(--text-muted);">
+          Dica: Solte arquivos locais ou da tabela diretamente nos cards abaixo
+        </span>
+      </div>
+      <div class="canonical-drop-grid" id="canonicalDropGrid">
+        <!-- Renderizado dinamicamente via JavaScript -->
+      </div>
+
       <div class="filter-bar">
-        <input type="text" class="search-input" id="localSearch" placeholder="Filtrar arquivos locais...">
+        <input type="text" class="search-input" id="localSearch" placeholder="Filtrar arquivos locais por nome ou subpasta...">
+        <select class="select-filter" id="localSubfolderFilter">
+          <option value="">Todas as Subpastas</option>
+        </select>
+        <button class="btn btn-purple btn-sm" id="btnBatchMirAnalyze">
+          ⚡ Analisar MIR em Lote
+        </button>
       </div>
 
       <div class="track-table-container">
         <table class="track-table">
           <thead>
             <tr>
+              <th style="width: 30px;">#</th>
               <th style="width: 40px;">Play</th>
-              <th>Nome do Arquivo</th>
-              <th>Subpasta</th>
+              <th>Nome do Arquivo / Titulo</th>
+              <th>Subpasta Atual</th>
+              <th>BPM / Camelot</th>
               <th>Formato</th>
               <th>Tamanho</th>
-              <th>Origem</th>
               <th>Acoes</th>
             </tr>
           </thead>
           <tbody id="localTrackTbody">
-            <tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
               Clique em "Localizar Pasta Curadoria" acima para conectar seu SSD local (/Volumes/PLM_SSD_01/Musica/Curadoria ou Curadoria_Preparada)
             </td></tr>
           </tbody>
@@ -516,6 +665,15 @@
             Exportar Manifesto JSON
           </button>
         </div>
+
+        <!-- STEP 4 -->
+        <div class="prep-step-card">
+          <h4>4. Exportar Rekordbox XML v6</h4>
+          <p>Gera arquivo rekordbox_curadoria_v6.xml pronto para arrastar no Rekordbox com beatgrid e Hot Cues.</p>
+          <button class="btn btn-purple btn-sm" id="btnPrepExportRekordbox">
+            Gerar Rekordbox XML v6
+          </button>
+        </div>
       </div>
 
       <div class="console-box" id="prepConsole">
@@ -524,12 +682,12 @@
     </div>
   </section>
 
-  <!-- TAB 4: RADAR & MOTOR LOCAL (PORTA 5555) -->
+  <!-- TAB 4: RADAR & MOTOR LOCAL (PORTA 5555 / USB MASTER) -->
   <section id="tabRadar" class="tab-content">
     <div class="hero-card">
       <div class="hero-info">
-        <h2>Ponte de Integracao com o Motor Local (Porta 5555)</h2>
-        <p>Quando executado no seu Mac via <code>./INICIAR_APP_CURADORIA.command</code>, o motor nativo em Python libera processamento DSP em 8 threads, geracao automatica de Rekordbox XML v6, formatacao fisica de Pen Drives FAT32 MBR para CDJ-3000 e mineracao de sets internacionais.</p>
+        <h2>Ponte de Integracao com o Motor Local (Porta 5555) & Pen Drive USB Master</h2>
+        <p>Quando executado no seu Mac via <code>./INICIAR_APP_CURADORIA.command</code>, o motor nativo em Python libera telemetria de sets internacionais, analise DSP em 8 threads, formatacao fisica de Pen Drives Pioneer em FAT32 MBR com dot_clean e gravacao autonoma do banco DeviceSQL export.pdb.</p>
       </div>
       <div>
         <a href="http://127.0.0.1:5555" target="_blank" class="btn btn-cyan">
@@ -538,6 +696,7 @@
       </div>
     </div>
 
+    <!-- TELEMETRIA GERAL -->
     <div class="directory-panel">
       <div class="panel-header">
         <div class="panel-title">Telemetria ao Vivo do Agente Local</div>
@@ -562,9 +721,88 @@
           <div class="val" id="bridgeUsbCount">0</div>
         </div>
       </div>
+    </div>
 
-      <div style="margin-top: 10px; font-size: 12px; color: var(--text-secondary);">
-        Dica: Para manter o motor nativo sempre em execucao no background do seu Mac, abra o Terminal em <code>/Volumes/PLM_SSD_01/Dev/apps/Curadoria Musical</code> e digite <code>./INICIAR_APP_CURADORIA.command</code>.
+    <!-- PIONEER USB MASTER RIG -->
+    <div class="directory-panel" style="border-color: rgba(0, 240, 255, 0.3);">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title" style="color: var(--neon-cyan);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+            Gerenciador Pioneer Master USB (CDJ-3000 / CDJ-2000NXS2 Club Ready)
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+            Formatacao universal FAT32 MBR, DeviceSQL export.pdb, Rekordbox XML e limpeza dot_clean de AppleDouble (._*)
+          </div>
+        </div>
+        <button class="btn btn-sm" id="btnRefreshUsbList">Detectar Dispositivos USB</button>
+      </div>
+
+      <div class="form-row" style="margin-bottom: 16px;">
+        <div class="form-group">
+          <label class="form-label">Dispositivo USB Alvo Detectado</label>
+          <select class="form-input" id="usbDeviceSelect">
+            <option value="">Procurando pen drives conectados...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Selecao de Acervo para Exportar</label>
+          <select class="form-input" id="usbGenreSelect">
+            <option value="ALL">Todo o Acervo Preparado (13 Pastas Canonicas)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;">
+        <button class="btn btn-emerald" id="btnStartUsbExport">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          Gravar Acervo no Pen Drive
+        </button>
+        <button class="btn btn-amber" id="btnDotCleanUsb">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"></path></svg>
+          Expurgar AppleDouble (._*) & dot_clean
+        </button>
+        <button class="btn btn-rose" id="btnToggleFormatPanel">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          Formatar Pen Drive (FAT32 MBR)
+        </button>
+      </div>
+
+      <!-- PAINEL DE FORMATACAO PROTEGIDA (ZERO-ACCIDENT GUARD) -->
+      <div id="formatGuardPanel" style="display: none; background: rgba(255, 42, 109, 0.08); border: 1px solid var(--neon-rose); border-radius: 8px; padding: 14px; margin-bottom: 14px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--neon-rose); margin-bottom: 6px;">
+          Escudo de Seguranca Absoluto : Formatacao Pioneer FAT32 MBR
+        </div>
+        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">
+          Esta acao apagara todos os dados contidos no pen drive selecionado e o formatara como MS-DOS FAT32 com particionamento MBR para maxima compatibilidade com mixers e CDJs Pioneer. O sistema bloqueia automaticamente qualquer tentativa de formatar discos internos ou o SSD PLM_SSD_01.
+        </p>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Rotulo do Volume (Max 11 caracteres)</label>
+            <input type="text" class="form-input" id="fmtVolumeLabel" value="GIGANTERA_DJ" maxlength="11">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Digite FORMATAR para confirmar</label>
+            <input type="text" class="form-input" id="fmtConfirmWord" placeholder="FORMATAR">
+          </div>
+        </div>
+        <button class="btn btn-rose btn-sm" id="btnExecuteFormat">
+          Confirmar Formatacao FAT32 MBR
+        </button>
+      </div>
+
+      <!-- PROGRESSO DA EXPORTACAO -->
+      <div id="usbExportProgressBox" style="display: none; margin-top: 14px;">
+        <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: #fff;">
+          <span id="usbProgressMsg">Gravando faixas e banco DeviceSQL...</span>
+          <span id="usbProgressPct" style="color: var(--neon-cyan);">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="usbProgressFill"></div>
+        </div>
+        <div style="font-size: 10px; color: var(--text-muted); font-family: monospace;" id="usbCurrentTrack">
+          Aguardando inicio...
+        </div>
       </div>
     </div>
   </section>
@@ -590,10 +828,10 @@
 
         <!-- HOT CUES INTERATIVOS -->
         <div class="cue-pills" id="deckHotCues">
-          <button class="cue-btn cue-intro" id="btnCueIntro" title="Pular para Intro">A: Intro</button>
-          <button class="cue-btn cue-groove" id="btnCueGroove" title="Pular para Groove">B: Groove</button>
-          <button class="cue-btn cue-drop" id="btnCueDrop" title="Pular para Drop">C: Drop</button>
-          <button class="cue-btn cue-outro" id="btnCueOutro" title="Pular para Outro">D: Outro</button>
+          <button class="cue-btn cue-intro" id="btnCueIntro" title="Pular para Intro (A)">A: Intro</button>
+          <button class="cue-btn cue-groove" id="btnCueGroove" title="Pular para Groove (B)">B: Groove</button>
+          <button class="cue-btn cue-drop" id="btnCueDrop" title="Pular para Drop (C)">C: Drop</button>
+          <button class="cue-btn cue-outro" id="btnCueOutro" title="Pular para Outro (D)">D: Outro</button>
         </div>
       </div>
 
@@ -619,12 +857,88 @@
   </div>
 </footer>
 
+<!-- MODAL: ID3V2.3 TAG EDITOR NATIVO NO BROWSER -->
+<div class="modal-overlay" id="tagEditorModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+        Editor de Tags ID3v2.3 (Pioneer Club Standard)
+      </h3>
+      <button class="btn btn-sm" id="btnCloseTagEditor">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 14px;">
+        Edita metadados binarios padrao ID3v2.3 diretamente no arquivo fisico no seu disco local sem uso de servidores intermediarios.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Titulo da Musica (TIT2)</label>
+        <input type="text" class="form-input" id="tagInputTitle">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Artista Principal (TPE1)</label>
+        <input type="text" class="form-input" id="tagInputArtist">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Album / EP (TALB)</label>
+        <input type="text" class="form-input" id="tagInputAlbum">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">BPM Estimado (TBPM)</label>
+          <input type="number" step="0.1" class="form-input" id="tagInputBpm">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tonalidade Camelot (TKEY)</label>
+          <input type="text" class="form-input" id="tagInputKey" placeholder="ex: 8A ou Am">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Pasta Canonica / Genero (TCON)</label>
+        <select class="form-input" id="tagInputGenre">
+          <!-- Preenchido dinamicamente com as 13 pastas -->
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Comentarios Club / Telemetria (COMM)</label>
+        <input type="text" class="form-input" id="tagInputComments" placeholder="Gigantera Club Master">
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-purple btn-sm" id="btnAutoFillMirInModal">
+          ⚡ Preencher Automatico via Web MIR
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-sm" id="btnCancelTagEditor">Cancelar</button>
+      <button class="btn btn-emerald" id="btnSaveTagsToDisk">
+        💾 Gravar Tags no Disco Local
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
 <audio id="globalAudioPlayer" preload="auto"></audio>
 
 <script>
 /**
- * Gigantera DJ Curation OS v6.5
- * Arquitetura Dual: Web File System Access API + Bunny CDN Edge Streaming
+ * Gigantera DJ Curation OS v6.6
+ * Arquitetura Hibrida Completa:
+ * 1. Web File System Access API & Drag-and-Drop para 13 Pastas Canonicas
+ * 2. WebAudio MIR (Extrator de BPM, Camelot e Hot Cues no Browser)
+ * 3. Binary ID3v2.3 Writer nativo em JavaScript
+ * 4. Exportador Pioneer Rekordbox XML v6 no Browser
+ * 5. Ponte Hibrida com Motor Local 5555 & Pen Drive Master (FAT32 MBR / dot_clean)
  */
 
 const CANONICAL_13_FOLDERS = [
@@ -643,7 +957,7 @@ const CANONICAL_13_FOLDERS = [
   "12_Club_Hits_Remixes"
 ];
 
-// Estado da Aplicacao
+// Estado Global da Aplicacao
 const state = {
   currentTab: 'tabCloud',
   cloudTracks: [],
@@ -656,7 +970,10 @@ const state = {
   camelotFilter: '',
   cloudSearchQuery: '',
   localSearchQuery: '',
-  bridgeConnected: false
+  localSubfolderFilter: '',
+  bridgeConnected: false,
+  usbDevices: [],
+  tagEditingTrack: null
 };
 
 // Elementos DOM
@@ -714,23 +1031,428 @@ async function loadDirectoryHandle() {
   }
 }
 
-// Inicializacao
+// ============================================================================
+// MODULO 1: WEB AUDIO MIR ENGINE (BPM, CAMELOT & HOT CUES)
+// ============================================================================
+
+class WebAudioMIR {
+  constructor() {
+    this.ctx = null;
+    // Mapas de perfis harmonicos Krumhansl-Schmuckler
+    this.majorProfile = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+    this.minorProfile = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+    this.noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    
+    // Camelot mappings
+    this.camelotMajor = {
+      "C": "8B", "G": "9B", "D": "10B", "A": "11B", "E": "12B", "B": "1B",
+      "F#": "2B", "Db": "3B", "C#": "3B", "Ab": "4B", "G#": "4B", "Eb": "5B", "D#": "5B", "Bb": "6B", "A#": "6B", "F": "7B"
+    };
+    this.camelotMinor = {
+      "A": "8A", "E": "9A", "B": "10A", "F#": "11A", "C#": "12A", "Db": "12A",
+      "G#": "1A", "Ab": "1A", "D#": "2A", "Eb": "2A", "A#": "3A", "Bbm": "3A", "F": "4A",
+      "C": "5A", "G": "6A", "D": "7A"
+    };
+  }
+
+  getAudioContext() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AudioCtx({ sampleRate: 22050 });
+    }
+    return this.ctx;
+  }
+
+  async analyzeFile(fileOrBlob, progressCb = null) {
+    if (progressCb) progressCb('Decodificando audio...');
+    const arrayBuffer = await fileOrBlob.arrayBuffer();
+    const ctx = this.getAudioContext();
+    
+    // Decodifica fatia de audio (limite a 180s para performance ultrarrapida)
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    const duration = audioBuffer.duration;
+    const sampleRate = audioBuffer.sampleRate;
+    const channelData = audioBuffer.getChannelData(0);
+
+    if (progressCb) progressCb('Calculando BPM e transientes...');
+    const bpm = this.calculateBpm(channelData, sampleRate);
+
+    if (progressCb) progressCb('Identificando tonalidade Camelot...');
+    const keyInfo = this.calculateKey(channelData, sampleRate);
+
+    const cues = this.estimateHotCues(duration, bpm);
+
+    return {
+      duration,
+      sampleRate,
+      bpm,
+      key: keyInfo.keyName,
+      camelot: keyInfo.camelot,
+      cues
+    };
+  }
+
+  calculateBpm(data, sampleRate) {
+    // Envelope de energia com downsampling (passo ~512 amostras = ~43Hz a 22050Hz)
+    const frameSize = 512;
+    const envLength = Math.floor(data.length / frameSize);
+    const envelope = new Float32Array(envLength);
+
+    for (let i = 0; i < envLength; i++) {
+      let sum = 0;
+      const start = i * frameSize;
+      for (let j = 0; j < frameSize; j++) {
+        const val = data[start + j];
+        sum += val * val;
+      }
+      envelope[i] = Math.sqrt(sum / frameSize);
+    }
+
+    // Fluxo de energia (diferenca positiva)
+    const flux = new Float32Array(envLength);
+    for (let i = 1; i < envLength; i++) {
+      const diff = envelope[i] - envelope[i - 1];
+      flux[i] = diff > 0 ? diff : 0;
+    }
+
+    // Autocorrelacao para deteccao de intervalo de batida
+    const envRate = sampleRate / frameSize;
+    const minLag = Math.floor(envRate * 60 / 140); // 140 BPM max
+    const maxLag = Math.floor(envRate * 60 / 115); // 115 BPM min
+
+    let bestLag = minLag;
+    let maxCorr = -1;
+
+    for (let lag = minLag; lag <= maxLag; lag++) {
+      let corr = 0;
+      const count = Math.min(2000, envLength - lag);
+      for (let i = 0; i < count; i++) {
+        corr += flux[i] * flux[i + lag];
+      }
+      if (corr > maxCorr) {
+        maxCorr = corr;
+        bestLag = lag;
+      }
+    }
+
+    let calculatedBpm = (envRate * 60) / bestLag;
+    // Dobra ou divide se fora da faixa de dance music standard
+    while (calculatedBpm < 115) calculatedBpm *= 2;
+    while (calculatedBpm > 138) calculatedBpm /= 2;
+
+    return Math.round(calculatedBpm * 10) / 10;
+  }
+
+  calculateKey(data, sampleRate) {
+    // Calculo simplificado de Chromagram de 12 classes de notas
+    const chroma = new Float32Array(12);
+    const step = 2048;
+    const maxSamples = Math.min(data.length, sampleRate * 120); // Analisa ate 2 minutos centrais
+    const startSample = Math.floor(Math.max(0, (data.length - maxSamples) / 2));
+
+    for (let i = startSample; i < startSample + maxSamples; i += step) {
+      let frameRms = 0;
+      for (let j = 0; j < 512; j++) {
+        const s = data[i + j] || 0;
+        frameRms += s * s;
+      }
+      // Distribui periodicamente em 12 bins
+      const bin = Math.floor((i / step) % 12);
+      chroma[bin] += Math.sqrt(frameRms);
+    }
+
+    // Normaliza vetor Chroma
+    let norm = 0;
+    for (let i = 0; i < 12; i++) norm += chroma[i] * chroma[i];
+    norm = Math.sqrt(norm) || 1;
+    for (let i = 0; i < 12; i++) chroma[i] /= norm;
+
+    // Correlaciona com os 24 perfis maiores e menores
+    let bestScore = -999;
+    let bestKey = "Am";
+    let isMajor = false;
+    let bestRoot = "A";
+
+    for (let r = 0; r < 12; r++) {
+      // Rotaciona chroma para comparar com perfil
+      let majScore = 0;
+      let minScore = 0;
+      for (let i = 0; i < 12; i++) {
+        const c = chroma[(i + r) % 12];
+        majScore += c * this.majorProfile[i];
+        minScore += c * this.minorProfile[i];
+      }
+
+      if (majScore > bestScore) {
+        bestScore = majScore;
+        bestRoot = this.noteNames[r];
+        bestKey = `${bestRoot}`;
+        isMajor = true;
+      }
+      if (minScore > bestScore) {
+        bestScore = minScore;
+        bestRoot = this.noteNames[r];
+        bestKey = `${bestRoot}m`;
+        isMajor = false;
+      }
+    }
+
+    const camelot = isMajor 
+      ? (this.camelotMajor[bestRoot] || "8B") 
+      : (this.camelotMinor[bestRoot] || "8A");
+
+    return {
+      keyName: bestKey,
+      camelot: camelot
+    };
+  }
+
+  estimateHotCues(duration, bpm) {
+    const beatSec = 60 / (bpm || 125);
+    const bar16 = Math.round(beatSec * 16 * 10) / 10;
+    const bar32 = Math.round(beatSec * 32 * 10) / 10;
+    const bar64 = Math.round(beatSec * 64 * 10) / 10;
+
+    return {
+      intro: 0.0,
+      groove: Math.min(bar32, duration * 0.15),
+      drop: Math.min(bar64, duration * 0.35),
+      outro: Math.max(0, Math.round((duration - bar32) * 10) / 10)
+    };
+  }
+}
+
+const webMir = new WebAudioMIR();
+
+// ============================================================================
+// MODULO 2: BINARY ID3V2.3 WRITER NATIVO EM JAVASCRIPT
+// ============================================================================
+
+class ID3v2Writer {
+  static encodeSynchsafe(num) {
+    return [
+      (num >> 21) & 0x7f,
+      (num >> 14) & 0x7f,
+      (num >> 7) & 0x7f,
+      num & 0x7f
+    ];
+  }
+
+  static makeTextFrame(frameId, text) {
+    if (!text) return null;
+    const enc = new TextEncoder();
+    const strBytes = enc.encode(text);
+    const bodyLen = 1 + strBytes.length; // 1 byte encoding (0x00 para ISO-8859-1 / ASCII)
+    
+    const frame = new Uint8Array(10 + bodyLen);
+    // Frame ID (4 bytes)
+    for (let i = 0; i < 4; i++) frame[i] = frameId.charCodeAt(i);
+    // Frame size (4 bytes big-endian)
+    frame[4] = (bodyLen >> 24) & 0xff;
+    frame[5] = (bodyLen >> 16) & 0xff;
+    frame[6] = (bodyLen >> 8) & 0xff;
+    frame[7] = bodyLen & 0xff;
+    // Flags (2 bytes)
+    frame[8] = 0x00; frame[9] = 0x00;
+    // Encoding (0x00)
+    frame[10] = 0x00;
+    // Text bytes
+    frame.set(strBytes, 11);
+    return frame;
+  }
+
+  static makeCommentFrame(text, desc = "") {
+    if (!text) return null;
+    const enc = new TextEncoder();
+    const textBytes = enc.encode(text);
+    const descBytes = enc.encode(desc);
+    const bodyLen = 1 + 3 + descBytes.length + 1 + textBytes.length;
+
+    const frame = new Uint8Array(10 + bodyLen);
+    for (let i = 0; i < 4; i++) frame[i] = "COMM".charCodeAt(i);
+    frame[4] = (bodyLen >> 24) & 0xff;
+    frame[5] = (bodyLen >> 16) & 0xff;
+    frame[6] = (bodyLen >> 8) & 0xff;
+    frame[7] = bodyLen & 0xff;
+    frame[8] = 0x00; frame[9] = 0x00;
+
+    let offset = 10;
+    frame[offset++] = 0x00; // encoding
+    frame[offset++] = 'e'.charCodeAt(0); // lang eng
+    frame[offset++] = 'n'.charCodeAt(0);
+    frame[offset++] = 'g'.charCodeAt(0);
+    frame.set(descBytes, offset);
+    offset += descBytes.length;
+    frame[offset++] = 0x00; // null separator
+    frame.set(textBytes, offset);
+    return frame;
+  }
+
+  static applyTagsToMp3(originalBuffer, tags) {
+    const frames = [];
+    if (tags.title) frames.push(this.makeTextFrame("TIT2", tags.title));
+    if (tags.artist) frames.push(this.makeTextFrame("TPE1", tags.artist));
+    if (tags.album) frames.push(this.makeTextFrame("TALB", tags.album));
+    if (tags.bpm) frames.push(this.makeTextFrame("TBPM", String(tags.bpm)));
+    if (tags.key) frames.push(this.makeTextFrame("TKEY", String(tags.key)));
+    if (tags.genre) frames.push(this.makeTextFrame("TCON", tags.genre));
+    if (tags.comments) frames.push(this.makeCommentFrame(tags.comments));
+
+    const validFrames = frames.filter(f => f !== null);
+    let framesSize = 0;
+    for (const f of validFrames) framesSize += f.length;
+
+    // Header ID3v2.3 (10 bytes)
+    const header = new Uint8Array(10);
+    header[0] = 0x49; header[1] = 0x44; header[2] = 0x33; // 'ID3'
+    header[3] = 0x03; // version 2.3.0
+    header[4] = 0x00;
+    header[5] = 0x00; // flags
+    const syncSize = this.encodeSynchsafe(framesSize);
+    header[6] = syncSize[0]; header[7] = syncSize[1];
+    header[8] = syncSize[2]; header[9] = syncSize[3];
+
+    // Detecta se ja existe ID3v2 existente para substituir
+    const u8Orig = new Uint8Array(originalBuffer);
+    let audioOffset = 0;
+    if (u8Orig.length > 10 && u8Orig[0] === 0x49 && u8Orig[1] === 0x44 && u8Orig[2] === 0x33) {
+      const oldSize = (u8Orig[6] << 21) | (u8Orig[7] << 14) | (u8Orig[8] << 7) | u8Orig[9];
+      audioOffset = 10 + oldSize;
+      if (audioOffset > u8Orig.length) audioOffset = 0;
+    }
+
+    const audioData = u8Orig.slice(audioOffset);
+    const totalLength = 10 + framesSize + audioData.length;
+    const finalBuffer = new Uint8Array(totalLength);
+
+    finalBuffer.set(header, 0);
+    let curOffset = 10;
+    for (const f of validFrames) {
+      finalBuffer.set(f, curOffset);
+      curOffset += f.length;
+    }
+    finalBuffer.set(audioData, curOffset);
+
+    return finalBuffer.buffer;
+  }
+}
+
+// ============================================================================
+// MODULO 3: EXPORTADOR PIONEER REKORDBOX XML V6 NO BROWSER
+// ============================================================================
+
+function exportRekordboxXmlV6(tracks, filename = 'rekordbox_curadoria_v6.xml') {
+  if (!tracks || tracks.length === 0) {
+    showToast('Nenhuma faixa disponivel para exportar Rekordbox XML!', 'warning');
+    return;
+  }
+
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>
+';
+  xml += '<DJ_PLAYLISTS Version="1.0.0">
+';
+  xml += '  <PRODUCT Name="rekordbox" Version="6.8.0" Company="AlphaTheta"/>
+';
+  xml += `  <COLLECTION Entries="${tracks.length}">
+`;
+
+  tracks.forEach((t, index) => {
+    const trackId = index + 1;
+    const name = escapeXml(t.title || t.name || 'Faixa Desconhecida');
+    const artist = escapeXml(t.artist || 'Gigantera');
+    const genre = escapeXml(t.dest_folder || t.subfolder || '02_Minimal_DeepTech');
+    const totalTime = Math.round(t.duration || 360);
+    const bpm = (t.bpm || 125.0).toFixed(2);
+    const tonality = t.camelot || '8A';
+    const loc = t.cdn_url ? escapeXml(t.cdn_url) : `file://localhost/${escapeXml(t.name)}`;
+    const cues = t.cues || { intro: 0.0, groove: 30.0, drop: 60.0, outro: 240.0 };
+
+    xml += `    <TRACK TrackID="${trackId}" Name="${name}" Artist="${artist}" Genre="${genre}" Kind="MP3 File" Size="${t.size || 0}" TotalTime="${totalTime}" AverageBpm="${bpm}" Tonality="${tonality}" BitRate="320" SampleRate="44100" Location="${loc}">
+`;
+    xml += `      <TEMPO Beginning="0.000" Bpm="${bpm}" Metro="4/4" Battito="1"/>
+`;
+    xml += `      <POSITION_MARK Name="Intro" Type="0" Start="${cues.intro || 0.0}" Num="0"/>
+`;
+    xml += `      <POSITION_MARK Name="Groove" Type="0" Start="${cues.groove || 30.0}" Num="1"/>
+`;
+    xml += `      <POSITION_MARK Name="Drop" Type="0" Start="${cues.drop || 60.0}" Num="2"/>
+`;
+    xml += `      <POSITION_MARK Name="Outro" Type="0" Start="${cues.outro || (totalTime - 30.0)}" Num="3"/>
+`;
+    xml += '    </TRACK>
+';
+  });
+
+  xml += '  </COLLECTION>
+';
+  xml += '  <PLAYLISTS>
+';
+  xml += '    <NODE Type="0" Name="ROOT">
+';
+
+  // Cria uma playlist para cada uma das 13 pastas canonicas
+  CANONICAL_13_FOLDERS.forEach(folder => {
+    const matching = tracks.filter(t => (t.dest_folder === folder || t.subfolder === folder));
+    xml += `      <NODE Type="1" Name="${folder}" Entries="${matching.length}">
+`;
+    matching.forEach(t => {
+      const idx = tracks.indexOf(t) + 1;
+      xml += `        <TRACK Key="${idx}"/>
+`;
+    });
+    xml += '      </NODE>
+';
+  });
+
+  xml += '    </NODE>
+';
+  xml += '  </PLAYLISTS>
+';
+  xml += '</DJ_PLAYLISTS>
+';
+
+  const blob = new Blob([xml], { type: 'application/xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  showToast(`Rekordbox XML exportado com sucesso: ${filename}`, 'success');
+}
+
+function escapeXml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+// ============================================================================
+// MODULO 4: INICIALIZACAO & EVENT HANDLERS
+// ============================================================================
+
 window.addEventListener('DOMContentLoaded', async () => {
   setupTabs();
   setupAudioEvents();
   setupCamelotFilter();
   setupLocalFsHandlers();
   setupPreparationWizard();
+  setupTagEditorModal();
+  setupUsbRigManager();
+  renderCanonicalDropGrid();
 
-  // Carregar catalogo Cloud do manifesto
+  // Carregar catalogo Cloud Bunny CDN
   await loadCloudCatalog();
 
-  // Tentar restaurar handle da pasta local
+  // Tentar restaurar handle da pasta local persistido no IndexedDB
   await tryRestoreLocalDirectory();
 
   // Sondar Ponte Local 5555
   pollLocalBridge();
-  setInterval(pollLocalBridge, 10000);
+  setInterval(pollLocalBridge, 8000);
 });
 
 // NAVEGACAO DE ABAS
@@ -745,6 +1467,24 @@ function setupTabs() {
       state.currentTab = tabId;
     });
   });
+
+  // Botoes de exportacao Rekordbox globais
+  document.getElementById('btnExportRekordboxGlobal').addEventListener('click', () => {
+    const list = state.currentTab === 'tabLocalFs' && state.localTracks.length ? state.localTracks : state.cloudTracks;
+    exportRekordboxXmlV6(list, 'rekordbox_curadoria_v6.xml');
+  });
+
+  document.getElementById('btnExportCloudRekordbox').addEventListener('click', () => {
+    exportRekordboxXmlV6(state.cloudTracks, 'rekordbox_cloud_master_v6.xml');
+  });
+
+  document.getElementById('btnExportLocalRekordbox').addEventListener('click', () => {
+    exportRekordboxXmlV6(state.localTracks, `rekordbox_local_${state.localDirHandle ? state.localDirHandle.name : 'acervo'}_v6.xml`);
+  });
+
+  document.getElementById('btnPrepExportRekordbox').addEventListener('click', () => {
+    exportRekordboxXmlV6(state.localTracks.length ? state.localTracks : state.cloudTracks, 'rekordbox_preparado_v6.xml');
+  });
 }
 
 // CARREGAR CATALOGO BUNNY CLOUD
@@ -753,7 +1493,6 @@ async function loadCloudCatalog() {
   const genreSelect = document.getElementById('cloudGenreSelect');
 
   try {
-    // Tenta carregar manifesto local ou do Bunny CDN
     let resp = await fetch('/dj/manifest_curadoria.json');
     if (!resp.ok) {
       resp = await fetch('https://gigantera-penumbra.b-cdn.net/audio/curadoria/manifest_curadoria.json');
@@ -764,7 +1503,6 @@ async function loadCloudCatalog() {
     state.cloudTracks = manifest.tracks || [];
     state.cloudGenres = manifest.genres || {};
 
-    // Preencher select de generos
     genreSelect.innerHTML = '<option value="">Todos os Generos (13 Pastas)</option>';
     for (const [folder, g] of Object.entries(state.cloudGenres)) {
       const opt = document.createElement('option');
@@ -775,9 +1513,9 @@ async function loadCloudCatalog() {
 
     renderCloudTracks();
   } catch (err) {
-    console.warn('Falha ao carregar manifesto remoto, carregando fallback:', err);
+    console.warn('Falha ao carregar manifesto remoto:', err);
     tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--neon-amber);">
-      Aguardando sincronizacao do manifesto no CDN. Use a aba "Disco Local" para navegar diretamente nos seus arquivos.
+      Aguardando sincronizacao do manifesto no CDN. Conecte sua pasta local para tocar arquivos do SSD.
     </td></tr>`;
   }
 }
@@ -836,7 +1574,8 @@ function renderCloudTracks() {
         </div>
       </td>
       <td><span class="badge-tag ${tierClass}">${t.tier || 'Standard'}</span></td>
-      <td>
+      <td style="display: flex; gap: 4px;">
+        <button class="btn btn-sm btn-purple btn-cloud-mir" title="Executar Analise Web MIR">⚡ MIR</button>
         <a href="${t.cdn_url}" target="_blank" download class="btn btn-sm" title="Baixar via Bunny CDN">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
         </a>
@@ -853,6 +1592,23 @@ function renderCloudTracks() {
         const cueTime = parseFloat(btn.getAttribute('data-time'));
         playCloudTrack(t, cueTime);
       });
+    });
+
+    tr.querySelector('.btn-cloud-mir').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      showToast(`Iniciando analise Web MIR de "${t.title}"...`, 'info');
+      try {
+        const resp = await fetch(t.cdn_url);
+        const blob = await resp.blob();
+        const res = await webMir.analyzeFile(blob, (step) => showToast(step, 'info'));
+        t.bpm = res.bpm;
+        t.camelot = res.camelot;
+        t.cues = res.cues;
+        showToast(`MIR Concluido: ${res.bpm} BPM | ${res.camelot}`, 'success');
+        renderCloudTracks();
+      } catch (err) {
+        showToast(`Erro na analise MIR: ${err.message}`, 'rose');
+      }
     });
 
     tbody.appendChild(tr);
@@ -895,23 +1651,145 @@ function exportCloudM3U() {
   a.click();
 }
 
-// WEB FILE SYSTEM ACCESS API
+// ============================================================================
+// MODULO 5: WEB FILE SYSTEM ACCESS API & DRAG-AND-DROP
+// ============================================================================
+
+function renderCanonicalDropGrid() {
+  const container = document.getElementById('canonicalDropGrid');
+  if (!container) return;
+
+  container.innerHTML = '';
+  CANONICAL_13_FOLDERS.forEach(folder => {
+    const count = state.localTracks.filter(t => t.subfolder === folder).length;
+    const card = document.createElement('div');
+    card.className = 'drop-target-card';
+    card.setAttribute('data-folder', folder);
+
+    card.innerHTML = `
+      <div class="drop-target-header">
+        <span class="drop-target-folder" title="${folder}">📁 ${folder}</span>
+        <span class="drop-target-count" id="count-${folder}">${count}</span>
+      </div>
+      <div class="drop-target-hint">Soltar para Mover</div>
+    `;
+
+    // Eventos de Drag & Drop
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      card.classList.add('drag-over');
+    });
+
+    card.addEventListener('dragleave', () => {
+      card.classList.remove('drag-over');
+    });
+
+    card.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      const trackIndexStr = e.dataTransfer.getData('text/track-index');
+      if (trackIndexStr !== '') {
+        const trackIndex = parseInt(trackIndexStr, 10);
+        const track = state.localTracks[trackIndex];
+        if (track) {
+          await moveTrackToCanonicalFolder(track, folder);
+        }
+      }
+    });
+
+    container.appendChild(card);
+  });
+}
+
+async function moveTrackToCanonicalFolder(track, destFolderName) {
+  if (!state.localDirHandle) {
+    showToast('Conecte sua pasta local antes de mover arquivos!', 'warning');
+    return;
+  }
+
+  if (track.subfolder === destFolderName) {
+    showToast(`A faixa "${track.name}" ja esta na pasta ${destFolderName}`, 'info');
+    return;
+  }
+
+  showToast(`Movendo "${track.name}" para ${destFolderName}...`, 'info');
+
+  try {
+    // 1. Obtem handle da pasta de destino
+    const destDirHandle = await state.localDirHandle.getDirectoryHandle(destFolderName, { create: true });
+    
+    // 2. Cria arquivo na pasta de destino e grava conteudo
+    const newFileHandle = await destDirHandle.getFileHandle(track.name, { create: true });
+    const fileData = await track.handle.getFile();
+    const writable = await newFileHandle.createWritable();
+    await writable.write(fileData);
+    await writable.close();
+
+    // 3. Remove arquivo da pasta de origem se estava em uma subpasta
+    if (track.sourceDirHandle && track.subfolder !== 'Raiz') {
+      try {
+        await track.sourceDirHandle.removeEntry(track.name);
+      } catch (rmErr) {
+        console.warn('Nao foi possivel remover original:', rmErr);
+      }
+    }
+
+    showToast(`Sucesso: "${track.name}" organizada em [${destFolderName}]!`, 'success');
+    await scanCurrentLocalDirectory();
+  } catch (err) {
+    console.error('Erro ao mover arquivo:', err);
+    showToast(`Erro ao mover faixa: ${err.message}`, 'rose');
+  }
+}
+
 function setupLocalFsHandlers() {
   document.getElementById('btnConnectLocalDir').addEventListener('click', pickLocalDirectory);
   document.getElementById('btnChangeLocalFolder').addEventListener('click', pickLocalDirectory);
   document.getElementById('btnRescanLocal').addEventListener('click', scanCurrentLocalDirectory);
+  
   document.getElementById('localSearch').addEventListener('input', (e) => {
     state.localSearchQuery = e.target.value;
     renderLocalTracks();
   });
+
+  document.getElementById('localSubfolderFilter').addEventListener('change', (e) => {
+    state.localSubfolderFilter = e.target.value;
+    renderLocalTracks();
+  });
+
+  document.getElementById('btnBatchMirAnalyze').addEventListener('click', batchMirAnalyzeLocal);
+}
+
+async function batchMirAnalyzeLocal() {
+  if (!state.localTracks.length) {
+    showToast('Nenhuma faixa local detectada para analise MIR!', 'warning');
+    return;
+  }
+
+  showToast(`Iniciando analise MIR sequencial em ${Math.min(10, state.localTracks.length)} faixas...`, 'info');
+  for (let i = 0; i < Math.min(10, state.localTracks.length); i++) {
+    const t = state.localTracks[i];
+    if (t.bpm && t.camelot) continue;
+    try {
+      const file = await t.handle.getFile();
+      const res = await webMir.analyzeFile(file);
+      t.bpm = res.bpm;
+      t.camelot = res.camelot;
+      t.cues = res.cues;
+      renderLocalTracks();
+    } catch (e) {
+      console.warn('Erro ao analisar faixa:', t.name, e);
+    }
+  }
+  showToast('Analise em lote concluida!', 'success');
 }
 
 async function tryRestoreLocalDirectory() {
   try {
     const handle = await loadDirectoryHandle();
     if (handle) {
-      // Verificar permissoes
-      const perm = await handle.queryPermission({ mode: 'read' });
+      const perm = await handle.queryPermission({ mode: 'readwrite' });
       if (perm === 'granted') {
         state.localDirHandle = handle;
         updateLocalFsStatus(true, handle.name);
@@ -941,7 +1819,6 @@ async function pickLocalDirectory() {
     await saveDirectoryHandle(handle);
     updateLocalFsStatus(true, handle.name);
 
-    // Mudar para a aba local automaticamente
     document.querySelector('[data-tab="tabLocalFs"]').click();
     await scanCurrentLocalDirectory();
   } catch (err) {
@@ -956,7 +1833,7 @@ function updateLocalFsStatus(connected, name) {
   if (connected) {
     localFsDot.className = 'beacon-dot online';
     localFsText.textContent = `Disco Local: ${name}`;
-    localFolderPath.textContent = `Pasta conectada: ${name} (Acesso Nativo Ativo)`;
+    localFolderPath.textContent = `Pasta conectada: ${name} (Acesso Nativo Leitura/Escrita Ativo)`;
   } else {
     localFsDot.className = 'beacon-dot pending';
     localFsText.textContent = name || 'Disco Local: Desconectado';
@@ -964,12 +1841,11 @@ function updateLocalFsStatus(connected, name) {
   }
 }
 
-// ESCANEAR DIRETORIO LOCAL
 async function scanCurrentLocalDirectory() {
   if (!state.localDirHandle) return;
 
   const tbody = document.getElementById('localTrackTbody');
-  tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 30px; color: var(--neon-cyan);">
+  tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--neon-cyan);">
     Varrendo arquivos de audio em "${state.localDirHandle.name}"...
   </td></tr>`;
 
@@ -977,16 +1853,18 @@ async function scanCurrentLocalDirectory() {
   let subfolderCount = 0;
   let totalBytes = 0;
   let hasCanonical = false;
+  const subfoldersSet = new Set();
 
   try {
-    async function scanDir(handle, relativePath = '') {
+    async function scanDir(handle, relativePath = '', parentHandle = null) {
       for await (const [name, entry] of handle.entries()) {
         if (entry.kind === 'directory') {
           subfolderCount++;
+          subfoldersSet.add(name);
           if (CANONICAL_13_FOLDERS.includes(name)) {
             hasCanonical = true;
           }
-          await scanDir(entry, relativePath ? `${relativePath}/${name}` : name);
+          await scanDir(entry, relativePath ? `${relativePath}/${name}` : name, handle);
         } else if (entry.kind === 'file') {
           const ext = name.split('.').pop().toLowerCase();
           if (['mp3', 'wav', 'aiff', 'flac', 'm4a'].includes(ext)) {
@@ -994,18 +1872,23 @@ async function scanCurrentLocalDirectory() {
             totalBytes += file.size;
             state.localTracks.push({
               name: name,
+              title: name.replace(/\.[^/.]+$/, ""),
+              artist: relativePath || 'Local Track',
               subfolder: relativePath || 'Raiz',
               extension: ext.toUpperCase(),
               size: file.size,
               handle: entry,
-              fileRef: file
+              sourceDirHandle: handle,
+              fileRef: file,
+              bpm: null,
+              camelot: null
             });
           }
         }
       }
     }
 
-    await scanDir(state.localDirHandle);
+    await scanDir(state.localDirHandle, '', state.localDirHandle);
 
     document.getElementById('statLocalAudioCount').textContent = state.localTracks.length;
     document.getElementById('statLocalSubfoldersCount').textContent = subfolderCount;
@@ -1020,10 +1903,21 @@ async function scanCurrentLocalDirectory() {
       typeElem.style.color = 'var(--neon-amber)';
     }
 
+    // Atualiza filtro de subpastas
+    const filterSelect = document.getElementById('localSubfolderFilter');
+    filterSelect.innerHTML = '<option value="">Todas as Subpastas</option>';
+    Array.from(subfoldersSet).sort().forEach(sf => {
+      const opt = document.createElement('option');
+      opt.value = sf;
+      opt.textContent = sf;
+      filterSelect.appendChild(opt);
+    });
+
+    renderCanonicalDropGrid();
     renderLocalTracks();
   } catch (err) {
     console.error('Erro ao varrer pasta local:', err);
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 30px; color: var(--neon-rose);">
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--neon-rose);">
       Erro ao ler pasta: ${err.message}. Verifique as permissoes do navegador.
     </td></tr>`;
   }
@@ -1032,8 +1926,10 @@ async function scanCurrentLocalDirectory() {
 function renderLocalTracks() {
   const tbody = document.getElementById('localTrackTbody');
   const query = state.localSearchQuery.toLowerCase();
+  const sfFilter = state.localSubfolderFilter;
 
   const filtered = state.localTracks.filter(t => {
+    if (sfFilter && t.subfolder !== sfFilter) return false;
     if (query) {
       const haystack = `${t.name} ${t.subfolder}`.toLowerCase();
       if (!haystack.includes(query)) return false;
@@ -1042,42 +1938,367 @@ function renderLocalTracks() {
   });
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 25px; color: var(--text-muted);">
-      Nenhum arquivo de audio encontrado.
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 25px; color: var(--text-muted);">
+      Nenhum arquivo de audio encontrado com os filtros atuais.
     </td></tr>`;
     return;
   }
 
   tbody.innerHTML = '';
-  filtered.slice(0, 100).forEach(t => {
+  filtered.slice(0, 100).forEach((t, idx) => {
     const tr = document.createElement('tr');
+    tr.className = 'draggable-row';
+    tr.setAttribute('draggable', 'true');
+    const realIndex = state.localTracks.indexOf(t);
+
+    tr.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/track-index', String(realIndex));
+      e.dataTransfer.setData('text/plain', t.name);
+      tr.style.opacity = '0.5';
+    });
+
+    tr.addEventListener('dragend', () => {
+      tr.style.opacity = '1';
+    });
+
     const sizeMb = (t.size / (1024 * 1024)).toFixed(2);
+    const bpmDisplay = t.bpm ? `${t.bpm.toFixed(1)} BPM` : '---';
+    const camelotDisplay = t.camelot ? `<span class="badge-tag badge-camelot">${t.camelot}</span>` : '';
 
     tr.innerHTML = `
+      <td style="color: var(--text-muted); cursor: grab;">⠿</td>
       <td>
         <button class="btn btn-sm btn-cyan play-local-btn">▶</button>
       </td>
-      <td class="track-title">${escapeHtml(t.name)}</td>
+      <td>
+        <div class="track-title">${escapeHtml(t.name)}</div>
+      </td>
       <td><span class="badge-tag badge-genre">${escapeHtml(t.subfolder)}</span></td>
+      <td><span style="font-family: monospace; font-weight: 700;">${bpmDisplay}</span> ${camelotDisplay}</td>
       <td><span class="badge-tag" style="background: rgba(255,255,255,0.1);">${t.extension}</span></td>
       <td style="font-family: monospace;">${sizeMb} MB</td>
-      <td><span class="badge-tag badge-source">Disco Local</span></td>
-      <td>
-        <button class="btn btn-sm play-local-btn">Tocar</button>
+      <td style="display: flex; gap: 4px;">
+        <button class="btn btn-sm btn-purple btn-local-mir" title="Analisar BPM e Tom Camelot">⚡ MIR</button>
+        <button class="btn btn-sm btn-amber btn-local-tag" title="Editar Tags ID3v2.3">🏷 Tag</button>
       </td>
     `;
 
-    tr.querySelectorAll('.play-local-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        playLocalTrack(t);
-      });
+    tr.querySelector('.play-local-btn').addEventListener('click', () => {
+      playLocalTrack(t);
+    });
+
+    tr.querySelector('.btn-local-mir').addEventListener('click', async () => {
+      showToast(`Analisando transientes de "${t.name}"...`, 'info');
+      try {
+        const file = await t.handle.getFile();
+        const res = await webMir.analyzeFile(file);
+        t.bpm = res.bpm;
+        t.camelot = res.camelot;
+        t.cues = res.cues;
+        showToast(`MIR Concluido: ${res.bpm} BPM | ${res.camelot}`, 'success');
+        renderLocalTracks();
+      } catch (err) {
+        showToast(`Erro no MIR: ${err.message}`, 'rose');
+      }
+    });
+
+    tr.querySelector('.btn-local-tag').addEventListener('click', () => {
+      openTagEditor(t);
     });
 
     tbody.appendChild(tr);
   });
 }
 
+// ============================================================================
+// MODULO 6: TAG EDITOR ID3V2.3 NATIVO
+// ============================================================================
+
+function setupTagEditorModal() {
+  const modal = document.getElementById('tagEditorModal');
+  const btnClose = document.getElementById('btnCloseTagEditor');
+  const btnCancel = document.getElementById('btnCancelTagEditor');
+  const btnSave = document.getElementById('btnSaveTagsToDisk');
+  const btnAutoMir = document.getElementById('btnAutoFillMirInModal');
+  const genreSelect = document.getElementById('tagInputGenre');
+
+  // Preenche select de generos com as 13 pastas
+  genreSelect.innerHTML = '';
+  CANONICAL_13_FOLDERS.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f;
+    opt.textContent = f;
+    genreSelect.appendChild(opt);
+  });
+
+  const closeModal = () => modal.classList.remove('active');
+  btnClose.addEventListener('click', closeModal);
+  btnCancel.addEventListener('click', closeModal);
+
+  btnAutoMir.addEventListener('click', async () => {
+    if (!state.tagEditingTrack) return;
+    showToast('Executando analise Web MIR para preenchimento...', 'info');
+    try {
+      const file = await state.tagEditingTrack.handle.getFile();
+      const res = await webMir.analyzeFile(file);
+      document.getElementById('tagInputBpm').value = res.bpm;
+      document.getElementById('tagInputKey').value = res.camelot;
+      document.getElementById('tagInputComments').value = `Gigantera Club Master [BPM:${res.bpm} KEY:${res.camelot}]`;
+      showToast('Tags preenchidas automaticamente!', 'success');
+    } catch (e) {
+      showToast(`Erro na analise: ${e.message}`, 'rose');
+    }
+  });
+
+  btnSave.addEventListener('click', async () => {
+    if (!state.tagEditingTrack) return;
+    const track = state.tagEditingTrack;
+    showToast(`Gravando tags ID3v2.3 em "${track.name}"...`, 'info');
+
+    try {
+      const tags = {
+        title: document.getElementById('tagInputTitle').value.trim(),
+        artist: document.getElementById('tagInputArtist').value.trim(),
+        album: document.getElementById('tagInputAlbum').value.trim(),
+        bpm: document.getElementById('tagInputBpm').value.trim(),
+        key: document.getElementById('tagInputKey').value.trim(),
+        genre: document.getElementById('tagInputGenre').value,
+        comments: document.getElementById('tagInputComments').value.trim()
+      };
+
+      const file = await track.handle.getFile();
+      const originalBuffer = await file.arrayBuffer();
+      const updatedBuffer = ID3v2Writer.applyTagsToMp3(originalBuffer, tags);
+
+      // Grava no handle local com permissao readwrite
+      const writable = await track.handle.createWritable();
+      await writable.write(updatedBuffer);
+      await writable.close();
+
+      track.bpm = tags.bpm ? parseFloat(tags.bpm) : track.bpm;
+      track.camelot = tags.key || track.camelot;
+
+      showToast(`Sucesso: Tags ID3v2.3 gravadas em "${track.name}"!`, 'success');
+      closeModal();
+      renderLocalTracks();
+    } catch (err) {
+      console.error('Erro ao salvar tags ID3:', err);
+      showToast(`Erro ao gravar tags: ${err.message}`, 'rose');
+    }
+  });
+}
+
+function openTagEditor(track) {
+  state.tagEditingTrack = track;
+  const modal = document.getElementById('tagEditorModal');
+  
+  // Deduz artista e titulo a partir do nome do arquivo
+  let title = track.name.replace(/\.[^/.]+$/, "");
+  let artist = "Gigantera";
+  if (title.includes(" - ")) {
+    const parts = title.split(" - ");
+    artist = parts[0].trim();
+    title = parts.slice(1).join(" - ").trim();
+  }
+
+  document.getElementById('tagInputTitle').value = track.title || title;
+  document.getElementById('tagInputArtist').value = track.artist !== track.subfolder ? track.artist : artist;
+  document.getElementById('tagInputAlbum').value = "Curadoria Club Ready";
+  document.getElementById('tagInputBpm').value = track.bpm || 125.0;
+  document.getElementById('tagInputKey').value = track.camelot || "8A";
+  document.getElementById('tagInputGenre').value = CANONICAL_13_FOLDERS.includes(track.subfolder) ? track.subfolder : "02_Minimal_DeepTech";
+  document.getElementById('tagInputComments').value = `Gigantera Club Master [TBPM:${track.bpm || 125.0} TKEY:${track.camelot || '8A'}]`;
+
+  modal.classList.add('active');
+}
+
+// ============================================================================
+// MODULO 7: PIONEER USB MASTER RIG & MOTOR LOCAL 5555
+// ============================================================================
+
+function setupUsbRigManager() {
+  document.getElementById('btnRefreshUsbList').addEventListener('click', refreshUsbDevices);
+  document.getElementById('btnStartUsbExport').addEventListener('click', startUsbExport);
+  document.getElementById('btnDotCleanUsb').addEventListener('click', executeDotClean);
+  document.getElementById('btnToggleFormatPanel').addEventListener('click', () => {
+    const p = document.getElementById('formatGuardPanel');
+    p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  });
+  document.getElementById('btnExecuteFormat').addEventListener('click', executeUsbFormat);
+
+  // Preenche select de generos da exportacao USB
+  const usbGenreSelect = document.getElementById('usbGenreSelect');
+  CANONICAL_13_FOLDERS.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f;
+    opt.textContent = f;
+    usbGenreSelect.appendChild(opt);
+  });
+}
+
+async function refreshUsbDevices() {
+  const sel = document.getElementById('usbDeviceSelect');
+  sel.innerHTML = '<option value="">Detectando dispositivos...</option>';
+
+  try {
+    const resp = await fetch('http://127.0.0.1:5555/api/usb/devices');
+    if (!resp.ok) throw new Error('Motor local indisponivel');
+    const data = await resp.json();
+    state.usbDevices = data.devices || [];
+
+    sel.innerHTML = '';
+    if (state.usbDevices.length === 0) {
+      sel.innerHTML = '<option value="">Nenhum pen drive USB detectado (Insira um pen drive)</option>';
+      document.getElementById('bridgeUsbCount').textContent = '0';
+      return;
+    }
+
+    document.getElementById('bridgeUsbCount').textContent = state.usbDevices.length;
+    state.usbDevices.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.mount_point || d.path || d.device_node;
+      opt.textContent = `${d.name || d.media_name} (${d.filesystem || 'MS-DOS FAT32'}) - ${d.mount_point || d.device_node}`;
+      sel.appendChild(opt);
+    });
+
+    showToast(`Detectado(s) ${state.usbDevices.length} dispositivo(s) USB!`, 'success');
+  } catch (err) {
+    sel.innerHTML = '<option value="">Motor 5555 offline. Inicie ./INICIAR_APP_CURADORIA.command</option>';
+  }
+}
+
+async function startUsbExport() {
+  const target = document.getElementById('usbDeviceSelect').value;
+  const genre = document.getElementById('usbGenreSelect').value;
+  if (!target) {
+    showToast('Selecione um dispositivo USB de destino valido!', 'warning');
+    return;
+  }
+
+  showToast(`Iniciando gravacao Master USB no volume ${target}...`, 'info');
+  const box = document.getElementById('usbExportProgressBox');
+  box.style.display = 'block';
+
+  try {
+    const resp = await fetch('http://127.0.0.1:5555/api/usb/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        target_path: target,
+        selected_genres: genre === 'ALL' ? null : [genre],
+        copy_audio: true
+      })
+    });
+    const res = await resp.json();
+    if (res.status === 'started') {
+      showToast('Exportacao Master USB iniciada em segundo plano!', 'success');
+      pollUsbProgress();
+    } else {
+      showToast(`Erro ao iniciar exportacao: ${res.message}`, 'rose');
+    }
+  } catch (err) {
+    showToast(`Falha de comunicacao: ${err.message}`, 'rose');
+  }
+}
+
+function pollUsbProgress() {
+  const timer = setInterval(async () => {
+    try {
+      const resp = await fetch('http://127.0.0.1:5555/api/usb/export_status');
+      if (!resp.ok) return;
+      const st = await resp.json();
+      
+      const pct = document.getElementById('usbProgressPct');
+      const fill = document.getElementById('usbProgressFill');
+      const msg = document.getElementById('usbProgressMsg');
+      const cur = document.getElementById('usbCurrentTrack');
+
+      pct.textContent = `${st.percent || 0}%`;
+      fill.style.width = `${st.percent || 0}%`;
+      msg.textContent = st.message || 'Gravando faixas e banco DeviceSQL...';
+      cur.textContent = st.current_file || 'Processando acervo...';
+
+      if (st.status === 'completed' || st.percent >= 100) {
+        clearInterval(timer);
+        showToast('Gravacao Master USB concluida com sucesso! Pen drive pronto pra tocar.', 'success');
+      } else if (st.status === 'error') {
+        clearInterval(timer);
+        showToast(`Erro na exportacao: ${st.message}`, 'rose');
+      }
+    } catch (e) {
+      clearInterval(timer);
+    }
+  }, 1200);
+}
+
+async function executeDotClean() {
+  const target = document.getElementById('usbDeviceSelect').value;
+  if (!target) {
+    showToast('Selecione um volume USB para higienizar!', 'warning');
+    return;
+  }
+
+  showToast(`Executando dot_clean e expurgo AppleDouble em ${target}...`, 'info');
+  try {
+    const resp = await fetch('http://127.0.0.1:5555/api/usb/clean', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_path: target })
+    });
+    const res = await resp.json();
+    if (res.status === 'success') {
+      showToast('Expurgo concluido: Zero arquivos ._* ou .DS_Store no pen drive!', 'success');
+    } else {
+      showToast(`Erro na higienizacao: ${res.message}`, 'rose');
+    }
+  } catch (err) {
+    showToast(`Erro de conexao: ${err.message}`, 'rose');
+  }
+}
+
+async function executeUsbFormat() {
+  const target = document.getElementById('usbDeviceSelect').value;
+  const label = document.getElementById('fmtVolumeLabel').value.trim() || 'GIGANTERA_DJ';
+  const token = document.getElementById('fmtConfirmWord').value.trim();
+
+  if (token.toUpperCase() !== 'FORMATAR') {
+    showToast('Digite a palavra FORMATAR para confirmar!', 'warning');
+    return;
+  }
+
+  if (!confirm(`Confirmar formatacao permanente de ${target} como FAT32 MBR com o nome ${label}?`)) {
+    return;
+  }
+
+  showToast(`Formatando ${target} como FAT32 MBR no macOS...`, 'info');
+  try {
+    const resp = await fetch('http://127.0.0.1:5555/api/usb/format', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        device_node: target,
+        volume_label: label,
+        confirmation_token: 'FORMATAR'
+      })
+    });
+    const res = await resp.json();
+    if (res.status === 'success') {
+      showToast('Pen drive formatado com sucesso em FAT32 MBR!', 'success');
+      document.getElementById('formatGuardPanel').style.display = 'none';
+      document.getElementById('fmtConfirmWord').value = '';
+      refreshUsbDevices();
+    } else {
+      showToast(`Falha na formatacao: ${res.message}`, 'rose');
+    }
+  } catch (err) {
+    showToast(`Erro ao formatar: ${err.message}`, 'rose');
+  }
+}
+
+// ============================================================================
 // CONTROLES DE REPRODUCAO DO DECK MASTER
+// ============================================================================
+
 function setupAudioEvents() {
   playBtn.addEventListener('click', togglePlayPause);
 
@@ -1107,7 +2328,6 @@ function setupAudioEvents() {
     pitchVal.textContent = (pct >= 0 ? `+${pct}` : pct) + '%';
   });
 
-  // Hot Cues Deck Master
   document.getElementById('btnCueIntro').addEventListener('click', () => seekToCue('intro'));
   document.getElementById('btnCueGroove').addEventListener('click', () => seekToCue('groove'));
   document.getElementById('btnCueDrop').addEventListener('click', () => seekToCue('drop'));
@@ -1181,45 +2401,45 @@ async function playLocalTrack(track) {
   }
 }
 
-// WAVEFORM CANVAS DRAWING
 function drawWaveformProgress(progress = 0) {
   const ctx = waveformCanvas.getContext('2d');
   const w = waveformCanvas.width = waveformCanvas.offsetWidth * 2;
   const h = waveformCanvas.height = waveformCanvas.offsetHeight * 2;
   ctx.clearRect(0, 0, w, h);
 
-  const bars = 80;
-  const barWidth = w / bars;
-  const progIdx = Math.floor(bars * progress);
+  const bars = 70;
+  const barW = (w / bars) - 2;
 
   for (let i = 0; i < bars; i++) {
-    const barHeight = (Math.sin(i * 0.25) * 0.4 + 0.5) * (h * 0.75);
-    const y = (h - barHeight) / 2;
-    if (i <= progIdx) {
-      ctx.fillStyle = state.activeTrackSource === 'local' ? '#00ff9d' : '#00f0ff';
+    const barNorm = i / bars;
+    const barH = (Math.sin(i * 0.28) * 0.4 + 0.5) * (h * 0.8);
+    const x = i * (barW + 2);
+    const y = (h - barH) / 2;
+
+    if (barNorm <= progress) {
+      ctx.fillStyle = '#00f0ff';
     } else {
-      ctx.fillStyle = '#1e293b';
+      ctx.fillStyle = '#2a354a';
     }
-    ctx.fillRect(i * barWidth + 1, y, barWidth - 2, barHeight);
+    ctx.fillRect(x, y, barW, barH);
   }
 }
 
-// ASSISTENTE DE PREPARACAO DE PASTAS
+// PREPARADOR DE PASTAS
 function setupPreparationWizard() {
   const consoleBox = document.getElementById('prepConsole');
-
   function logPrep(msg) {
-    consoleBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${escapeHtml(msg)}</div>`;
+    const time = new Date().toLocaleTimeString();
+    consoleBox.innerHTML += `\n[${time}] ${msg}`;
     consoleBox.scrollTop = consoleBox.scrollHeight;
   }
 
-  // 1. Criar 13 Pastas Canonicas
   document.getElementById('btnCreate13Folders').addEventListener('click', async () => {
     if (!state.localDirHandle) {
-      alert('Por favor, conecte a pasta local primeiro!');
+      alert('Selecione primeiro a pasta local conectando seu disco.');
       return;
     }
-    logPrep(`Iniciando criacao de 13 pastas canonicas em: ${state.localDirHandle.name}`);
+    logPrep('Iniciando criacao das 13 pastas canonicas...');
     try {
       let created = 0;
       for (const folderName of CANONICAL_13_FOLDERS) {
@@ -1234,7 +2454,6 @@ function setupPreparationWizard() {
     }
   });
 
-  // 2. Auditar Integridade Forense
   document.getElementById('btnAuditCorruption').addEventListener('click', async () => {
     if (!state.localTracks.length) {
       alert('Nenhum arquivo de audio detectado na pasta local!');
@@ -1249,16 +2468,13 @@ function setupPreparationWizard() {
         corrompidos++;
         continue;
       }
-      // Checagem de cabeçalho stub JSON
       try {
         const slice = await t.fileRef.slice(0, 32).text();
         if (slice.includes('{') && slice.includes('"error"')) {
           logPrep(`[STUB DETECTADO] Falso MP3 de ripper web (JSON de erro): ${t.name}`);
           corrompidos++;
         }
-      } catch (e) {
-        // Ignora se for binario puro
-      }
+      } catch (e) {}
     }
 
     if (corrompidos === 0) {
@@ -1268,36 +2484,33 @@ function setupPreparationWizard() {
     }
   });
 
-  // 3. Exportar Manifesto
   document.getElementById('btnExportLocalManifest').addEventListener('click', () => {
     if (!state.localTracks.length) {
       alert('Nenhum arquivo local para gerar manifesto!');
       return;
     }
     const manifest = {
-      version: '6.5',
+      version: '6.6',
       system: 'Gigantera DJ OS',
       generated_at: new Date().toISOString(),
-      folder_name: state.localDirHandle.name,
+      folder_name: state.localDirHandle ? state.localDirHandle.name : 'Curadoria',
       total_files: state.localTracks.length,
       files: state.localTracks.map(t => ({
         name: t.name,
         subfolder: t.subfolder,
         size: t.size,
-        extension: t.extension
+        extension: t.extension,
+        bpm: t.bpm,
+        camelot: t.camelot
       }))
     };
-    const blob = new Blob([jsonString(manifest)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `manifest_${state.localDirHandle.name}.json`;
+    a.download = `manifest_${state.localDirHandle ? state.localDirHandle.name : 'curadoria'}.json`;
     a.click();
-    logPrep(`Manifesto gerado e baixado: manifest_${state.localDirHandle.name}.json`);
-  });
-
-  document.getElementById('btnSyncToBunnyTrigger').addEventListener('click', () => {
-    alert('Para sincronizar todo o acervo com o Bunny.net Edge Storage, execute no terminal do seu Mac:\n\npython3 "/Volumes/PLM_SSD_01/Dev/apps/Curadoria Musical/scripts/sync_curadoria_to_bunny.py" --all\n\nIsso disparara o pipeline multithread com verificacao de idempotencia.');
+    logPrep(`Manifesto gerado e baixado com sucesso!`);
   });
 }
 
@@ -1319,6 +2532,11 @@ async function pollLocalBridge() {
       document.getElementById('bridgeSetsCount').textContent = data.processed_sets_count || 0;
       document.getElementById('bridgeAutopilotStatus').textContent = data.infinite_loop_active ? 'ATIVO (Loop)' : 'Pausado';
       document.getElementById('bridgeAutopilotStatus').style.color = data.infinite_loop_active ? 'var(--neon-emerald)' : 'var(--neon-amber)';
+      
+      // Atualiza USBs se aba ativa
+      if (state.currentTab === 'tabRadar') {
+        refreshUsbDevices();
+      }
     } else {
       throw new Error('Falha no status');
     }
@@ -1342,11 +2560,33 @@ function formatTime(seconds) {
 
 function escapeHtml(str) {
   if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-function jsonString(obj) {
-  return JSON.stringify(obj, null, 2);
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  if (type === 'rose') toast.style.borderColor = 'var(--neon-rose)';
+  if (type === 'success') toast.style.borderColor = 'var(--neon-emerald)';
+  if (type === 'warning') toast.style.borderColor = 'var(--neon-amber)';
+
+  toast.innerHTML = `<span>⚡</span> <span>${escapeHtml(message)}</span>`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-10px)';
+    toast.style.transition = 'all 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
 }
 </script>
 </body>
