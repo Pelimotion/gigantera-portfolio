@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gigantera DJ Curation OS : Cloud & Local Studio</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg">
+<style>
+  :root {
+    --bg-main: #07090e;
+    --bg-surface: #0e121a;
+    --bg-card: #141924;
+    --bg-card-hover: #1b2230;
+    --bg-card-sub: #0a0d13;
+    
+    --border-subtle: #1c2331;
+    --border-medium: #2a354a;
+    --border-accent: #00f0ff;
+    
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --text-dim: #475569;
+    
+    --neon-cyan: #00f0ff;
+    --neon-cyan-sub: rgba(0, 240, 255, 0.12);
+    --neon-emerald: #00ff9d;
+    --neon-emerald-sub: rgba(0, 255, 157, 0.12);
+    --neon-amber: #ffb703;
+    --neon-amber-sub: rgba(255, 183, 3, 0.12);
+    --neon-rose: #ff2a6d;
+    --neon-rose-sub: rgba(255, 42, 109, 0.12);
+    --neon-purple: #a855f7;
+    --neon-purple-sub: rgba(168, 85, 247, 0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { background-color: var(--bg-main); color: var(--text-primary); font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased; padding-bottom: 110px; }
+
+  /* TOP HUD */
+  .top-hud {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(7, 9, 14, 0.92);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 12px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .brand-group { display: flex; align-items: center; gap: 12px; }
+  .brand-badge {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid var(--neon-cyan);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px; color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+  }
+  .brand-title { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+  .brand-sub { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+
+  .status-cluster { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .beacon-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .beacon-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .beacon-dot.online { background: var(--neon-emerald); box-shadow: 0 0 8px var(--neon-emerald); }
+  .beacon-dot.pending { background: var(--neon-amber); box-shadow: 0 0 8px var(--neon-amber); }
+  .beacon-dot.offline { background: var(--neon-rose); box-shadow: 0 0 8px var(--neon-rose); }
+
+  /* BUTTONS */
+  .btn {
+    background: var(--bg-card); border: 1px solid var(--border-medium);
+    color: var(--text-primary); padding: 7px 14px; border-radius: 6px;
+    font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex;
+    align-items: center; gap: 6px; transition: all 0.15s ease;
+  }
+  .btn:hover { background: var(--bg-card-hover); border-color: var(--neon-cyan); }
+  .btn-cyan { background: rgba(0, 240, 255, 0.12); border-color: var(--neon-cyan); color: #fff; }
+  .btn-cyan:hover { background: rgba(0, 240, 255, 0.25); box-shadow: 0 0 12px rgba(0, 240, 255, 0.3); }
+  .btn-emerald { background: rgba(0, 255, 157, 0.12); border-color: var(--neon-emerald); color: var(--neon-emerald); }
+  .btn-emerald:hover { background: rgba(0, 255, 157, 0.25); color: #fff; }
+  .btn-amber { background: rgba(255, 183, 3, 0.12); border-color: var(--neon-amber); color: var(--neon-amber); }
+  .btn-amber:hover { background: rgba(255, 183, 3, 0.25); color: #fff; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+  /* TABS */
+  .tabs-bar {
+    display: flex; gap: 6px; padding: 12px 24px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    overflow-x: auto;
+  }
+  .tab-item {
+    padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; color: var(--text-secondary); background: transparent;
+    border: 1px solid transparent; transition: all 0.15s ease;
+    display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .tab-item:hover { color: #fff; background: rgba(255,255,255,0.03); }
+  .tab-item.active {
+    color: #fff; background: var(--bg-card);
+    border-color: var(--border-medium);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+
+  /* LAYOUT */
+  .container { max-width: 1440px; margin: 0 auto; padding: 20px 24px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* HERO BANNER */
+  .hero-card {
+    background: linear-gradient(135deg, rgba(20, 25, 36, 0.8) 0%, rgba(10, 13, 19, 0.9) 100%);
+    border: 1px solid var(--border-medium);
+    border-radius: 12px; padding: 20px 24px; margin-bottom: 20px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  .hero-info h2 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .hero-info p { color: var(--text-secondary); font-size: 12px; max-width: 720px; }
+
+  /* DIRECTORY AUDITOR PANEL */
+  .directory-panel {
+    background: var(--bg-card); border: 1px solid var(--border-medium);
+    border-radius: 10px; padding: 18px 20px; margin-bottom: 20px;
+  }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+  .panel-title { font-size: 14px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+  .folder-stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;
+  }
+  .stat-card {
+    background: var(--bg-card-sub); border: 1px solid var(--border-subtle);
+    border-radius: 8px; padding: 12px 14px;
+  }
+  .stat-card .val { font-size: 20px; font-weight: 800; color: #fff; margin-top: 4px; }
+  .stat-card .lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* FILTER BAR */
+  .filter-bar {
+    display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;
+  }
+  .search-input {
+    background: var(--bg-card); border: 1px solid var(--border-medium);
+    color: #fff; padding: 7px 12px; border-radius: 6px; font-size: 12px; min-width: 260px; flex: 1;
+  }
+  .search-input:focus { outline: none; border-color: var(--neon-cyan); }
+  .filter-select {
+    background: var(--bg-card); border: 1px solid var(--border-medium);
+    color: #fff; padding: 7px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+  }
+  .filter-select:focus { outline: none; border-color: var(--neon-cyan); }
+
+  /* CAMELOT WHEEL SELECTOR */
+  .camelot-strip {
+    display: flex; gap: 4px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 16px;
+  }
+  .camelot-pill {
+    padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700;
+    cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-subtle);
+    color: var(--text-secondary); transition: all 0.12s ease;
+  }
+  .camelot-pill:hover { border-color: var(--neon-cyan); color: #fff; }
+  .camelot-pill.active { background: var(--neon-cyan-sub); border-color: var(--neon-cyan); color: var(--neon-cyan); }
+
+  /* TRACK LIST TABLE */
+  .track-table-container {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: 10px; overflow: hidden;
+  }
+  .track-table { width: 100%; border-collapse: collapse; text-align: left; }
+  .track-table th {
+    background: var(--bg-card-sub); padding: 10px 14px; font-size: 11px;
+    font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .track-table td {
+    padding: 10px 14px; border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-secondary); font-size: 12px; vertical-align: middle;
+  }
+  .track-table tr:hover td { background: var(--bg-card-hover); color: #fff; }
+  .track-table tr.active td { background: rgba(0, 240, 255, 0.08); color: #fff; }
+
+  .track-title { font-weight: 600; color: #fff; }
+  .track-artist { font-size: 11px; color: var(--text-muted); }
+  .badge-tag {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+  }
+  .badge-genre { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+  .badge-camelot { background: rgba(0, 240, 255, 0.15); color: var(--neon-cyan); border: 1px solid rgba(0, 240, 255, 0.3); font-weight: 800; }
+  .badge-tier-a { background: rgba(0, 255, 157, 0.15); color: var(--neon-emerald); border: 1px solid rgba(0, 255, 157, 0.3); }
+  .badge-tier-b { background: rgba(255, 183, 3, 0.15); color: var(--neon-amber); border: 1px solid rgba(255, 183, 3, 0.3); }
+  .badge-source { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+  /* HOT CUES ROW */
+  .cue-pills { display: inline-flex; gap: 4px; }
+  .cue-btn {
+    background: var(--bg-card-sub); border: 1px solid var(--border-subtle);
+    padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;
+    cursor: pointer; color: var(--text-secondary); transition: all 0.1s ease;
+  }
+  .cue-btn:hover { border-color: var(--neon-cyan); color: #fff; }
+  .cue-btn.cue-intro { border-color: #3b82f6; color: #60a5fa; }
+  .cue-btn.cue-groove { border-color: var(--neon-emerald); color: var(--neon-emerald); }
+  .cue-btn.cue-drop { border-color: var(--neon-rose); color: var(--neon-rose); }
+  .cue-btn.cue-outro { border-color: var(--neon-amber); color: var(--neon-amber); }
+
+  /* BOTTOM MASTER DECK PLAYER */
+  .master-deck {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    background: rgba(10, 13, 19, 0.96); backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border-medium);
+    padding: 10px 24px; box-shadow: 0 -4px 30px rgba(0,0,0,0.8);
+  }
+  .deck-inner {
+    max-width: 1440px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .deck-track-info { display: flex; align-items: center; gap: 12px; min-width: 260px; max-width: 320px; }
+  .deck-art {
+    width: 44px; height: 44px; border-radius: 6px; background: var(--bg-card);
+    border: 1px solid var(--border-medium); display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: var(--neon-cyan); flex-shrink: 0;
+  }
+  .deck-meta { overflow: hidden; }
+  .deck-meta .t-name { font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .deck-meta .t-artist { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .deck-controls { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; max-width: 600px; }
+  .deck-buttons { display: flex; align-items: center; gap: 12px; }
+  .play-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--neon-cyan); border: none; color: #000;
+    font-size: 16px; font-weight: 800; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 14px rgba(0, 240, 255, 0.4); transition: transform 0.1s ease;
+  }
+  .play-btn:hover { transform: scale(1.06); }
+  .play-btn:active { transform: scale(0.96); }
+
+  .waveform-container { width: 100%; position: relative; height: 30px; display: flex; align-items: center; }
+  .waveform-canvas { width: 100%; height: 26px; border-radius: 4px; cursor: pointer; background: rgba(0,0,0,0.4); border: 1px solid var(--border-subtle); }
+  .deck-time { font-size: 11px; color: var(--text-muted); font-family: monospace; display: flex; justify-content: space-between; width: 100%; }
+
+  .deck-telemetry { display: flex; align-items: center; gap: 12px; }
+  .pitch-control { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); }
+  .pitch-control input[type=range] { width: 80px; accent-color: var(--neon-cyan); }
+
+  /* PREPARATION MODAL / DRAWER */
+  .prep-wizard {
+    background: var(--bg-surface); border: 1px solid var(--border-medium);
+    border-radius: 10px; padding: 18px 20px; margin-bottom: 20px;
+  }
+  .prep-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 14px; }
+  .prep-step-card {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: 8px; padding: 14px;
+  }
+  .prep-step-card h4 { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .prep-step-card p { font-size: 11px; color: var(--text-secondary); margin-bottom: 10px; }
+
+  /* LOG CONSOLE */
+  .console-box {
+    background: #050608; border: 1px solid var(--border-subtle);
+    border-radius: 6px; padding: 10px 12px; font-family: monospace; font-size: 11px;
+    color: var(--neon-emerald); max-height: 120px; overflow-y: auto; margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP HUD -->
+<header class="top-hud">
+  <div class="brand-group">
+    <div class="brand-badge">G</div>
+    <div>
+      <div class="brand-title">GIGANTERA DJ RIG : CURATION OS</div>
+      <div class="brand-sub">SISTEMA HIBRIDO CLOUD (BUNNY.NET) & DISCO LOCAL (WEB FS) : V6.5</div>
+    </div>
+  </div>
+
+  <div class="status-cluster">
+    <div class="beacon-pill" id="localFsBeacon">
+      <span class="beacon-dot pending" id="localFsDot"></span>
+      <span id="localFsText">Disco Local: Desconectado</span>
+    </div>
+
+    <div class="beacon-pill" id="bunnyCdnBeacon">
+      <span class="beacon-dot online"></span>
+      <span>Bunny CDN: Conectado</span>
+    </div>
+
+    <div class="beacon-pill" id="localBridgeBeacon">
+      <span class="beacon-dot pending" id="bridgeDot"></span>
+      <span id="bridgeText">Ponte 5555: Sondando...</span>
+    </div>
+
+    <button class="btn btn-cyan btn-sm" id="btnConnectLocalDir">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+      Localizar Pasta Curadoria
+    </button>
+  </div>
+</header>
+
+<!-- TABS BAR -->
+<nav class="tabs-bar">
+  <button class="tab-item active" data-tab="tabCloud">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>
+    Nuvem Bunny CDN (Acervo Master)
+  </button>
+  <button class="tab-item" data-tab="tabLocalFs">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path></svg>
+    Disco Local (Web File System)
+  </button>
+  <button class="tab-item" data-tab="tabPrep">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"></path></svg>
+    Preparador & Organizador de Pastas
+  </button>
+  <button class="tab-item" data-tab="tabRadar">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8Zm0-14a6 6 0 1 0 6 6 6 6 0 0 0-6-6Z"></path></svg>
+    Radar & Motor Local (Porta 5555)
+  </button>
+</nav>
+
+<main class="container">
+
+  <!-- TAB 1: BUNNY CDN CLOUD REPOSITORY -->
+  <section id="tabCloud" class="tab-content active">
+    <div class="hero-card">
+      <div class="hero-info">
+        <h2>Acervo Master Global : Streaming via Bunny.net CDN</h2>
+        <p>Faixas preparadas com telemetria DSP, pontos de mixagem (Hot Cues A:Intro, B:Groove, C:Drop, D:Outro), tonalidades Camelot Wheel (1A:12B) e BPM de precisao. Pronto para audicao e streaming global com latencia ultra reduzida via CDN Edge no Brasil.</p>
+      </div>
+      <div>
+        <button class="btn btn-emerald" id="btnSyncToBunnyTrigger">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Sincronizar Acervo Local no Bunny
+        </button>
+      </div>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+      <input type="text" class="search-input" id="cloudSearch" placeholder="Buscar por artista, titulo, album ou selo...">
+      <select class="filter-select" id="cloudGenreSelect">
+        <option value="">Todos os Generos (13 Pastas)</option>
+      </select>
+      <select class="filter-select" id="cloudTierSelect">
+        <option value="">Todas as Fidelidades (Tiers)</option>
+        <option value="Tier A">Tier A Master (>=16.5 kHz)</option>
+        <option value="Tier B">Tier B Standard</option>
+      </select>
+      <button class="btn btn-sm" id="btnExportM3U">Exportar Playlist M3U8</button>
+    </div>
+
+    <!-- CAMELOT WHEEL SELECTOR -->
+    <div class="camelot-strip" id="camelotStrip">
+      <div class="camelot-pill active" data-camelot="">Todos Tons</div>
+      <div class="camelot-pill" data-camelot="1A">1A</div>
+      <div class="camelot-pill" data-camelot="2A">2A</div>
+      <div class="camelot-pill" data-camelot="3A">3A</div>
+      <div class="camelot-pill" data-camelot="4A">4A</div>
+      <div class="camelot-pill" data-camelot="5A">5A</div>
+      <div class="camelot-pill" data-camelot="6A">6A</div>
+      <div class="camelot-pill" data-camelot="7A">7A</div>
+      <div class="camelot-pill" data-camelot="8A">8A</div>
+      <div class="camelot-pill" data-camelot="9A">9A</div>
+      <div class="camelot-pill" data-camelot="10A">10A</div>
+      <div class="camelot-pill" data-camelot="11A">11A</div>
+      <div class="camelot-pill" data-camelot="12A">12A</div>
+      <div class="camelot-pill" data-camelot="1B">1B</div>
+      <div class="camelot-pill" data-camelot="2B">2B</div>
+      <div class="camelot-pill" data-camelot="3B">3B</div>
+      <div class="camelot-pill" data-camelot="4B">4B</div>
+      <div class="camelot-pill" data-camelot="5B">5B</div>
+      <div class="camelot-pill" data-camelot="6B">6B</div>
+      <div class="camelot-pill" data-camelot="7B">7B</div>
+      <div class="camelot-pill" data-camelot="8B">8B</div>
+      <div class="camelot-pill" data-camelot="9B">9B</div>
+      <div class="camelot-pill" data-camelot="10B">10B</div>
+      <div class="camelot-pill" data-camelot="11B">11B</div>
+      <div class="camelot-pill" data-camelot="12B">12B</div>
+    </div>
+
+    <!-- TRACK TABLE -->
+    <div class="track-table-container">
+      <table class="track-table">
+        <thead>
+          <tr>
+            <th style="width: 40px;">Play</th>
+            <th>Titulo / Artista</th>
+            <th>Genero / Pasta</th>
+            <th>BPM</th>
+            <th>Tom</th>
+            <th>Hot Cues CDJ</th>
+            <th>Fidelidade</th>
+            <th>Acoes</th>
+          </tr>
+        </thead>
+        <tbody id="cloudTrackTbody">
+          <tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">Carregando catalogo do acervo Bunny CDN...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- TAB 2: LOCAL DISK (WEB FILE SYSTEM ACCESS API) -->
+  <section id="tabLocalFs" class="tab-content">
+    <div class="directory-panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path></svg>
+            Auditoria da Pasta Local Conectada
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" id="localFolderPath">Nenhuma pasta conectada</div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-cyan btn-sm" id="btnRescanLocal">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+            Re-escanear Pasta
+          </button>
+          <button class="btn btn-sm" id="btnChangeLocalFolder">Trocar de Pasta</button>
+        </div>
+      </div>
+
+      <div class="folder-stats-grid">
+        <div class="stat-card">
+          <div class="lbl">Total de Faixas de Audio</div>
+          <div class="val" id="statLocalAudioCount">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="lbl">Subpastas Encontradas</div>
+          <div class="val" id="statLocalSubfoldersCount">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="lbl">Tipo Estrutural Detectado</div>
+          <div class="val" id="statLocalType" style="font-size: 14px; color: var(--neon-cyan);">Aguardando Conexao</div>
+        </div>
+        <div class="stat-card">
+          <div class="lbl">Tamanho Total Estimado</div>
+          <div class="val" id="statLocalTotalSize">0 MB</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" class="search-input" id="localSearch" placeholder="Filtrar arquivos locais...">
+      </div>
+
+      <div class="track-table-container">
+        <table class="track-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;">Play</th>
+              <th>Nome do Arquivo</th>
+              <th>Subpasta</th>
+              <th>Formato</th>
+              <th>Tamanho</th>
+              <th>Origem</th>
+              <th>Acoes</th>
+            </tr>
+          </thead>
+          <tbody id="localTrackTbody">
+            <tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
+              Clique em "Localizar Pasta Curadoria" acima para conectar seu SSD local (/Volumes/PLM_SSD_01/Musica/Curadoria ou Curadoria_Preparada)
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 3: PREPARADOR & ORGANIZADOR DE PASTAS -->
+  <section id="tabPrep" class="tab-content">
+    <div class="prep-wizard">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"></path></svg>
+          Assistente de Organizacao e Padronizacao de Pastas
+        </div>
+        <div style="font-size: 11px; color: var(--text-secondary);">Estrutura Padrao Club DJ (Pioneer CDJ / Rekordbox)</div>
+      </div>
+
+      <p style="color: var(--text-secondary); font-size: 12px; margin-bottom: 14px;">
+        Se voce apontar para uma nova pasta ou para a pasta bruta de downloads ("Curadoria"), este assistente permite auditar a saude dos arquivos, criar a taxonomia canonica de 13 pastas do estúdio e organizar suas musicas sem riscos.
+      </p>
+
+      <div class="prep-steps">
+        <!-- STEP 1 -->
+        <div class="prep-step-card">
+          <h4>1. Criar Taxonomia Canonica</h4>
+          <p>Cria as 13 pastas padrao (00_Set_Massa ate 12_Club_Hits_Remixes) diretamente na pasta local selecionada.</p>
+          <button class="btn btn-cyan btn-sm" id="btnCreate13Folders">
+            Criar 13 Pastas Canonicas
+          </button>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="prep-step-card">
+          <h4>2. Auditoria Zero-Trust Forense</h4>
+          <p>Verifica arquivos .mp3 corrompidos, 0-byte ou stubs JSON gerados por rippers web ineficientes.</p>
+          <button class="btn btn-amber btn-sm" id="btnAuditCorruption">
+            Auditar Integridade de Audio
+          </button>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="prep-step-card">
+          <h4>3. Gerar Manifesto para Nuvem</h4>
+          <p>Indexa as faixas preparadas e gera um manifesto com deep-links para sincronizacao no Bunny.net CDN.</p>
+          <button class="btn btn-emerald btn-sm" id="btnExportLocalManifest">
+            Exportar Manifesto JSON
+          </button>
+        </div>
+      </div>
+
+      <div class="console-box" id="prepConsole">
+        [SISTEMA PRONTO] Conecte sua pasta local para iniciar acoes de preparacao.
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 4: RADAR & MOTOR LOCAL (PORTA 5555) -->
+  <section id="tabRadar" class="tab-content">
+    <div class="hero-card">
+      <div class="hero-info">
+        <h2>Ponte de Integracao com o Motor Local (Porta 5555)</h2>
+        <p>Quando executado no seu Mac via <code>./INICIAR_APP_CURADORIA.command</code>, o motor nativo em Python libera processamento DSP em 8 threads, geracao automatica de Rekordbox XML v6, formatacao fisica de Pen Drives FAT32 MBR para CDJ-3000 e mineracao de sets internacionais.</p>
+      </div>
+      <div>
+        <a href="http://127.0.0.1:5555" target="_blank" class="btn btn-cyan">
+          Abrir Cockpit Nativo (127.0.0.1:5555)
+        </a>
+      </div>
+    </div>
+
+    <div class="directory-panel">
+      <div class="panel-header">
+        <div class="panel-title">Telemetria ao Vivo do Agente Local</div>
+        <button class="btn btn-sm" id="btnRefreshBridge">Atualizar Status</button>
+      </div>
+
+      <div class="folder-stats-grid">
+        <div class="stat-card">
+          <div class="lbl">Status da Fila de Sets</div>
+          <div class="val" id="bridgeQueueStatus" style="font-size: 16px;">Sondando...</div>
+        </div>
+        <div class="stat-card">
+          <div class="lbl">Sets Minerados no Radar</div>
+          <div class="val" id="bridgeSetsCount">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="lbl">Piloto Automatico Infinito</div>
+          <div class="val" id="bridgeAutopilotStatus" style="font-size: 16px; color: var(--neon-amber);">Offline</div>
+        </div>
+        <div class="stat-card">
+          <div class="lbl">Dispositivos USB Conectados</div>
+          <div class="val" id="bridgeUsbCount">0</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 10px; font-size: 12px; color: var(--text-secondary);">
+        Dica: Para manter o motor nativo sempre em execucao no background do seu Mac, abra o Terminal em <code>/Volumes/PLM_SSD_01/Dev/apps/Curadoria Musical</code> e digite <code>./INICIAR_APP_CURADORIA.command</code>.
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- BOTTOM MASTER DECK PLAYER -->
+<footer class="master-deck">
+  <div class="deck-inner">
+    <div class="deck-track-info">
+      <div class="deck-art" id="deckArtIcon">♪</div>
+      <div class="deck-meta">
+        <div class="t-name" id="deckTrackTitle">Selecione uma faixa para tocar</div>
+        <div class="t-artist" id="deckTrackArtist">Streaming via Bunny CDN ou Disco Local</div>
+      </div>
+    </div>
+
+    <div class="deck-controls">
+      <div class="deck-buttons">
+        <button class="btn btn-sm" id="deckPrevBtn">⏮</button>
+        <button class="play-btn" id="deckPlayBtn">▶</button>
+        <button class="btn btn-sm" id="deckNextBtn">⏭</button>
+
+        <!-- HOT CUES INTERATIVOS -->
+        <div class="cue-pills" id="deckHotCues">
+          <button class="cue-btn cue-intro" id="btnCueIntro" title="Pular para Intro">A: Intro</button>
+          <button class="cue-btn cue-groove" id="btnCueGroove" title="Pular para Groove">B: Groove</button>
+          <button class="cue-btn cue-drop" id="btnCueDrop" title="Pular para Drop">C: Drop</button>
+          <button class="cue-btn cue-outro" id="btnCueOutro" title="Pular para Outro">D: Outro</button>
+        </div>
+      </div>
+
+      <div class="waveform-container">
+        <canvas class="waveform-canvas" id="waveformCanvas"></canvas>
+      </div>
+
+      <div class="deck-time">
+        <span id="deckCurrentTime">00:00</span>
+        <span id="deckBpmKeyDisplay" style="color: var(--neon-cyan); font-weight: 700;">--- BPM | ---</span>
+        <span id="deckDuration">00:00</span>
+      </div>
+    </div>
+
+    <div class="deck-telemetry">
+      <div class="pitch-control">
+        <span>Pitch</span>
+        <input type="range" id="pitchSlider" min="0.92" max="1.08" step="0.005" value="1.0">
+        <span id="pitchVal" style="font-family: monospace; width: 38px;">0.0%</span>
+      </div>
+      <span class="badge-tag badge-source" id="deckSourceBadge">Nuvem</span>
+    </div>
+  </div>
+</footer>
+
+<audio id="globalAudioPlayer" preload="auto"></audio>
+
+<script>
+/**
+ * Gigantera DJ Curation OS v6.5
+ * Arquitetura Dual: Web File System Access API + Bunny CDN Edge Streaming
+ */
+
+const CANONICAL_13_FOLDERS = [
+  "00_Set_Massa",
+  "01_Tech_House",
+  "02_Minimal_DeepTech",
+  "03_Brasilidades_Edits",
+  "04_House_Classic",
+  "05_Indie_Dance",
+  "06_Acid_Electro",
+  "07_Breakbeat",
+  "08_Techno_Peak",
+  "09_Melodic_Trance",
+  "10_Low_BPM",
+  "11_Ethnic_Organic",
+  "12_Club_Hits_Remixes"
+];
+
+// Estado da Aplicacao
+const state = {
+  currentTab: 'tabCloud',
+  cloudTracks: [],
+  cloudGenres: {},
+  localTracks: [],
+  localDirHandle: null,
+  activeTrack: null,
+  activeTrackSource: 'cloud', // 'cloud' | 'local'
+  isPlaying: false,
+  camelotFilter: '',
+  cloudSearchQuery: '',
+  localSearchQuery: '',
+  bridgeConnected: false
+};
+
+// Elementos DOM
+const audioPlayer = document.getElementById('globalAudioPlayer');
+const playBtn = document.getElementById('deckPlayBtn');
+const deckTrackTitle = document.getElementById('deckTrackTitle');
+const deckTrackArtist = document.getElementById('deckTrackArtist');
+const deckBpmKeyDisplay = document.getElementById('deckBpmKeyDisplay');
+const deckCurrentTime = document.getElementById('deckCurrentTime');
+const deckDuration = document.getElementById('deckDuration');
+const deckSourceBadge = document.getElementById('deckSourceBadge');
+const waveformCanvas = document.getElementById('waveformCanvas');
+const pitchSlider = document.getElementById('pitchSlider');
+const pitchVal = document.getElementById('pitchVal');
+
+const localFsDot = document.getElementById('localFsDot');
+const localFsText = document.getElementById('localFsText');
+const localFolderPath = document.getElementById('localFolderPath');
+const bridgeDot = document.getElementById('bridgeDot');
+const bridgeText = document.getElementById('bridgeText');
+
+// IndexedDB Helper para persistencia do DirectoryHandle
+const IDB_NAME = 'gigantera_dj_vault';
+const IDB_STORE = 'handles';
+
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveDirectoryHandle(handle) {
+  try {
+    const db = await openIDB();
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(handle, 'curadoria_dir');
+    return new Promise(resolve => tx.oncomplete = () => resolve());
+  } catch (err) {
+    console.warn('Erro ao salvar handle no IndexedDB:', err);
+  }
+}
+
+async function loadDirectoryHandle() {
+  try {
+    const db = await openIDB();
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get('curadoria_dir');
+    return new Promise(resolve => req.onsuccess = () => resolve(req.result));
+  } catch (err) {
+    console.warn('Erro ao carregar handle:', err);
+    return null;
+  }
+}
+
+// Inicializacao
+window.addEventListener('DOMContentLoaded', async () => {
+  setupTabs();
+  setupAudioEvents();
+  setupCamelotFilter();
+  setupLocalFsHandlers();
+  setupPreparationWizard();
+
+  // Carregar catalogo Cloud do manifesto
+  await loadCloudCatalog();
+
+  // Tentar restaurar handle da pasta local
+  await tryRestoreLocalDirectory();
+
+  // Sondar Ponte Local 5555
+  pollLocalBridge();
+  setInterval(pollLocalBridge, 10000);
+});
+
+// NAVEGACAO DE ABAS
+function setupTabs() {
+  document.querySelectorAll('.tab-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      const tabId = btn.getAttribute('data-tab');
+      document.getElementById(tabId).classList.add('active');
+      state.currentTab = tabId;
+    });
+  });
+}
+
+// CARREGAR CATALOGO BUNNY CLOUD
+async function loadCloudCatalog() {
+  const tbody = document.getElementById('cloudTrackTbody');
+  const genreSelect = document.getElementById('cloudGenreSelect');
+
+  try {
+    // Tenta carregar manifesto local ou do Bunny CDN
+    let resp = await fetch('/dj/manifest_curadoria.json');
+    if (!resp.ok) {
+      resp = await fetch('https://gigantera-penumbra.b-cdn.net/audio/curadoria/manifest_curadoria.json');
+    }
+    if (!resp.ok) throw new Error('Manifesto indisponivel');
+
+    const manifest = await resp.json();
+    state.cloudTracks = manifest.tracks || [];
+    state.cloudGenres = manifest.genres || {};
+
+    // Preencher select de generos
+    genreSelect.innerHTML = '<option value="">Todos os Generos (13 Pastas)</option>';
+    for (const [folder, g] of Object.entries(state.cloudGenres)) {
+      const opt = document.createElement('option');
+      opt.value = folder;
+      opt.textContent = `${folder} (${g.count})`;
+      genreSelect.appendChild(opt);
+    }
+
+    renderCloudTracks();
+  } catch (err) {
+    console.warn('Falha ao carregar manifesto remoto, carregando fallback:', err);
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--neon-amber);">
+      Aguardando sincronizacao do manifesto no CDN. Use a aba "Disco Local" para navegar diretamente nos seus arquivos.
+    </td></tr>`;
+  }
+}
+
+function renderCloudTracks() {
+  const tbody = document.getElementById('cloudTrackTbody');
+  const query = state.cloudSearchQuery.toLowerCase();
+  const selectedGenre = document.getElementById('cloudGenreSelect').value;
+  const selectedTier = document.getElementById('cloudTierSelect').value;
+
+  const filtered = state.cloudTracks.filter(t => {
+    if (selectedGenre && t.dest_folder !== selectedGenre) return false;
+    if (selectedTier && t.tier !== selectedTier) return false;
+    if (state.camelotFilter && t.camelot !== state.camelotFilter) return false;
+    if (query) {
+      const haystack = `${t.title} ${t.artist} ${t.album} ${t.dest_folder}`.toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 25px; color: var(--text-muted);">
+      Nenhuma faixa encontrada com os filtros selecionados.
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = '';
+  filtered.slice(0, 100).forEach(t => {
+    const tr = document.createElement('tr');
+    if (state.activeTrack && state.activeTrack.track_id === t.track_id) {
+      tr.classList.add('active');
+    }
+
+    const tierClass = t.tier === 'Tier A' ? 'badge-tier-a' : 'badge-tier-b';
+    const cues = t.cues || {};
+
+    tr.innerHTML = `
+      <td>
+        <button class="btn btn-sm btn-cyan play-track-btn" data-id="${t.track_id}">▶</button>
+      </td>
+      <td>
+        <div class="track-title">${escapeHtml(t.title)}</div>
+        <div class="track-artist">${escapeHtml(t.artist)}</div>
+      </td>
+      <td><span class="badge-tag badge-genre">${escapeHtml(t.dest_folder)}</span></td>
+      <td style="font-family: monospace; font-weight: 700;">${t.bpm ? t.bpm.toFixed(1) : '---'}</td>
+      <td><span class="badge-tag badge-camelot">${t.camelot || '---'}</span></td>
+      <td>
+        <div class="cue-pills">
+          <button class="cue-btn cue-intro inline-cue" data-time="${cues.intro || 0}">A</button>
+          <button class="cue-btn cue-groove inline-cue" data-time="${cues.groove || 0}">B</button>
+          <button class="cue-btn cue-drop inline-cue" data-time="${cues.drop || 0}">C</button>
+          <button class="cue-btn cue-outro inline-cue" data-time="${cues.outro || 0}">D</button>
+        </div>
+      </td>
+      <td><span class="badge-tag ${tierClass}">${t.tier || 'Standard'}</span></td>
+      <td>
+        <a href="${t.cdn_url}" target="_blank" download class="btn btn-sm" title="Baixar via Bunny CDN">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        </a>
+      </td>
+    `;
+
+    tr.querySelector('.play-track-btn').addEventListener('click', () => {
+      playCloudTrack(t);
+    });
+
+    tr.querySelectorAll('.inline-cue').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const cueTime = parseFloat(btn.getAttribute('data-time'));
+        playCloudTrack(t, cueTime);
+      });
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+// FILTRO CAMELOT
+function setupCamelotFilter() {
+  document.querySelectorAll('.camelot-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.camelot-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      state.camelotFilter = pill.getAttribute('data-camelot');
+      renderCloudTracks();
+    });
+  });
+
+  document.getElementById('cloudSearch').addEventListener('input', (e) => {
+    state.cloudSearchQuery = e.target.value;
+    renderCloudTracks();
+  });
+  document.getElementById('cloudGenreSelect').addEventListener('change', renderCloudTracks);
+  document.getElementById('cloudTierSelect').addEventListener('change', renderCloudTracks);
+
+  document.getElementById('btnExportM3U').addEventListener('click', exportCloudM3U);
+}
+
+function exportCloudM3U() {
+  if (state.cloudTracks.length === 0) return;
+  let m3u = '#EXTM3U\n';
+  state.cloudTracks.forEach(t => {
+    m3u += `#EXTINF:${Math.round(t.duration || 0)},${t.artist} - ${t.title}\n`;
+    m3u += `${t.cdn_url}\n`;
+  });
+  const blob = new Blob([m3u], { type: 'audio/x-mpegurl' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'gigantera_master_bunny_curadoria.m3u8';
+  a.click();
+}
+
+// WEB FILE SYSTEM ACCESS API
+function setupLocalFsHandlers() {
+  document.getElementById('btnConnectLocalDir').addEventListener('click', pickLocalDirectory);
+  document.getElementById('btnChangeLocalFolder').addEventListener('click', pickLocalDirectory);
+  document.getElementById('btnRescanLocal').addEventListener('click', scanCurrentLocalDirectory);
+  document.getElementById('localSearch').addEventListener('input', (e) => {
+    state.localSearchQuery = e.target.value;
+    renderLocalTracks();
+  });
+}
+
+async function tryRestoreLocalDirectory() {
+  try {
+    const handle = await loadDirectoryHandle();
+    if (handle) {
+      // Verificar permissoes
+      const perm = await handle.queryPermission({ mode: 'read' });
+      if (perm === 'granted') {
+        state.localDirHandle = handle;
+        updateLocalFsStatus(true, handle.name);
+        await scanCurrentLocalDirectory();
+      } else {
+        updateLocalFsStatus(false, `${handle.name} (Clique para reautorizar)`);
+      }
+    }
+  } catch (err) {
+    console.warn('Falha ao restaurar handle de diretorio:', err);
+  }
+}
+
+async function pickLocalDirectory() {
+  try {
+    if (!('showDirectoryPicker' in window)) {
+      alert('Seu navegador nao suporta a Web File System Access API nativa. Por favor, utilize o Google Chrome, Brave ou Microsoft Edge para acessar discos locais.');
+      return;
+    }
+
+    const handle = await window.showDirectoryPicker({
+      mode: 'readwrite',
+      startIn: 'music'
+    });
+
+    state.localDirHandle = handle;
+    await saveDirectoryHandle(handle);
+    updateLocalFsStatus(true, handle.name);
+
+    // Mudar para a aba local automaticamente
+    document.querySelector('[data-tab="tabLocalFs"]').click();
+    await scanCurrentLocalDirectory();
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error('Erro ao selecionar pasta:', err);
+      alert('Falha ao obter acesso a pasta local: ' + err.message);
+    }
+  }
+}
+
+function updateLocalFsStatus(connected, name) {
+  if (connected) {
+    localFsDot.className = 'beacon-dot online';
+    localFsText.textContent = `Disco Local: ${name}`;
+    localFolderPath.textContent = `Pasta conectada: ${name} (Acesso Nativo Ativo)`;
+  } else {
+    localFsDot.className = 'beacon-dot pending';
+    localFsText.textContent = name || 'Disco Local: Desconectado';
+    localFolderPath.textContent = 'Nenhuma pasta conectada';
+  }
+}
+
+// ESCANEAR DIRETORIO LOCAL
+async function scanCurrentLocalDirectory() {
+  if (!state.localDirHandle) return;
+
+  const tbody = document.getElementById('localTrackTbody');
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 30px; color: var(--neon-cyan);">
+    Varrendo arquivos de audio em "${state.localDirHandle.name}"...
+  </td></tr>`;
+
+  state.localTracks = [];
+  let subfolderCount = 0;
+  let totalBytes = 0;
+  let hasCanonical = false;
+
+  try {
+    async function scanDir(handle, relativePath = '') {
+      for await (const [name, entry] of handle.entries()) {
+        if (entry.kind === 'directory') {
+          subfolderCount++;
+          if (CANONICAL_13_FOLDERS.includes(name)) {
+            hasCanonical = true;
+          }
+          await scanDir(entry, relativePath ? `${relativePath}/${name}` : name);
+        } else if (entry.kind === 'file') {
+          const ext = name.split('.').pop().toLowerCase();
+          if (['mp3', 'wav', 'aiff', 'flac', 'm4a'].includes(ext)) {
+            const file = await entry.getFile();
+            totalBytes += file.size;
+            state.localTracks.push({
+              name: name,
+              subfolder: relativePath || 'Raiz',
+              extension: ext.toUpperCase(),
+              size: file.size,
+              handle: entry,
+              fileRef: file
+            });
+          }
+        }
+      }
+    }
+
+    await scanDir(state.localDirHandle);
+
+    document.getElementById('statLocalAudioCount').textContent = state.localTracks.length;
+    document.getElementById('statLocalSubfoldersCount').textContent = subfolderCount;
+    document.getElementById('statLocalTotalSize').textContent = `${(totalBytes / (1024 * 1024)).toFixed(1)} MB`;
+
+    const typeElem = document.getElementById('statLocalType');
+    if (hasCanonical) {
+      typeElem.textContent = 'Acervo Preparado Club (13 Pastas)';
+      typeElem.style.color = 'var(--neon-emerald)';
+    } else {
+      typeElem.textContent = 'Pasta Bruta (Requer Organizacao)';
+      typeElem.style.color = 'var(--neon-amber)';
+    }
+
+    renderLocalTracks();
+  } catch (err) {
+    console.error('Erro ao varrer pasta local:', err);
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 30px; color: var(--neon-rose);">
+      Erro ao ler pasta: ${err.message}. Verifique as permissoes do navegador.
+    </td></tr>`;
+  }
+}
+
+function renderLocalTracks() {
+  const tbody = document.getElementById('localTrackTbody');
+  const query = state.localSearchQuery.toLowerCase();
+
+  const filtered = state.localTracks.filter(t => {
+    if (query) {
+      const haystack = `${t.name} ${t.subfolder}`.toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 25px; color: var(--text-muted);">
+      Nenhum arquivo de audio encontrado.
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = '';
+  filtered.slice(0, 100).forEach(t => {
+    const tr = document.createElement('tr');
+    const sizeMb = (t.size / (1024 * 1024)).toFixed(2);
+
+    tr.innerHTML = `
+      <td>
+        <button class="btn btn-sm btn-cyan play-local-btn">▶</button>
+      </td>
+      <td class="track-title">${escapeHtml(t.name)}</td>
+      <td><span class="badge-tag badge-genre">${escapeHtml(t.subfolder)}</span></td>
+      <td><span class="badge-tag" style="background: rgba(255,255,255,0.1);">${t.extension}</span></td>
+      <td style="font-family: monospace;">${sizeMb} MB</td>
+      <td><span class="badge-tag badge-source">Disco Local</span></td>
+      <td>
+        <button class="btn btn-sm play-local-btn">Tocar</button>
+      </td>
+    `;
+
+    tr.querySelectorAll('.play-local-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        playLocalTrack(t);
+      });
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+// CONTROLES DE REPRODUCAO DO DECK MASTER
+function setupAudioEvents() {
+  playBtn.addEventListener('click', togglePlayPause);
+
+  audioPlayer.addEventListener('timeupdate', () => {
+    deckCurrentTime.textContent = formatTime(audioPlayer.currentTime);
+    drawWaveformProgress(audioPlayer.currentTime / (audioPlayer.duration || 1));
+  });
+
+  audioPlayer.addEventListener('loadedmetadata', () => {
+    deckDuration.textContent = formatTime(audioPlayer.duration);
+  });
+
+  audioPlayer.addEventListener('play', () => {
+    state.isPlaying = true;
+    playBtn.textContent = '⏸';
+  });
+
+  audioPlayer.addEventListener('pause', () => {
+    state.isPlaying = false;
+    playBtn.textContent = '▶';
+  });
+
+  pitchSlider.addEventListener('input', (e) => {
+    const rate = parseFloat(e.target.value);
+    audioPlayer.playbackRate = rate;
+    const pct = ((rate - 1.0) * 100).toFixed(1);
+    pitchVal.textContent = (pct >= 0 ? `+${pct}` : pct) + '%';
+  });
+
+  // Hot Cues Deck Master
+  document.getElementById('btnCueIntro').addEventListener('click', () => seekToCue('intro'));
+  document.getElementById('btnCueGroove').addEventListener('click', () => seekToCue('groove'));
+  document.getElementById('btnCueDrop').addEventListener('click', () => seekToCue('drop'));
+  document.getElementById('btnCueOutro').addEventListener('click', () => seekToCue('outro'));
+
+  waveformCanvas.addEventListener('click', (e) => {
+    if (!audioPlayer.duration) return;
+    const rect = waveformCanvas.getBoundingClientRect();
+    const pos = (e.clientX - rect.left) / rect.width;
+    audioPlayer.currentTime = pos * audioPlayer.duration;
+  });
+}
+
+function seekToCue(cueType) {
+  if (!state.activeTrack || !state.activeTrack.cues) return;
+  const time = state.activeTrack.cues[cueType];
+  if (time !== undefined && time >= 0) {
+    audioPlayer.currentTime = time;
+  }
+}
+
+function togglePlayPause() {
+  if (!audioPlayer.src) return;
+  if (audioPlayer.paused) {
+    audioPlayer.play();
+  } else {
+    audioPlayer.pause();
+  }
+}
+
+function playCloudTrack(track, startTime = 0) {
+  state.activeTrack = track;
+  state.activeTrackSource = 'cloud';
+
+  audioPlayer.src = track.cdn_url;
+  deckTrackTitle.textContent = track.title;
+  deckTrackArtist.textContent = track.artist;
+  deckBpmKeyDisplay.textContent = `${track.bpm ? track.bpm.toFixed(1) : '---'} BPM | ${track.camelot || '---'}`;
+  deckSourceBadge.textContent = 'Bunny CDN';
+  deckSourceBadge.style.background = 'rgba(0, 240, 255, 0.15)';
+  deckSourceBadge.style.color = 'var(--neon-cyan)';
+
+  audioPlayer.oncanplay = () => {
+    if (startTime > 0) audioPlayer.currentTime = startTime;
+    audioPlayer.play().catch(e => console.warn('Autoplay bloqueado:', e));
+    audioPlayer.oncanplay = null;
+  };
+
+  renderCloudTracks();
+}
+
+async function playLocalTrack(track) {
+  try {
+    const file = await track.handle.getFile();
+    const objectUrl = URL.createObjectURL(file);
+
+    state.activeTrack = track;
+    state.activeTrackSource = 'local';
+
+    audioPlayer.src = objectUrl;
+    deckTrackTitle.textContent = track.name;
+    deckTrackArtist.textContent = `Pasta: ${track.subfolder}`;
+    deckBpmKeyDisplay.textContent = `${track.extension} Local`;
+    deckSourceBadge.textContent = 'Disco Local';
+    deckSourceBadge.style.background = 'rgba(0, 255, 157, 0.15)';
+    deckSourceBadge.style.color = 'var(--neon-emerald)';
+
+    audioPlayer.play().catch(e => console.warn('Autoplay bloqueado:', e));
+  } catch (err) {
+    alert('Erro ao reproduzir arquivo local: ' + err.message);
+  }
+}
+
+// WAVEFORM CANVAS DRAWING
+function drawWaveformProgress(progress = 0) {
+  const ctx = waveformCanvas.getContext('2d');
+  const w = waveformCanvas.width = waveformCanvas.offsetWidth * 2;
+  const h = waveformCanvas.height = waveformCanvas.offsetHeight * 2;
+  ctx.clearRect(0, 0, w, h);
+
+  const bars = 80;
+  const barWidth = w / bars;
+  const progIdx = Math.floor(bars * progress);
+
+  for (let i = 0; i < bars; i++) {
+    const barHeight = (Math.sin(i * 0.25) * 0.4 + 0.5) * (h * 0.75);
+    const y = (h - barHeight) / 2;
+    if (i <= progIdx) {
+      ctx.fillStyle = state.activeTrackSource === 'local' ? '#00ff9d' : '#00f0ff';
+    } else {
+      ctx.fillStyle = '#1e293b';
+    }
+    ctx.fillRect(i * barWidth + 1, y, barWidth - 2, barHeight);
+  }
+}
+
+// ASSISTENTE DE PREPARACAO DE PASTAS
+function setupPreparationWizard() {
+  const consoleBox = document.getElementById('prepConsole');
+
+  function logPrep(msg) {
+    consoleBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${escapeHtml(msg)}</div>`;
+    consoleBox.scrollTop = consoleBox.scrollHeight;
+  }
+
+  // 1. Criar 13 Pastas Canonicas
+  document.getElementById('btnCreate13Folders').addEventListener('click', async () => {
+    if (!state.localDirHandle) {
+      alert('Por favor, conecte a pasta local primeiro!');
+      return;
+    }
+    logPrep(`Iniciando criacao de 13 pastas canonicas em: ${state.localDirHandle.name}`);
+    try {
+      let created = 0;
+      for (const folderName of CANONICAL_13_FOLDERS) {
+        await state.localDirHandle.getDirectoryHandle(folderName, { create: true });
+        logPrep(`Pasta verificada / criada: ${folderName}`);
+        created++;
+      }
+      logPrep(`Sucesso: ${created} pastas canonicas estruturadas com sucesso!`);
+      await scanCurrentLocalDirectory();
+    } catch (err) {
+      logPrep(`Erro ao criar pastas: ${err.message}`);
+    }
+  });
+
+  // 2. Auditar Integridade Forense
+  document.getElementById('btnAuditCorruption').addEventListener('click', async () => {
+    if (!state.localTracks.length) {
+      alert('Nenhum arquivo de audio detectado na pasta local!');
+      return;
+    }
+    logPrep(`Iniciando auditoria de integridade em ${state.localTracks.length} faixas locais...`);
+    let corrompidos = 0;
+
+    for (const t of state.localTracks) {
+      if (t.size < 1024) {
+        logPrep(`[ALERTA] Arquivo com menos de 1KB detectado: ${t.name} (${t.size} bytes)`);
+        corrompidos++;
+        continue;
+      }
+      // Checagem de cabeçalho stub JSON
+      try {
+        const slice = await t.fileRef.slice(0, 32).text();
+        if (slice.includes('{') && slice.includes('"error"')) {
+          logPrep(`[STUB DETECTADO] Falso MP3 de ripper web (JSON de erro): ${t.name}`);
+          corrompidos++;
+        }
+      } catch (e) {
+        // Ignora se for binario puro
+      }
+    }
+
+    if (corrompidos === 0) {
+      logPrep(`[OK] Auditoria forense concluida: 0 arquivos corrompidos ou stubs detectados!`);
+    } else {
+      logPrep(`[AVISO] Encontrados ${corrompidos} arquivos anomalos para quarentena.`);
+    }
+  });
+
+  // 3. Exportar Manifesto
+  document.getElementById('btnExportLocalManifest').addEventListener('click', () => {
+    if (!state.localTracks.length) {
+      alert('Nenhum arquivo local para gerar manifesto!');
+      return;
+    }
+    const manifest = {
+      version: '6.5',
+      system: 'Gigantera DJ OS',
+      generated_at: new Date().toISOString(),
+      folder_name: state.localDirHandle.name,
+      total_files: state.localTracks.length,
+      files: state.localTracks.map(t => ({
+        name: t.name,
+        subfolder: t.subfolder,
+        size: t.size,
+        extension: t.extension
+      }))
+    };
+    const blob = new Blob([jsonString(manifest)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `manifest_${state.localDirHandle.name}.json`;
+    a.click();
+    logPrep(`Manifesto gerado e baixado: manifest_${state.localDirHandle.name}.json`);
+  });
+
+  document.getElementById('btnSyncToBunnyTrigger').addEventListener('click', () => {
+    alert('Para sincronizar todo o acervo com o Bunny.net Edge Storage, execute no terminal do seu Mac:\n\npython3 "/Volumes/PLM_SSD_01/Dev/apps/Curadoria Musical/scripts/sync_curadoria_to_bunny.py" --all\n\nIsso disparara o pipeline multithread com verificacao de idempotencia.');
+  });
+}
+
+// PONTE LOCAL (PORTA 5555)
+async function pollLocalBridge() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const resp = await fetch('http://127.0.0.1:5555/api/state', { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (resp.ok) {
+      const data = await resp.json();
+      state.bridgeConnected = true;
+      bridgeDot.className = 'beacon-dot online';
+      bridgeText.textContent = 'Ponte 5555: Online';
+
+      document.getElementById('bridgeQueueStatus').textContent = data.current_status || 'Ocioso';
+      document.getElementById('bridgeSetsCount').textContent = data.processed_sets_count || 0;
+      document.getElementById('bridgeAutopilotStatus').textContent = data.infinite_loop_active ? 'ATIVO (Loop)' : 'Pausado';
+      document.getElementById('bridgeAutopilotStatus').style.color = data.infinite_loop_active ? 'var(--neon-emerald)' : 'var(--neon-amber)';
+    } else {
+      throw new Error('Falha no status');
+    }
+  } catch (err) {
+    state.bridgeConnected = false;
+    bridgeDot.className = 'beacon-dot pending';
+    bridgeText.textContent = 'Ponte 5555: Offline (Modo Web)';
+    document.getElementById('bridgeQueueStatus').textContent = 'Motor Nao Detectado';
+  }
+}
+
+document.getElementById('btnRefreshBridge').addEventListener('click', pollLocalBridge);
+
+// UTILITARIOS
+function formatTime(seconds) {
+  if (isNaN(seconds) || seconds < 0) return '00:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function jsonString(obj) {
+  return JSON.stringify(obj, null, 2);
+}
+</script>
+</body>
+</html>

@@ -73,7 +73,19 @@
       "destination": "/admin/index.html"
     },
     {
-      "source": "/((?!assets|works|cd|models|ar|admin|penumbra|bora|favicon|logo|robots|sitemap).*\\..*)",
+      "source": "/dj",
+      "destination": "/dj/index.html"
+    },
+    {
+      "source": "/dj/",
+      "destination": "/dj/index.html"
+    },
+    {
+      "source": "/dj/(.*)",
+      "destination": "/dj/$1"
+    },
+    {
+      "source": "/((?!assets|works|cd|models|ar|admin|penumbra|dj|bora|favicon|logo|robots|sitemap).*\\..*)",
       "destination": "/$1"
     },
     {
