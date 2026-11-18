@@ -435,8 +435,8 @@ export const EspinhacoInteractive: React.FC = () => {
             const geom = (originalMesh as THREE.Mesh).geometry.clone();
             geom.computeVertexNormals();
             geom.center();
-            // Rotação Z de 90° para posicionar a coluna vertebral na vertical
-            geom.rotateZ(Math.PI / 2);
+            // Rotação Z de -90° para posicionar a coluna vertebral na vertical ereta com crânio ascendente
+            geom.rotateZ(-Math.PI / 2);
 
             // Escala para encaixe exato com a nuvem de pontos
             const box = new THREE.Box3().setFromBufferAttribute(geom.attributes.position as THREE.BufferAttribute);
@@ -446,15 +446,15 @@ export const EspinhacoInteractive: React.FC = () => {
             const meshScale = targetHeight / Math.max(size.x, size.y, size.z);
             geom.scale(meshScale, meshScale, meshScale);
 
-            // 1. Malha Sólida PBR em Prata Acetinada (conforme referência criativo 04.png)
+            // 1. Malha Sólida PBR em Prata Martelada / Aço Fosco Acetinado
             const pbrMat = new THREE.MeshPhysicalMaterial({
-              color: new THREE.Color(0xdde5ec),
-              metalness: 0.94,
-              roughness: 0.28,
-              reflectivity: 0.85,
-              clearcoat: 0.25,
-              clearcoatRoughness: 0.20,
-              envMapIntensity: 1.8,
+              color: new THREE.Color(0xf2f5f9),
+              metalness: 0.84,
+              roughness: 0.36,
+              reflectivity: 0.90,
+              clearcoat: 0.28,
+              clearcoatRoughness: 0.18,
+              envMapIntensity: 2.2,
               side: THREE.DoubleSide
             });
             pbrMat.onBeforeCompile = (shader) => {

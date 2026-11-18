@@ -2337,10 +2337,14 @@
 
     function exportSingleSetMd(setId) {
       if (!setId) setId = 'ALL';
+      if (!window.BACKEND_CONNECTED) {
+        exportSingleSetMdClientFallback(setId);
+        return;
+      }
       showNotification('Resolvendo links diretos do YouTube e gerando Markdown...', 'info');
 
       // Tenta download via backend com resolucao de deep-links do YouTube (watch?v=)
-      fetch(`${API_BASE}/api/export_tracklist_md?set_id=${encodeURIComponent(setId)}`)
+      fetch(apiUrl('/export_tracklist_md?set_id=' + encodeURIComponent(setId)))
         .then(res => {
           if (!res.ok) throw new Error("Status " + res.status);
           const disp = res.headers.get("Content-Disposition");
@@ -2663,12 +2667,11 @@
         return;
       }
       showNotification('Varrendo novas fontes underground excluindo faixas ja no acervo...', 'info');
-      fetch(`${API_BASE}/api/inflow/refresh`, {
+      safeFetchJson(apiUrl('/inflow/refresh'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tag: 'rominimal' })
       })
-      .then(r => r.json())
       .then(data => {
         if (data.feed) {
           APP_STATE.inflow_feed = data.feed;
@@ -2741,13 +2744,12 @@
         showNotification('Abrir no Finder requer daemon local ativo no MacBook.', 'info');
         return;
       }
-      fetch(`${API_BASE}/api/reveal_in_finder?path=${encodeURIComponent(t.path)}`)
-        .then(r => r.json())
+      safeFetchJson(apiUrl('/reveal_in_finder?path=' + encodeURIComponent(t.path)))
         .then(d => {
           showNotification('Arquivo revelado no macOS Finder: ' + (t.filename || t.title), 'success');
         })
         .catch(err => {
-          showNotification('Falha ao abrir no Finder: ' + err, 'error');
+          showNotification('Falha ao abrir no Finder: ' + err.message, 'error');
         });
     }
 
@@ -3056,8 +3058,7 @@
         return;
       }
 
-      fetch(`${API_BASE}/api/usb/devices`)
-        .then(r => r.json())
+      safeFetchJson(apiUrl('/usb/devices'))
         .then(data => {
           select.innerHTML = '';
           USB_CONNECTED_DEVICES = data.devices || [];
@@ -3184,6 +3185,11 @@
         return;
       }
 
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Formatacao de pen drive requer daemon local ativo no MacBook.', 'warning');
+        return;
+      }
+
       const selectedOpt = select.options[select.selectedIndex];
       const idx = selectedOpt ? parseInt(selectedOpt.dataset.index, 10) : 0;
       const dev = USB_CONNECTED_DEVICES[idx];
@@ -3213,7 +3219,7 @@
       }
       showNotification('Formatando pen drive com seguranca (FAT32 MBR)...', 'info');
 
-      fetch(`${API_BASE}/api/usb/format`, {
+      safeFetchJson(apiUrl('/usb/format'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3222,7 +3228,6 @@
           confirmation_token: 'FORMATAR'
         })
       })
-      .then(r => r.json())
       .then(data => {
         if (data.status === 'success') {
           showNotification(data.message || 'Pen drive formatado com sucesso!', 'success');
@@ -3276,9 +3281,18 @@
         btn.innerHTML = '<span>⏳</span> Exportando Master USB em segundo plano...';
       }
 
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Preparacao Master USB requer daemon local no MacBook.', 'warning');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>🚀</span> Iniciar Preparacao Master USB 1-Click';
+        }
+        return;
+      }
+
       showNotification('Iniciando preparacao autonoma Pioneer Master USB...', 'info');
 
-      fetch(`${API_BASE}/api/usb/export`, {
+      safeFetchJson(apiUrl('/usb/export'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3287,7 +3301,6 @@
           copy_audio: true
         })
       })
-      .then(r => r.json())
       .then(data => {
         if (data.status === 'started') {
           showNotification('Processamento Master USB despachado com sucesso!', 'success');
@@ -3311,8 +3324,11 @@
     }
 
     function pollUsbProgress() {
-      fetch(`${API_BASE}/api/usb/export_status`)
-        .then(r => r.json())
+      if (!window.BACKEND_CONNECTED) {
+        if (usbPollTimer) clearInterval(usbPollTimer);
+        return;
+      }
+      safeFetchJson(apiUrl('/usb/export_status'))
         .then(st => {
           const badge = document.getElementById('usbStatusBadge');
           const msg = document.getElementById('usbProgressMsg');
@@ -3560,12 +3576,18 @@
     }
 
     function updateLabelStatusBackend(labelId, newStatus) {
-      fetch(`${API_BASE}/api/promos/update_status`, {
+      if (!window.BACKEND_CONNECTED) {
+        const l = (window.PROMOS_STATE.labels || []).find(x => x.id === labelId);
+        if (l) l.application_status = newStatus;
+        renderPromosTable();
+        showNotification('Status do selo atualizado localmente (Modo Nuvem): ' + newStatus, 'info');
+        return;
+      }
+      safeFetchJson(apiUrl('/promos/update_status'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ label_id: labelId, new_status: newStatus })
       })
-      .then(r => r.json())
       .then(data => {
         if (data.status === 'success') {
           const l = (window.PROMOS_STATE.labels || []).find(x => x.id === labelId);
@@ -3583,8 +3605,25 @@
       const genre = document.getElementById('promoGenreFilter')?.value || 'ALL';
       const status = document.getElementById('promoStatusFilter')?.value || 'ALL';
 
-      fetch(`${API_BASE}/api/promos/batch_bcc?genre=${genre}&status=${status}`)
-        .then(r => r.json())
+      if (!window.BACKEND_CONNECTED) {
+        const labels = (window.PROMOS_STATE && window.PROMOS_STATE.labels) || [];
+        const filtered = labels.filter(l => {
+          const matchGenre = (genre === 'ALL' || (l.genres && l.genres.includes(genre)));
+          const matchStatus = (status === 'ALL' || l.application_status === status);
+          return matchGenre && matchStatus && (l.promo_email || l.contact_email);
+        });
+        const emails = filtered.map(l => l.promo_email || l.contact_email).filter(Boolean);
+        if (emails.length) {
+          navigator.clipboard.writeText(emails.join(', ')).then(() => {
+            showNotification(`Mala direta copiada: ${emails.length} e-mails prontos para envio em lote (BCC)!`, 'success');
+          });
+        } else {
+          showNotification('Nenhum e-mail localizado para os filtros ativos.', 'warning');
+        }
+        return;
+      }
+
+      safeFetchJson(apiUrl(`/promos/batch_bcc?genre=${genre}&status=${status}`))
         .then(data => {
           if (data.bcc) {
             navigator.clipboard.writeText(data.bcc).then(() => {
@@ -3601,8 +3640,28 @@
     }
 
     function openArtistConfigModal() {
-      fetch(`${API_BASE}/api/promos/config`)
-        .then(r => r.json())
+      if (!window.BACKEND_CONNECTED) {
+        const saved = localStorage.getItem('GIG_ARTIST_CONFIG');
+        const cfg = saved ? JSON.parse(saved) : {
+          name: 'Felipe Conceicao',
+          dj_alias: 'Gigantera',
+          primary_email: 'konceptrenassans@gmail.com',
+          soundcloud_url: 'https://soundcloud.com/gigantera',
+          resident_advisor_url: 'https://ra.co/dj/gigantera',
+          bio_summary: 'Curadoria e producao focadas em minimal-techno, microhouse e texturas percussivas romenas.'
+        };
+        document.getElementById('cfgArtistName').value = cfg.name || '';
+        document.getElementById('cfgDjAlias').value = cfg.dj_alias || '';
+        document.getElementById('cfgPrimaryEmail').value = cfg.primary_email || '';
+        document.getElementById('cfgSoundcloudUrl').value = cfg.soundcloud_url || '';
+        document.getElementById('cfgRaUrl').value = cfg.resident_advisor_url || '';
+        document.getElementById('cfgBioSummary').value = cfg.bio_summary || '';
+        const modal = document.getElementById('artistConfigModal');
+        if (modal) modal.classList.add('open');
+        return;
+      }
+
+      safeFetchJson(apiUrl('/promos/config'))
         .then(cfg => {
           document.getElementById('cfgArtistName').value = cfg.name || 'Felipe Conceicao';
           document.getElementById('cfgDjAlias').value = cfg.dj_alias || 'Gigantera';
@@ -3634,12 +3693,18 @@
         bio_summary: document.getElementById('cfgBioSummary').value.trim()
       };
 
-      fetch(`${API_BASE}/api/promos/config`, {
+      if (!window.BACKEND_CONNECTED) {
+        localStorage.setItem('GIG_ARTIST_CONFIG', JSON.stringify(payload));
+        closeArtistConfigModal();
+        showNotification('Perfil do artista salvo no navegador (Modo Nuvem).', 'success');
+        return;
+      }
+
+      safeFetchJson(apiUrl('/promos/config'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      .then(r => r.json())
       .then(data => {
         closeArtistConfigModal();
         showNotification('Perfil do artista atualizado. Recarregando pitches estrategicos...', 'success');
@@ -3761,7 +3826,7 @@
       document.getElementById('agentDot').className = 'pulse-dot working';
       document.getElementById('agentStatusText').textContent = 'Iniciando mineracao...';
 
-      fetch(`${API_BASE}/api/scan`, {
+      safeFetchJson(apiUrl('/scan'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: src })
@@ -3793,7 +3858,7 @@
       const url = document.getElementById('enqUrl').value;
       const notes = document.getElementById('enqNotes').value;
 
-      fetch(`${API_BASE}/api/enqueue`, {
+      safeFetchJson(apiUrl('/enqueue'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dj_name: dj, event_or_show: ev, genre: genre, source_url: url, notes: notes })
@@ -3832,7 +3897,7 @@
       document.getElementById('agentDot').className = 'pulse-dot working';
       document.getElementById('agentStatusText').textContent = 'Varrendo plataformas underground...';
 
-      fetch(`${API_BASE}/api/inflow`, {
+      safeFetchJson(apiUrl('/inflow'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tag: tag, query: query, limit: limit })
@@ -3847,8 +3912,7 @@
         showNotification('Checagem USB nativa requer daemon local no MacBook.', 'info');
         return;
       }
-      fetch(`${API_BASE}/api/usb`)
-        .then(r => r.json())
+      safeFetchJson(apiUrl('/usb'))
         .then(u => {
           alert(u.label);
           pollState();
@@ -3926,12 +3990,11 @@
         showNotification('Caminho do arquivo nao informado.', 'warning');
         return;
       }
-      fetch(`${API_BASE}/api/reveal_in_finder`, {
+      safeFetchJson(apiUrl('/reveal_in_finder'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: resolved })
       })
-      .then(r => r.json())
       .then(data => {
         if (data.status === 'success') {
           showNotification('Arquivo revelado no macOS Finder: ' + (resolved.split('/').pop()), 'success');
@@ -3950,7 +4013,7 @@
         return;
       }
       showNotification('Iniciando download e preparacao de audio: ' + artist + ' : ' + title, 'info');
-      fetch(`${API_BASE}/api/download_track`, {
+      safeFetchJson(apiUrl('/download_track'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3960,7 +4023,6 @@
           source_set: sourceSet || 'Set Minerado'
         })
       })
-      .then(r => r.json())
       .then(data => {
         if (data.status === 'started') {
           showNotification('Download em andamento em background...', 'success');
@@ -3976,8 +4038,17 @@
 
     function refreshUpcomingQueue() {
       showNotification('Renovando fila de sets com novas opcoes underground...', 'info');
-      fetch(`${API_BASE}/api/refresh_queue`, { method: 'POST' })
-      .then(r => r.json())
+      if (!window.BACKEND_CONNECTED) {
+        if (APP_STATE.queue && APP_STATE.queue.length > 1) {
+          const first = APP_STATE.queue.shift();
+          APP_STATE.queue.push(first);
+        }
+        renderQueueTable();
+        showNotification('Modo Nuvem: fila de sets alternada no navegador. Para mineracao real no YouTube, inicie o daemon no MacBook.', 'info');
+        return;
+      }
+
+      safeFetchJson(apiUrl('/refresh_queue'), { method: 'POST' })
       .then(data => {
         showNotification('Fila renovada com sucesso!', 'success');
         pollState();
@@ -3988,9 +4059,12 @@
     }
 
     function processAllUpcomingQueue() {
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Mineracao e download de sets requerem daemon local ativo no MacBook.', 'info');
+        return;
+      }
       showNotification('Minerando e baixando todos os sets da fila atual...', 'info');
-      fetch(`${API_BASE}/api/process_all_queue`, { method: 'POST' })
-      .then(r => r.json())
+      safeFetchJson(apiUrl('/process_all_queue'), { method: 'POST' })
       .then(data => {
         showNotification('Processamento em lote despachado em background!', 'success');
         setTimeout(pollState, 1500);
@@ -4001,13 +4075,16 @@
     }
 
     function toggleAutopilot() {
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Piloto Automatico Infinito requer daemon local ativo no MacBook.', 'info');
+        return;
+      }
       const isRunning = APP_STATE.autopilot && APP_STATE.autopilot.running;
-      const endpoint = isRunning ? '/api/infinite_loop/stop' : '/api/infinite_loop/start';
+      const endpoint = isRunning ? '/infinite_loop/stop' : '/infinite_loop/start';
       const actionMsg = isRunning ? 'Parando Piloto Automatico Infinito...' : 'Ativando Piloto Automatico Infinito...';
       showNotification(actionMsg, 'info');
 
-      fetch(`${API_BASE}${endpoint}`, { method: 'POST' })
-      .then(r => r.json())
+      safeFetchJson(apiUrl(endpoint), { method: 'POST' })
       .then(data => {
         if (data.status === 'started') {
           showNotification('Piloto Automatico Infinito ativado!', 'success');
@@ -4669,14 +4746,17 @@
         showNotification('Selecione um volume USB para higienizar!', 'warning');
         return;
       }
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Higienizacao dot_clean requer daemon local ativo no MacBook.', 'info');
+        return;
+      }
       showNotification('Executando dot_clean e expurgo AppleDouble em ' + target + '...', 'info');
       try {
-        const resp = await fetch(`${API_BASE}/api/usb/clean`, {
+        const res = await safeFetchJson(apiUrl('/usb/clean'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ target_path: target })
         });
-        const res = await resp.json();
         if (res.status === 'success') {
           showNotification('Expurgo concluido: Zero arquivos ._* ou .DS_Store no pen drive!', 'success');
         } else {
@@ -4704,9 +4784,14 @@
         return;
       }
 
+      if (!window.BACKEND_CONNECTED) {
+        showNotification('Formatacao de Pen Drive requer daemon local ativo no MacBook.', 'warning');
+        return;
+      }
+
       showNotification('Formatando ' + target + ' como FAT32 MBR no macOS...', 'info');
       try {
-        const resp = await fetch(`${API_BASE}/api/usb/format`, {
+        const res = await safeFetchJson(apiUrl('/usb/format'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -4715,7 +4800,6 @@
             confirmation_token: token
           })
         });
-        const res = await resp.json();
         if (res.status === 'success') {
           showNotification('Pen drive formatado com sucesso como MBR FAT32!', 'success');
           refreshUsbDevices();

@@ -187,6 +187,9 @@ export class PlayerController {
     this.bindEvents();
   }
 
+  private isRequestingLock: boolean = false;
+  private lastLockRequestTime: number = 0;
+
   private bindEvents(): void {
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
@@ -195,6 +198,7 @@ export class PlayerController {
     window.addEventListener('mouseup', this.handleMouseUp);
     this.domElement.addEventListener('wheel', this.handleWheel, { passive: false });
     document.addEventListener('pointerlockchange', this.handlePointerLockChange);
+    document.addEventListener('pointerlockerror', this.handlePointerLockError);
 
     // Touch support para mobile
     this.domElement.addEventListener('touchstart', this.handleTouchStart, { passive: true });
@@ -213,6 +217,7 @@ export class PlayerController {
     window.removeEventListener('mouseup', this.handleMouseUp);
     this.domElement.removeEventListener('wheel', this.handleWheel);
     document.removeEventListener('pointerlockchange', this.handlePointerLockChange);
+    document.removeEventListener('pointerlockerror', this.handlePointerLockError);
 
     this.domElement.removeEventListener('touchstart', this.handleTouchStart);
     this.domElement.removeEventListener('touchmove', this.handleTouchMove);
@@ -225,6 +230,7 @@ export class PlayerController {
   }
 
   private handlePointerLockChange = (): void => {
+    this.isRequestingLock = false;
     const lockEl = document.pointerLockElement;
     this.isLocked = Boolean(
       lockEl && (lockEl === this.domElement || this.domElement.contains(lockEl) || lockEl === document.body)
@@ -237,23 +243,47 @@ export class PlayerController {
     this.prevMouseY = -1;
   };
 
+  private handlePointerLockError = (): void => {
+    this.isRequestingLock = false;
+    this.isLocked = false;
+    if (this.onPointerLockChange) {
+      this.onPointerLockChange(false);
+    }
+  };
+
   public requestLock(): void {
     if (this.isHoldingCD || this.isCinemaActive || useAppStore.getState().isMobile) return;
     if (!this.domElement || !this.domElement.isConnected) return;
+    if (this.isLocked || document.pointerLockElement) return;
+
+    const now = performance.now();
+    if (this.isRequestingLock || (now - this.lastLockRequestTime < 200)) return;
+
+    this.isRequestingLock = true;
+    this.lastLockRequestTime = now;
+
     const target = this.getLockTarget();
-    if (!this.isLocked) {
-      try {
-        const p = (target.requestPointerLock || this.domElement.requestPointerLock).call(target) as any;
-        if (p && typeof p.catch === 'function') {
-          p.catch(() => {});
-        }
-      } catch {
-        // Ignora caso bloqueado pelo navegador
+    try {
+      const targetWithLock = target as any;
+      const promise = targetWithLock.requestPointerLock?.({ unadjustedMovement: true }) || targetWithLock.requestPointerLock?.();
+      if (promise && typeof promise.then === 'function') {
+        promise
+          .then(() => {
+            this.isRequestingLock = false;
+          })
+          .catch(() => {
+            this.isRequestingLock = false;
+          });
+      } else {
+        this.isRequestingLock = false;
       }
+    } catch {
+      this.isRequestingLock = false;
     }
   }
 
   public exitLock(): void {
+    this.isRequestingLock = false;
     if (document.pointerLockElement) {
       try {
         document.exitPointerLock();

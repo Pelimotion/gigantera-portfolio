@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { Reflector } from 'three/examples/jsm/objects/Reflector.js';
 import { useAppStore } from '../../core/store';
 import { ARTWORKS_CATALOG, BUNNY_CDN_GIGANTERA, cleanBase } from '../../data/artworks';
 import { Artwork } from '../../types/art';
@@ -257,6 +256,91 @@ function createWallNormalTexture(): THREE.CanvasTexture {
   tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(16, 4);
   return tex;
+}
+
+/**
+ * Gerador procedural de Normal Map para Prata Martelada / Aço Fosco Escovado:
+ * Simula facetas convexas/côncavas de batidas sutis de martelo de ourivesaria (Voronoi/micro-células)
+ * combinadas com estrias finas de escovação metálica acetinada.
+ */
+function createHammeredMetalNormalTexture(): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  const height = new Float32Array(size * size);
+
+  // Sementes esparsas de batida de martelo (dimples/células de ourivesaria)
+  const numDimples = 72;
+  const dimples: { x: number; y: number; r: number; depth: number }[] = [];
+  for (let i = 0; i < numDimples; i++) {
+    dimples.push({
+      x: Math.random() * size,
+      y: Math.random() * size,
+      r: 28 + Math.random() * 38,
+      depth: 18 + Math.random() * 22
+    });
+  }
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      let h = 128;
+      // Adiciona estrias finas de aço fosco
+      h += (Math.random() - 0.5) * 8 + Math.sin(x * 0.45 + y * 0.15) * 4;
+
+      // Adiciona cavidades de martelamento com decaimento suave
+      for (let d = 0; d < numDimples; d++) {
+        const dimp = dimples[d];
+        const dx = Math.min(Math.abs(x - dimp.x), size - Math.abs(x - dimp.x));
+        const dy = Math.min(Math.abs(y - dimp.y), size - Math.abs(y - dimp.y));
+        const distSq = dx * dx + dy * dy;
+        const rSq = dimp.r * dimp.r;
+        if (distSq < rSq) {
+          const factor = 1.0 - distSq / rSq;
+          h -= Math.sin(factor * Math.PI * 0.5) * dimp.depth;
+        }
+      }
+      height[y * size + x] = h;
+    }
+  }
+
+  const imgData = ctx.createImageData(size, size);
+  const data = imgData.data;
+
+  for (let y = 0; y < size; y++) {
+    const ym1 = (y - 1 + size) % size;
+    const yp1 = (y + 1) % size;
+    for (let x = 0; x < size; x++) {
+      const xm1 = (x - 1 + size) % size;
+      const xp1 = (x + 1) % size;
+
+      const dX = (height[y * size + xp1] - height[y * size + xm1]) * 1.6;
+      const dY = (height[yp1 * size + x] - height[ym1 * size + x]) * 1.6;
+
+      let nx = -dX;
+      let ny = -dY;
+      let nz = 128.0;
+      const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1.0;
+      nx /= len;
+      ny /= len;
+      nz /= len;
+
+      const idx = (y * size + x) * 4;
+      data[idx] = Math.floor((nx * 0.5 + 0.5) * 255);
+      data[idx + 1] = Math.floor((ny * 0.5 + 0.5) * 255);
+      data[idx + 2] = Math.floor((nz * 0.5 + 0.5) * 255);
+      data[idx + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+  const hTex = new THREE.CanvasTexture(canvas);
+  hTex.wrapS = THREE.RepeatWrapping;
+  hTex.wrapT = THREE.RepeatWrapping;
+  hTex.repeat.set(6, 6);
+  return hTex;
 }
 
 /**
@@ -746,17 +830,20 @@ export const GalleryScene3D: React.FC = () => {
       isLight ? 0xfbf6ec : 0xf2e4ce,
       isLight ? 0.85 : 1.05
     );
-    sunLight.position.set(12, 24, hallCenterZ + 30);
+    sunLight.position.set(12, 32, hallCenterZ + 12);
+    sunLight.target.position.set(0, 0, hallCenterZ);
+    scene.add(sunLight.target);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
     sunLight.shadow.camera.near = 1;
-    sunLight.shadow.camera.far = hallLen + 50;
-    sunLight.shadow.camera.left = -22;
-    sunLight.shadow.camera.right = 22;
-    sunLight.shadow.camera.top = 22;
-    sunLight.shadow.camera.bottom = -22;
+    sunLight.shadow.camera.far = 160;
+    sunLight.shadow.camera.left = -80;
+    sunLight.shadow.camera.right = 80;
+    sunLight.shadow.camera.top = 40;
+    sunLight.shadow.camera.bottom = -40;
     sunLight.shadow.bias = -0.0003;
+    sunLight.shadow.normalBias = 0.04;
     scene.add(sunLight);
 
     // Materiais dinâmicos do Santuário para suporte ao teto escuro e troca de tema
@@ -776,7 +863,7 @@ export const GalleryScene3D: React.FC = () => {
     const penumbraBlocker = new THREE.Mesh(penumbraBlockerGeo, penumbraBlockerMat);
     penumbraBlocker.position.set(0, 11.5, penumbraZ);
     penumbraBlocker.rotation.x = Math.PI / 2;
-    penumbraBlocker.castShadow = true;
+    penumbraBlocker.castShadow = false;
     scene.add(penumbraBlocker);
 
     // ─── NOVA ILUMINAÇÃO CURATORIAL & EXPOGRAFIA DO SANTUÁRIO DO ESPINHAÇO ───
@@ -1063,33 +1150,24 @@ export const GalleryScene3D: React.FC = () => {
 
     const floorGeo = new THREE.PlaneGeometry(layout.roomWidth + 6, hallLen + 12, 1, 1);
     floorGeo.rotateX(-Math.PI / 2);
-    const floorMat = new THREE.MeshStandardMaterial({
+    // Piso PBR de Alta Fidelidade Arquitetônica (Microcimento / Marmorite com Verniz Acetinado Clearcoat)
+    // Elimina 100% de planar reflectors artificiais (que causam artefatos pretos e dobram o custo de render da GPU)
+    const floorMat = new THREE.MeshPhysicalMaterial({
       map: isLight ? floorLightTex : floorDarkTex,
       normalMap: floorNormalTex,
-      normalScale: new THREE.Vector2(0.4, 0.4),
-      roughness: isLight ? 0.38 : 0.45,
-      metalness: isLight ? 0.08 : 0.12
+      normalScale: new THREE.Vector2(0.28, 0.28),
+      roughness: isLight ? 0.24 : 0.30,
+      metalness: 0.04,
+      clearcoat: isLight ? 0.48 : 0.58,
+      clearcoatRoughness: 0.16,
+      reflectivity: 0.88,
+      envMapIntensity: isLight ? 1.5 : 1.9
     });
     const floorMesh = new THREE.Mesh(floorGeo, floorMat);
     floorMesh.position.set(0, -3.2, hallCenterZ);
     floorMesh.receiveShadow = true;
     scene.add(floorMesh);
     walkableFloors.push(floorMesh);
-
-    // Reflexão Planar em Tempo Real do Piso (Simulação Raytracing Suave — revela a textura do piso)
-    // Reduzida a resolução para 256/512 para simular o "blur" (roughness) e não parecer um espelho limpo
-    const floorReflector = new Reflector(new THREE.PlaneGeometry(layout.roomWidth, hallLen), {
-      clipBias: 0.003,
-      textureWidth: Math.min(512, (typeof window !== 'undefined' ? window.innerWidth : 1280) * 0.5),
-      textureHeight: Math.min(512, (typeof window !== 'undefined' ? window.innerHeight : 720) * 0.5),
-      color: isLight ? 0xd0cec7 : 0x666666
-    });
-    floorReflector.position.set(0, -3.193, hallCenterZ);
-    floorReflector.rotateX(-Math.PI / 2);
-    (floorReflector.material as any).transparent = true;
-    (floorReflector.material as any).opacity = isLight ? 0.12 : 0.16;
-    scene.add(floorReflector);
-    walkableFloors.push(floorReflector as any);
 
     const wallGeo = new THREE.PlaneGeometry(hallLen + 12, 24);
     const wallMat = new THREE.MeshStandardMaterial({
@@ -1250,6 +1328,30 @@ export const GalleryScene3D: React.FC = () => {
     });
     const dustPoints = new THREE.Points(dustGeo, dustMat);
     scene.add(dustPoints);
+
+    // 3.02 CONGELAMENTO DE MATRIZES DA ARQUITETURA ESTÁTICA (Técnica de Game Engines AAA)
+    // Elimina centenas de cálculos redundantes de transform na CPU do Mac M1
+    const staticMeshes: THREE.Object3D[] = [
+      leftWall, rightWall, backWall, floorMesh, leftReveal, rightReveal,
+      leftBaffle, rightBaffle,
+      projCenterMesh, leftWingMesh, rightWingMesh
+    ];
+    staticMeshes.forEach((m) => {
+      m.matrixAutoUpdate = false;
+      m.updateMatrix();
+    });
+    benchesGroup.traverse((c) => {
+      if ((c as THREE.Mesh).isMesh) {
+        c.matrixAutoUpdate = false;
+        c.updateMatrix();
+      }
+    });
+    ceilingBeamsGroup.traverse((c) => {
+      if ((c as THREE.Mesh).isMesh) {
+        c.matrixAutoUpdate = false;
+        c.updateMatrix();
+      }
+    });
 
     // 3.1 CAIXAS ACÚSTICAS 3D FIXADAS NAS PAREDES (Voltadas das Paredes para o Centro do Salão)
     const speakerCabinets: THREE.Group[] = [];
@@ -1748,6 +1850,7 @@ export const GalleryScene3D: React.FC = () => {
         vid.setAttribute('webkit-playsinline', '');
         vid.setAttribute('muted', '');
         vid.setAttribute('data-art-id', art.id);
+        vid.preload = 'none'; // Não sobrecarrega memória e decodificadores da GPU M1 na inicialização
         // Elemento fora da visão mas ativo no layout (evita congelamento da decodificação em Chromium/Safari)
         vid.style.position = 'fixed';
         vid.style.top = '-9999px';
@@ -1769,21 +1872,18 @@ export const GalleryScene3D: React.FC = () => {
           map: pTex,
           emissive: new THREE.Color(0xffffff),
           emissiveMap: pTex,
-          emissiveIntensity: 0.15,
+          emissiveIntensity: 0.08, // Estado de repouso curatorial (fade suave ao aproximar)
           roughness: 0.95,
           metalness: 0.0,
           side: THREE.DoubleSide
         });
 
-        let swapped = false;
         const swapToVideo = () => {
-          if (swapped) return;
-          swapped = true;
-          artworkTex = vTex;
-          paperMat.map = vTex;
-          paperMat.emissiveMap = vTex;
-          paperMat.needsUpdate = true;
-
+          if (paperMat.map !== vTex) {
+            paperMat.map = vTex;
+            paperMat.emissiveMap = vTex;
+            paperMat.needsUpdate = true;
+          }
           const currentCinema = useAppStore.getState().cinemaArtwork;
           if (currentCinema && currentCinema.id === art.id) {
             artPlaneMat.map = vTex;
@@ -1791,17 +1891,7 @@ export const GalleryScene3D: React.FC = () => {
           }
         };
 
-        vid.addEventListener('loadeddata', () => {
-          vid.play().then(swapToVideo).catch(() => {});
-        });
-        vid.addEventListener('canplay', () => {
-          vid.play().then(swapToVideo).catch(() => {});
-        });
-        vid.addEventListener('playing', () => {
-          swapToVideo();
-        });
-
-        vid.play().then(swapToVideo).catch(() => {});
+        vid.addEventListener('playing', swapToVideo);
         videoElement = vid;
       } else if (isEspinhaco) {
         // Obra Interativa 3D: painel de papel é transparente para visualização 360° da escultura
@@ -1901,8 +1991,8 @@ export const GalleryScene3D: React.FC = () => {
             solidGeo.computeVertexNormals();
             solidGeo.center();
 
-            // Orientação anatômica autêntica conforme criativo 04.png:
-            // Rotação Z de -90° posiciona a cabeça/crânio na base e a coluna vertebral arqueando para cima
+            // Orientação anatômica ereta autêntica:
+            // Rotação Z de -90° posiciona a coluna vertebral ereta com crânio ascendente e base engastada no pedestal
             solidGeo.rotateZ(-Math.PI / 2);
             solidGeo.computeBoundingBox();
             const bbox = solidGeo.boundingBox!;
@@ -1913,23 +2003,19 @@ export const GalleryScene3D: React.FC = () => {
               solidGeo.setAttribute('uv2', solidGeo.getAttribute('uv'));
             }
 
-            // Material Físico de Alta Fidelidade (Pewter / Prata Fundida de criativo 04.png)
-            // Utiliza as texturas originais embutidas no GLB (Color, NormalGL, ORM)
+            // Material Físico de Alta Fidelidade (Prata Martelada / Aço Fosco Escovado de Museu)
+            // Utiliza normal map procedural de martelamento artesanal com dispersão luminosa aveludada
+            const hammeredTex = createHammeredMetalNormalTexture();
             const silverMaterial = new THREE.MeshPhysicalMaterial({
-              map: origMat?.map || null,
-              normalMap: origMat?.normalMap || null,
-              normalScale: new THREE.Vector2(1.85, 1.85), // Esculpe com precisão cirúrgica cada vértebra e ranhura
-              roughnessMap: origMat?.roughnessMap || null,
-              metalnessMap: origMat?.metalnessMap || null,
-              aoMap: origMat?.aoMap || origMat?.roughnessMap || null,
-              aoMapIntensity: 1.5,
-              color: new THREE.Color(0xf5f7fa),           // Prata lunar nobre pura
-              metalness: 0.92,                            // Metal fundido altamente condutivo
-              roughness: 0.22,                            // Acabamento acetinado escovado
-              reflectivity: 0.95,
-              clearcoat: 0.35,                            // Película de cera / verniz de museu
-              clearcoatRoughness: 0.12,
-              envMapIntensity: 2.4,                       // Reflexos ambientais ricos da câmara PMREM
+              color: new THREE.Color(0xf2f5f9),           // Prata nobre pura / aço acetinado luminoso
+              metalness: 0.82,                            // Metal fundido autêntico com corpo difuso equilibrado
+              roughness: 0.38,                            // Acabamento fosco escovado de museu (dispersa reflexos sem escurecer)
+              normalMap: hammeredTex,
+              normalScale: new THREE.Vector2(1.2, 1.2),   // Facetas sutis de martelamento artesanal
+              clearcoat: 0.28,                            // Verniz protetor de conservação museológica
+              clearcoatRoughness: 0.18,
+              reflectivity: 0.90,
+              envMapIntensity: 2.2,                       // Reflexos ambientais ricos da câmara PMREM
               side: THREE.DoubleSide
             });
 
@@ -1966,16 +2052,24 @@ export const GalleryScene3D: React.FC = () => {
           }
         );
 
-        // 3. Sistema de Iluminação de Museu Especializado em Metal Esculpido (Highlights + Sombras Vivas)
-        // Key Spotlight rasante de alta definição projetando sombras de cada vértebra
-        const spineKeySpot = new THREE.SpotLight(0xfffcf5, 4.8, 36, Math.PI / 4.2, 0.35, 1.1);
-        spineKeySpot.position.set(3.8, 7.5, 4.2);
+        // 3. Sistema de Iluminação de Museu Especializado em Metal Esculpido (Highlights + Sombras Vivas Suaves)
+        // Key Spotlight rasante de alta definição projetando sombras aveludadas de cada vértebra
+        const spineKeySpot = new THREE.SpotLight(0xfffcf5, 5.2, 38, Math.PI / 4.0, 0.40, 1.1);
+        spineKeySpot.position.set(3.8, 7.8, 4.2);
         spineKeySpot.target = spineHolder;
         spineKeySpot.castShadow = true;
-        spineKeySpot.shadow.bias = -0.0001;
-        spineKeySpot.shadow.mapSize.width = 1024;
-        spineKeySpot.shadow.mapSize.height = 1024;
+        spineKeySpot.shadow.bias = -0.0003;
+        spineKeySpot.shadow.normalBias = 0.04;
+        spineKeySpot.shadow.radius = 3.5;
+        spineKeySpot.shadow.mapSize.width = 2048;
+        spineKeySpot.shadow.mapSize.height = 2048;
         espinhacoTotemGroup.add(spineKeySpot);
+        espinhacoTotemGroup.add(spineKeySpot.target);
+
+        // Preenchimento de chão suave em degradê quente que elimina 100% sombras pretas quadriculadas
+        const sanctuaryShadowFillLight = new THREE.PointLight(0xe8edf2, 0.55, 14, 1.4);
+        sanctuaryShadowFillLight.position.set(0, -2.6, 2.0);
+        espinhacoTotemGroup.add(sanctuaryShadowFillLight);
 
         // Top Rim Spot para desenhar as cristas da coluna contra o fundo escuro
         const spineTopSpot = new THREE.SpotLight(0xf0f4fc, 3.8, 30, Math.PI / 3.8, 0.40, 1.2);
@@ -2952,13 +3046,6 @@ export const GalleryScene3D: React.FC = () => {
       } catch {}
       playerController.resumeAimControl();
       playerController.requestLock();
-
-      // Destrava reprodução de todos os vídeos de fundo com o gesto do usuário
-      artworkItems.forEach((item) => {
-        if (item.videoEl && item.videoEl.paused) {
-          item.videoEl.play().catch(() => {});
-        }
-      });
     };
 
     window.addEventListener('mousedown', onMouseDown);
@@ -2992,30 +3079,80 @@ export const GalleryScene3D: React.FC = () => {
     };
     window.addEventListener('resize', onResize);
 
-    // Assinatura dinâmica da qualidade gráfica com Pixel Ratio adaptativo para Mac M1 / Retina
+    // ─── GESTÃO DE CICLO DE VIDA DA ABA (Visibilidade / Suspensão de Recursos AAA) ───
+    // Quando o usuário muda de aba ou abre múltiplas janelas, a galeria suspende o loop da GPU
+    // e pausa os decodificadores de vídeo para não engasgar a memória unificada do Mac M1
+    let isPageVisible = typeof document !== 'undefined' ? document.visibilityState === 'visible' : true;
+    const onVisibilityChange = () => {
+      isPageVisible = document.visibilityState === 'visible';
+      if (!isPageVisible) {
+        artworkItems.forEach((item) => {
+          if (item.videoEl && !item.videoEl.paused) {
+            item.videoEl.pause();
+          }
+        });
+        if (projVideo && !projVideo.paused) {
+          projVideo.pause();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // Assinatura dinâmica da qualidade gráfica com PBR adaptativo para Mac M1 / Retina
     const applyQualitySettings = (q: 'light' | 'med' | 'high') => {
       if (q === 'high') {
-        floorReflector.visible = true;
-        (floorReflector.material as any).opacity = isLight ? 0.22 : 0.28;
+        renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFShadowMap;
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
-        floorMat.normalScale.set(0.42, 0.42);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+        sunLight.castShadow = true;
+        floorMat.roughness = isLight ? 0.22 : 0.28;
+        floorMat.clearcoat = 0.58;
+        floorMat.clearcoatRoughness = 0.14;
+        floorMat.normalScale.set(0.35, 0.35);
         wallMat.normalScale.set(0.28, 0.28);
       } else if (q === 'med') {
-        floorReflector.visible = true;
-        (floorReflector.material as any).opacity = isLight ? 0.12 : 0.16;
+        renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFShadowMap;
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
-        floorMat.normalScale.set(0.22, 0.22);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+        sunLight.castShadow = false; // Foco nos spots curatoriais do Espinhaço, aliviando a GPU do Mac M1
+        floorMat.roughness = isLight ? 0.28 : 0.34;
+        floorMat.clearcoat = 0.38;
+        floorMat.clearcoatRoughness = 0.18;
+        floorMat.normalScale.set(0.20, 0.20);
         wallMat.normalScale.set(0.15, 0.15);
       } else {
-        floorReflector.visible = false;
-        renderer.shadowMap.type = THREE.BasicShadowMap;
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+        renderer.shadowMap.enabled = false;
+        sunLight.castShadow = false;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.0));
+        floorMat.roughness = 0.48;
+        floorMat.clearcoat = 0.0;
         floorMat.normalScale.set(0.0, 0.0);
         wallMat.normalScale.set(0.0, 0.0);
+        // Pausa todos os vídeos imediatamente no modo leve
+        artworkItems.forEach((item) => {
+          if (item.videoEl && !item.videoEl.paused) {
+            item.videoEl.pause();
+          }
+          if (item.posterTex && item.paperMat.map !== item.posterTex) {
+            item.paperMat.map = item.posterTex;
+            item.paperMat.emissiveMap = item.posterTex;
+            item.paperMat.needsUpdate = true;
+          }
+        });
       }
       renderer.shadowMap.needsUpdate = true;
+      floorMat.needsUpdate = true;
+      wallMat.needsUpdate = true;
+      scene.traverse((obj) => {
+        if ((obj as THREE.Mesh).isMesh && (obj as THREE.Mesh).material) {
+          const mat = (obj as THREE.Mesh).material;
+          if (Array.isArray(mat)) {
+            mat.forEach((m) => { m.needsUpdate = true; });
+          } else {
+            mat.needsUpdate = true;
+          }
+        }
+      });
     };
 
     applyQualitySettings(useAppStore.getState().graphicsQuality);
@@ -3046,14 +3183,12 @@ export const GalleryScene3D: React.FC = () => {
       visitorLight.intensity = isL ? 0.85 : 1.45;
 
       floorMat.map = isL ? floorLightTex : floorDarkTex;
-      floorMat.roughness = isL ? 0.38 : 0.45;
-      floorMat.metalness = isL ? 0.08 : 0.12;
+      floorMat.roughness = isL ? 0.24 : 0.30;
+      floorMat.clearcoat = isL ? 0.48 : 0.58;
       floorMat.needsUpdate = true;
 
       wallMat.map = isL ? wallLightTex : wallDarkTex;
       wallMat.needsUpdate = true;
-
-      (floorReflector.material as any).opacity = isL ? 0.22 : 0.28;
 
       plinthMat.color.set(isL ? 0x222625 : 0x161918);
       deckMat.color.set(isL ? 0x333836 : 0x242826);
@@ -3144,6 +3279,14 @@ export const GalleryScene3D: React.FC = () => {
     const cameraFrustum = new THREE.Frustum();
     const cameraProjScreenMatrix = new THREE.Matrix4();
 
+    // ─── DYNAMIC RESOLUTION SCALING (DRS) FRAME GOVERNOR (PADRÃO AAA) ───
+    // Amortecedor EMA que monitora o orçamento de frame da GPU (alvo 16.6ms / 60 FPS)
+    // Se múltiplas abas abertas ou tarefas do sistema gerarem pressão na GPU/RAM do Mac M1,
+    // o DRS reduz suavemente o DPR para preservar fluidez de 60 FPS cravados;
+    // assim que o sistema respira, recupera a resolução plena Retina instantaneamente.
+    let emaFrameTime = 16.6;
+    let currentDprScale = 1.0;
+
     const fpsRingBuffer: number[] = [];
     let lastFpsReportTime = performance.now();
     const benchmarkStartTime = performance.now();
@@ -3153,6 +3296,9 @@ export const GalleryScene3D: React.FC = () => {
     const animate = () => {
       rafId = requestAnimationFrame(animate);
 
+      // Suspensão de recursos: se a aba estiver oculta ou minimizada, não consome GPU no M1
+      if (!isPageVisible) return;
+
       try {
         const currentTimeMs = performance.now();
         const delta = Math.min((currentTimeMs - lastTime) / 1000, 0.08);
@@ -3160,10 +3306,32 @@ export const GalleryScene3D: React.FC = () => {
         clockElapsedTime += delta;
         const elapsedTime = clockElapsedTime;
 
-      const storeState = useAppStore.getState();
-      const currentCinemaArt = storeState.cinemaArtwork;
-      const holdingCD = storeState.isHoldingCD;
-      const isAudioPlaying = storeState.isAudioPlaying;
+        // Atualização da matriz de projeção e frustum para culling direcional
+        cameraProjScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        cameraFrustum.setFromProjectionMatrix(cameraProjScreenMatrix);
+
+        const storeState = useAppStore.getState();
+        const currentCinemaArt = storeState.cinemaArtwork;
+        const holdingCD = storeState.isHoldingCD;
+        const isAudioPlaying = storeState.isAudioPlaying;
+
+        // Execução do DRS Frame Governor
+        const rawDeltaMs = delta * 1000;
+        emaFrameTime = emaFrameTime * 0.92 + rawDeltaMs * 0.08;
+
+        const baseTargetDpr = storeState.graphicsQuality === 'high' ? 1.75 : storeState.graphicsQuality === 'med' ? 1.25 : 1.0;
+        const maxNativeDpr = Math.min(window.devicePixelRatio || 1, baseTargetDpr);
+
+        if (emaFrameTime > 20.0) { // < 50 FPS: pressão de recursos
+          currentDprScale = Math.max(0.72, currentDprScale - 0.015);
+        } else if (emaFrameTime < 15.5) { // > 64 FPS: folga de GPU
+          currentDprScale = Math.min(1.0, currentDprScale + 0.008);
+        }
+
+        const dynamicDpr = Math.max(0.85, maxNativeDpr * currentDprScale);
+        if (Math.abs(renderer.getPixelRatio() - dynamicDpr) > 0.06) {
+          renderer.setPixelRatio(dynamicDpr);
+        }
 
       // Transição fluida entre Exploração FPS e Modo Acervo 3D em Grade (TAB)
       const isArchiveMode = storeState.viewMode === 'archive' && !currentCinemaArt;
@@ -3281,31 +3449,93 @@ export const GalleryScene3D: React.FC = () => {
         }
       }
 
-      // Otimização de Performance & Decodificação GPU (LOD de Proximidade para Vídeos)
-      // Pausa decodificação em segundo plano se o visitante estiver a mais de 18m
-      // Retoma reprodução contínua ao se aproximar (< 15m) ou no modo cinema
+      // ─── SISTEMA ULTRA-INTELIGENTE DE PROXIMIDADE, BUFFER E FADING DE VÍDEOS ───
+      // Garante fluidez absoluta a 60 FPS no MacBook M1 8GB e GPUs integradas
       const camPos = camera.position;
-      artworkItems.forEach((item) => {
-        if (!item.videoEl) return;
-        const isCinemaActiveThis = currentCinemaArt?.id === item.artwork.id;
-        if (isCinemaActiveThis) {
-          if (item.videoEl.paused) {
-            item.videoEl.play().catch(() => {});
-          }
-          return;
-        }
+      const currentQuality = storeState.graphicsQuality;
+      const maxConcurrentVideos = currentQuality === 'high' ? 2 : currentQuality === 'med' ? 1 : 0;
+      const videoTriggerDist = currentQuality === 'high' ? 14.0 : 10.5;
 
-        const dist = camPos.distanceTo(item.group.position);
-        if (dist <= 15.0) {
-          if (item.videoEl.paused) {
-            item.videoEl.play().catch(() => {});
+      // Se estiver no Modo Cinema, apenas a obra em exibição toca; todas as outras do salão pausam
+      if (currentCinemaArt) {
+        artworkItems.forEach((item) => {
+          if (!item.videoEl) return;
+          if (item.artwork.id === currentCinemaArt.id) {
+            if (item.videoEl.paused) item.videoEl.play().catch(() => {});
+          } else {
+            if (!item.videoEl.paused) item.videoEl.pause();
           }
-        } else if (dist > 18.0) {
-          if (!item.videoEl.paused) {
-            item.videoEl.pause();
+        });
+      } else {
+        // ─── FRUSTUM & DIRECTIONAL STREAMING DE VÍDEOS (GAME ENGINE PATTERN) ───
+        // Só consome decodificador de vídeo para obras que o jogador está realmente encarando
+        const camDir = new THREE.Vector3();
+        camera.getWorldDirection(camDir);
+        const toArt = new THREE.Vector3();
+
+        const videoCandidates: { item: typeof artworkItems[0]; dist: number; inView: boolean }[] = [];
+        artworkItems.forEach((item) => {
+          if (!item.videoEl) return;
+          const dist = Math.hypot(camPos.x - item.hallwayPos.x, camPos.z - item.hallwayPos.z);
+          toArt.set(item.hallwayPos.x - camPos.x, 0, item.hallwayPos.z - camPos.z).normalize();
+          const dot = camDir.dot(toArt);
+          const inFrustum = cameraFrustum.containsPoint(item.group.position);
+          // Obra só é candidata ativa se estiver no campo de visão (dot > -0.15) e dentro do frustum
+          const inView = dot > -0.15 && inFrustum;
+          videoCandidates.push({ item, dist, inView });
+        });
+
+        // Ordena: primeiro as que estão no campo de visão do jogador, depois por menor distância
+        videoCandidates.sort((a, b) => {
+          if (a.inView && !b.inView) return -1;
+          if (!a.inView && b.inView) return 1;
+          return a.dist - b.dist;
+        });
+
+        let activePlayingCount = 0;
+        videoCandidates.forEach(({ item, dist, inView }) => {
+          const isEligible = inView && dist <= videoTriggerDist && activePlayingCount < maxConcurrentVideos;
+          
+          if (isEligible) {
+            activePlayingCount++;
+            if (item.videoEl && item.videoEl.paused) {
+              item.videoEl.play().catch(() => {});
+            }
+            if (item.videoTex && item.videoEl && item.videoEl.readyState >= 2) {
+              if (item.paperMat.map !== item.videoTex) {
+                item.paperMat.map = item.videoTex;
+                item.paperMat.emissiveMap = item.videoTex;
+                item.paperMat.needsUpdate = true;
+              }
+            }
+            // Revelação suave de luminosidade ao se aproximar (Curatorial Fade-In)
+            const targetEmissive = isLight ? 0.22 : 0.26;
+            item.paperMat.emissiveIntensity = THREE.MathUtils.lerp(
+              item.paperMat.emissiveIntensity,
+              targetEmissive,
+              delta * 3.5
+            );
+          } else {
+            // Obra fora do campo ou distância: pausa o vídeo imediatamente para liberar o hardware M1
+            if (item.videoEl && !item.videoEl.paused) {
+              item.videoEl.pause();
+            }
+            // Retorna ao pôster estático de alta definição (zero carga de decodificação)
+            if (item.posterTex && item.paperMat.map !== item.posterTex) {
+              item.paperMat.map = item.posterTex;
+              item.paperMat.emissiveMap = item.posterTex;
+              item.paperMat.needsUpdate = true;
+            }
+            // Fica suavemente escurecida / em repouso contemplativo quando distante
+            const idleEmissive = isLight ? 0.08 : 0.05;
+            item.paperMat.emissiveIntensity = THREE.MathUtils.lerp(
+              item.paperMat.emissiveIntensity,
+              idleEmissive,
+              delta * 2.0
+            );
           }
-        }
-      });
+        });
+      }
 
       // DINÂMICA DO MODO DE INSPEÇÃO 3D (Obra no Primeiro Plano saindo da vitrine)
       if (currentCinemaArt) {
@@ -3648,15 +3878,6 @@ export const GalleryScene3D: React.FC = () => {
       // Atualiza matriz de frustum para culling de vídeos e objetos fora do campo de visão
       cameraProjScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
       cameraFrustum.setFromProjectionMatrix(cameraProjScreenMatrix);
-
-      // Otimização de fill-rate M1: durante a inspeção de obras em primeiro plano,
-      // desativa o refletor do piso para economizar 100% do pass secundário de renderização
-      if (currentCinemaArt) {
-        if (floorReflector.visible) floorReflector.visible = false;
-      } else {
-        const targetReflVis = storeState.graphicsQuality !== 'light';
-        if (floorReflector.visible !== targetReflVis) floorReflector.visible = targetReflVis;
-      }
 
       // Animação sutil dos dust motes atmosféricos
       const dustPosAttr = dustGeo.attributes.position as THREE.BufferAttribute;
@@ -4026,6 +4247,7 @@ export const GalleryScene3D: React.FC = () => {
       window.removeEventListener('gigantera:request-lock', handleRequestLock);
       window.removeEventListener('gigantera:flip-cd', handleFlipCDEvent);
       window.removeEventListener('resize', onResize);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       if (dragHintTimerRef.current) clearTimeout(dragHintTimerRef.current);
       window.removeEventListener('resize', checkMobile);
       unsubQuality();

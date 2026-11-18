@@ -34,7 +34,9 @@ export const GalleryHeader: React.FC = () => {
         return;
       }
       if (e.code === 'KeyG' && !e.metaKey && !e.ctrlKey) {
-        setGraphicsQuality(graphicsQuality === 'high' ? 'med' : 'high');
+        e.preventDefault();
+        const nextQ = graphicsQuality === 'high' ? 'med' : graphicsQuality === 'med' ? 'light' : 'high';
+        setGraphicsQuality(nextQ);
       } else if (e.code === 'KeyT' && !e.metaKey && !e.ctrlKey) {
         toggleTheme();
       } else if (e.code === 'KeyC' && !e.metaKey && !e.ctrlKey) {
@@ -139,9 +141,16 @@ export const GalleryHeader: React.FC = () => {
 
             <div className="quality-segmented-toggle" role="group" aria-label="Ajuste de fidelidade gráfica" style={{ border: 'none', background: 'transparent' }}>
               <button
+                onClick={() => setGraphicsQuality('light')}
+                className={`quality-seg-btn ${graphicsQuality === 'light' ? 'is-active' : ''}`}
+                title="Modo Baixo: Máxima fluidez e leveza (sem reflexos ou sombras pesadas, ideal para economia de GPU)"
+              >
+                <span>BAIXO</span>
+              </button>
+              <button
                 onClick={() => setGraphicsQuality('med')}
                 className={`quality-seg-btn ${graphicsQuality === 'med' ? 'is-active' : ''}`}
-                title="Modo Médio: Equilíbrio ótimo entre fidelidade e fluidez"
+                title="Modo Médio: Equilíbrio ótimo entre fidelidade e fluidez a 60 FPS"
               >
                 <span>MÉDIO</span>
               </button>
